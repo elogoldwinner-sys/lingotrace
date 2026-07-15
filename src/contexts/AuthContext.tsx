@@ -9,6 +9,8 @@ import {
   onAuthStateChanged,
   signInWithEmailAndPassword,
   createUserWithEmailAndPassword,
+  signInWithPopup,
+  GoogleAuthProvider,
   signOut as firebaseSignOut,
   updateProfile,
   type User,
@@ -23,6 +25,7 @@ interface AuthContextValue {
   loading: boolean;
   signIn: (email: string, password: string) => Promise<void>;
   signUp: (email: string, password: string, displayName: string) => Promise<void>;
+  signInWithGoogle: () => Promise<void>;
   signOut: () => Promise<void>;
 }
 
@@ -76,12 +79,33 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setProfile(newProfile);
   }
 
+  async function signInWithGoogle() {
+    const provider = new GoogleAuthProvider();
+    const credential = await signInWithPopup(auth, provider);
+    const profileRef = doc(db, "teachers", credential.user.uid);
+    const snapshot = await getDoc(profileRef);
+
+    if (!snapshot.exists()) {
+      const newProfile: UserProfile = {
+        uid: credential.user.uid,
+        email: credential.user.email ?? "",
+        displayName: credential.user.displayName ?? "",
+        role: "teacher",
+        createdAt: Date.now(),
+      };
+      await setDoc(profileRef, { ...newProfile, createdAt: serverTimestamp() });
+      setProfile(newProfile);
+    } else {
+      setProfile(snapshot.data() as UserProfile);
+    }
+  }
+
   async function signOut() {
     await firebaseSignOut(auth);
   }
 
   return (
-    <AuthContext.Provider value={{ user, profile, loading, signIn, signUp, signOut }}>
+    <AuthContext.Provider value={{ user, profile, loading, signIn, signUp, signInWithGoogle, signOut }}>
       {children}
     </AuthContext.Provider>
   );
