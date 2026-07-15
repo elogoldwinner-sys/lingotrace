@@ -1,0 +1,88 @@
+{
+  "app": { "name": "لينغوتريس" },
+  "nav": {
+    "dashboard": "لوحة التحكم",
+    "classes": "الصفوف",
+    "students": "الطلاب",
+    "attendance": "الحضور",
+    "sessions": "الجلسات",
+    "notes": "الملاحظات",
+    "notifications": "الإشعارات",
+    "settings": "الإعدادات",
+    "signOut": "تسجيل الخروج"
+  },
+  "auth": {
+    "signIn": "تسجيل الدخول",
+    "signUp": "إنشاء حساب",
+    "email": "البريد الإلكتروني",
+    "password": "كلمة المرور",
+    "displayName": "الاسم الكامل",
+    "welcomeBack": "مرحبًا بعودتك",
+    "welcomeBackSub": "سجّل الدخول للوصول إلى لوحة التحكم",
+    "createAccount": "إنشاء حسابك",
+    "createAccountSub": "ابدأ بمتابعة صفوفك مع لينغوتريس",
+    "noAccount": "ليس لديك حساب؟",
+    "haveAccount": "لديك حساب بالفعل؟",
+    "signInError": "تعذّر تسجيل الدخول. يرجى التحقق من البريد الإلكتروني وكلمة المرور.",
+    "signUpError": "تعذّر إنشاء الحساب. يرجى المحاولة مرة أخرى."
+  },
+  "dashboard": {
+    "title": "لوحة التحكم",
+    "welcome": "مرحبًا بعودتك، {{name}}",
+    "totalClasses": "الصفوف",
+    "totalStudents": "الطلاب",
+    "todayAttendance": "حضور اليوم",
+    "recentActivity": "النشاط الأخير"
+  },
+  "classes": {
+    "title": "الصفوف",
+    "newClass": "صف جديد",
+    "className": "اسم الصف",
+    "description": "الوصف",
+    "students": "طلاب",
+    "noClasses": "لا توجد صفوف بعد. أنشئ صفك الأول للبدء."
+  },
+  "students": {
+    "title": "الطلاب",
+    "newStudent": "طالب جديد",
+    "name": "اسم الطالب",
+    "parentName": "اسم ولي الأمر",
+    "parentEmail": "بريد ولي الأمر الإلكتروني",
+    "points": "النقاط",
+    "badges": "الشارات",
+    "noStudents": "لا يوجد طلاب بعد."
+  },
+  "attendance": {
+    "title": "الحضور",
+    "present": "حاضر",
+    "absent": "غائب",
+    "late": "متأخر",
+    "excused": "معذور",
+    "save": "حفظ الحضور"
+  },
+  "sessions": {
+    "title": "الجلسات",
+    "newSession": "جلسة جديدة",
+    "topic": "الموضوع",
+    "objectives": "أهداف التعلم"
+  },
+  "notes": {
+    "title": "الملاحظات",
+    "add": "إضافة ملاحظة",
+    "visibleToParent": "مرئية لولي الأمر"
+  },
+  "points": {
+    "award": "منح نقاط",
+    "amount": "الكمية",
+    "reason": "السبب"
+  },
+  "common": {
+    "save": "حفظ",
+    "cancel": "إلغاء",
+    "delete": "حذف",
+    "edit": "تعديل",
+    "loading": "جارٍ التحميل…",
+    "search": "بحث",
+    "language": "اللغة"
+  }
+}

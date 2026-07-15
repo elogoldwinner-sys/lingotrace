@@ -1,0 +1,88 @@
+{
+  "app": { "name": "LingoTrace" },
+  "nav": {
+    "dashboard": "Dashboard",
+    "classes": "Classes",
+    "students": "Students",
+    "attendance": "Attendance",
+    "sessions": "Sessions",
+    "notes": "Notes",
+    "notifications": "Notifications",
+    "settings": "Settings",
+    "signOut": "Sign out"
+  },
+  "auth": {
+    "signIn": "Sign in",
+    "signUp": "Create account",
+    "email": "Email",
+    "password": "Password",
+    "displayName": "Full name",
+    "welcomeBack": "Welcome back",
+    "welcomeBackSub": "Sign in to your LingoTrace dashboard",
+    "createAccount": "Create your account",
+    "createAccountSub": "Start tracking your classes with LingoTrace",
+    "noAccount": "Don't have an account?",
+    "haveAccount": "Already have an account?",
+    "signInError": "We couldn't sign you in. Please check your email and password.",
+    "signUpError": "We couldn't create your account. Please try again."
+  },
+  "dashboard": {
+    "title": "Dashboard",
+    "welcome": "Welcome back, {{name}}",
+    "totalClasses": "Classes",
+    "totalStudents": "Students",
+    "todayAttendance": "Today's Attendance",
+    "recentActivity": "Recent Activity"
+  },
+  "classes": {
+    "title": "Classes",
+    "newClass": "New class",
+    "className": "Class name",
+    "description": "Description",
+    "students": "students",
+    "noClasses": "No classes yet. Create your first class to get started."
+  },
+  "students": {
+    "title": "Students",
+    "newStudent": "New student",
+    "name": "Student name",
+    "parentName": "Parent name",
+    "parentEmail": "Parent email",
+    "points": "Points",
+    "badges": "Badges",
+    "noStudents": "No students yet."
+  },
+  "attendance": {
+    "title": "Attendance",
+    "present": "Present",
+    "absent": "Absent",
+    "late": "Late",
+    "excused": "Excused",
+    "save": "Save attendance"
+  },
+  "sessions": {
+    "title": "Sessions",
+    "newSession": "New session",
+    "topic": "Topic",
+    "objectives": "Learning objectives"
+  },
+  "notes": {
+    "title": "Notes",
+    "add": "Add note",
+    "visibleToParent": "Visible to parent"
+  },
+  "points": {
+    "award": "Award points",
+    "amount": "Amount",
+    "reason": "Reason"
+  },
+  "common": {
+    "save": "Save",
+    "cancel": "Cancel",
+    "delete": "Delete",
+    "edit": "Edit",
+    "loading": "Loading…",
+    "search": "Search",
+    "language": "Language"
+  }
+}
