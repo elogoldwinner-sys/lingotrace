@@ -61,6 +61,18 @@ src/
   types/          Shared TypeScript interfaces
 ```
 
+## Deploying to GitHub Pages
+
+A workflow at .github/workflows/deploy.yml builds and deploys automatically on every push to main. To activate it:
+
+1. Push this project to your elogoldwinner-sys/lingotrace repo (the workflow file must be in .github/workflows/ for the Actions tab to pick it up — that's why nothing showed up before).
+2. In the repo: Settings -> Pages -> Build and deployment -> Source -> select "GitHub Actions".
+3. In the repo: Settings -> Secrets and variables -> Actions -> New repository secret, and add each of the VITE_* values from your .env (Firebase, Cloudinary, EmailJS). The workflow reads them from secrets rather than a committed .env, since .env is gitignored and shouldn't be pushed.
+4. Push to main (or run the workflow manually from the Actions tab) — it will appear as a run named "Deploy to GitHub Pages".
+5. Your site will be live at https://elogoldwinner-sys.github.io/lingotrace/.
+
+vite.config.ts is already set with base: '/lingotrace/' to match this repo name, and the router/index.html include the standard GitHub Pages SPA redirect trick so deep links (e.g. /students) don't 404 on a hard refresh.
+
 ## Verifying
 
 ```
