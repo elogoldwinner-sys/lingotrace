@@ -6,7 +6,7 @@ Styled to match **LingoBite**'s theme: navy (`#0d1b2a`), gold (`#c9993f`), cream
 
 ## What's included (Phase 1)
 
-- Email/password auth (sign up creates a `teachers/{uid}` Firestore profile)
+- Google sign-in only, no separate sign-up flow (first Google sign-in auto-creates a `teachers/{uid}` Firestore profile)
 - Dashboard with live stats
 - Classes: create / list / delete
 - Students: create / list / delete, profile photo upload via Cloudinary
@@ -37,7 +37,7 @@ Styled to match **LingoBite**'s theme: navy (`#0d1b2a`), gold (`#c9993f`), cream
    - VITE_EMAILJS_PUBLIC_KEY
 
    All of these are in your Firebase console (Project settings -> General -> Your apps) and EmailJS dashboard (Account -> General).
-3. In the Firebase console, enable Email/Password sign-in under Authentication, and create a Firestore database in production mode.
+3. In the Firebase console, under Authentication -> Sign-in method, enable Google as a sign-in provider (Email/Password is not used). Also create a Firestore database in production mode.
 4. Set Firestore security rules so teachers can only read/write their own classes/students/etc. (not included here — ask if you want a starter ruleset).
 5. npm run dev
 

@@ -7,12 +7,9 @@ import {
 } from "react";
 import {
   onAuthStateChanged,
-  signInWithEmailAndPassword,
-  createUserWithEmailAndPassword,
   signInWithPopup,
   GoogleAuthProvider,
   signOut as firebaseSignOut,
-  updateProfile,
   type User,
 } from "firebase/auth";
 import { doc, getDoc, setDoc, serverTimestamp } from "firebase/firestore";
@@ -23,13 +20,13 @@ interface AuthContextValue {
   user: User | null;
   profile: UserProfile | null;
   loading: boolean;
-  signIn: (email: string, password: string) => Promise<void>;
-  signUp: (email: string, password: string, displayName: string) => Promise<void>;
   signInWithGoogle: () => Promise<void>;
   signOut: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextValue | undefined>(undefined);
+
+const googleProvider = new GoogleAuthProvider();
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
@@ -55,45 +52,34 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return unsubscribe;
   }, []);
 
-  async function signIn(email: string, password: string) {
-    await signInWithEmailAndPassword(auth, email, password);
-  }
-
-  async function signUp(email: string, password: string, displayName: string) {
-    const credential = await createUserWithEmailAndPassword(auth, email, password);
-    await updateProfile(credential.user, { displayName });
-
-    const newProfile: UserProfile = {
-      uid: credential.user.uid,
-      email,
-      displayName,
-      role: "teacher",
-      createdAt: Date.now(),
-    };
-
-    await setDoc(doc(db, "teachers", credential.user.uid), {
-      ...newProfile,
-      createdAt: serverTimestamp(),
-    });
-
-    setProfile(newProfile);
-  }
-
+  /**
+   * Signs the teacher in with Google. There is no separate sign-up flow —
+   * the first time a Google account signs in, a matching `teachers/{uid}`
+   * Firestore profile is created automatically (using the name/photo Google
+   * provides); on every later sign-in the existing profile is just loaded.
+   */
   async function signInWithGoogle() {
-    const provider = new GoogleAuthProvider();
-    const credential = await signInWithPopup(auth, provider);
-    const profileRef = doc(db, "teachers", credential.user.uid);
+    const credential = await signInWithPopup(auth, googleProvider);
+    const firebaseUser = credential.user;
+
+    const profileRef = doc(db, "teachers", firebaseUser.uid);
     const snapshot = await getDoc(profileRef);
 
     if (!snapshot.exists()) {
       const newProfile: UserProfile = {
-        uid: credential.user.uid,
-        email: credential.user.email ?? "",
-        displayName: credential.user.displayName ?? "",
+        uid: firebaseUser.uid,
+        email: firebaseUser.email || "",
+        displayName: firebaseUser.displayName || "Teacher",
         role: "teacher",
+        photoURL: firebaseUser.photoURL || undefined,
         createdAt: Date.now(),
       };
-      await setDoc(profileRef, { ...newProfile, createdAt: serverTimestamp() });
+
+      await setDoc(profileRef, {
+        ...newProfile,
+        createdAt: serverTimestamp(),
+      });
+
       setProfile(newProfile);
     } else {
       setProfile(snapshot.data() as UserProfile);
@@ -105,7 +91,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }
 
   return (
-    <AuthContext.Provider value={{ user, profile, loading, signIn, signUp, signInWithGoogle, signOut }}>
+    <AuthContext.Provider value={{ user, profile, loading, signInWithGoogle, signOut }}>
       {children}
     </AuthContext.Provider>
   );
