@@ -1,5 +1,7 @@
 {
-  "app": { "name": "LingoTrace" },
+  "app": {
+    "name": "LingoTrace"
+  },
   "nav": {
     "dashboard": "Dashboard",
     "classes": "Classes",
@@ -13,10 +15,15 @@
   },
   "auth": {
     "signIn": "Sign in",
-    "signInWithGoogle": "Continue with Google",
+    "signUp": "Create account",
     "welcomeBack": "Welcome back",
-    "welcomeBackSub": "Sign in with your Google account to access your LingoTrace dashboard",
-    "signInError": "We couldn't sign you in with Google. Please try again."
+    "welcomeBackSub": "Sign in to your LingoTrace dashboard",
+    "createAccount": "Create your account",
+    "createAccountSub": "Start tracking your classes with LingoTrace",
+    "noAccount": "Don't have an account?",
+    "haveAccount": "Already have an account?",
+    "continueWithGoogle": "Continue with Google",
+    "googleError": "We couldn't sign you in with Google. Please try again."
   },
   "dashboard": {
     "title": "Dashboard",

@@ -1,5 +1,7 @@
 {
-  "app": { "name": "لينغوتريس" },
+  "app": {
+    "name": "لينغوتريس"
+  },
   "nav": {
     "dashboard": "لوحة التحكم",
     "classes": "الصفوف",
@@ -13,10 +15,15 @@
   },
   "auth": {
     "signIn": "تسجيل الدخول",
-    "signInWithGoogle": "المتابعة باستخدام Google",
+    "signUp": "إنشاء حساب",
     "welcomeBack": "مرحبًا بعودتك",
-    "welcomeBackSub": "سجّل الدخول بحساب Google للوصول إلى لوحة التحكم",
-    "signInError": "تعذّر تسجيل الدخول عبر Google. يرجى المحاولة مرة أخرى."
+    "welcomeBackSub": "سجّل الدخول للوصول إلى لوحة التحكم",
+    "createAccount": "إنشاء حسابك",
+    "createAccountSub": "ابدأ بمتابعة صفوفك مع لينغوتريس",
+    "noAccount": "ليس لديك حساب؟",
+    "haveAccount": "لديك حساب بالفعل؟",
+    "continueWithGoogle": "المتابعة باستخدام جوجل",
+    "googleError": "تعذّر تسجيل الدخول باستخدام جوجل. يرجى المحاولة مرة أخرى."
   },
   "dashboard": {
     "title": "لوحة التحكم",
