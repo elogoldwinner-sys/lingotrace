@@ -4,7 +4,7 @@ import Spinner from "../common/Spinner";
 import type { ReactNode } from "react";
 
 export default function ProtectedRoute({ children }: { children: ReactNode }) {
-  const { user, loading } = useAuth();
+  const { user, role, loading } = useAuth();
 
   if (loading) {
     return (
@@ -16,6 +16,14 @@ export default function ProtectedRoute({ children }: { children: ReactNode }) {
 
   if (!user) {
     return <Navigate to="/login" replace />;
+  }
+
+  if (role === "student") {
+    return <Navigate to="/portal/student" replace />;
+  }
+
+  if (role === "parent") {
+    return <Navigate to="/portal/parent" replace />;
   }
 
   return <>{children}</>;

@@ -15,6 +15,30 @@ export function subscribeToStudentNotes(
   );
 }
 
+/**
+ * Notes a parent is allowed to see for their child. Filtered server-side
+ * (two equality clauses only, no orderBy — avoids needing a composite index)
+ * so the Firestore rules can enforce visibility per-document; sorted
+ * newest-first on the client instead.
+ */
+export function subscribeToVisibleParentNotes(
+  studentId: string,
+  onData: (notes: NoteRecord[]) => void,
+  onError?: (error: Error) => void
+) {
+  return service.subscribe(
+    [
+      service.where("studentId", "==", studentId),
+      service.where("visibleToParent", "==", true),
+    ],
+    (notes) => {
+      const sorted = [...notes].sort((a, b) => (b.createdAt as number) - (a.createdAt as number));
+      onData(sorted);
+    },
+    onError
+  );
+}
+
 export async function createNote(data: {
   studentId: string;
   classId: string;

@@ -39,7 +39,10 @@
     "className": "Class name",
     "description": "Description",
     "students": "students",
-    "noClasses": "No classes yet. Create your first class to get started."
+    "noClasses": "No classes yet. Create your first class to get started.",
+    "studentInvite": "Student invite link",
+    "parentInvite": "Parent invite link",
+    "copied": "Copied!"
   },
   "students": {
     "title": "Students",
@@ -66,7 +69,22 @@
     "objectives": "Learning objectives",
     "rosterTitle": "Class roster",
     "randomPick": "Random pick",
-    "picking": "Picking…"
+    "picking": "Picking…",
+    "noSessions": "No sessions yet. Create one, or generate a batch of sessions at once.",
+    "bulkGenerate": "Bulk generate",
+    "startDate": "Start date",
+    "endDate": "End date",
+    "titlePrefix": "Session title",
+    "weeklyDistribution": "Weekly distribution",
+    "weeklyDistributionHint": "How many sessions to schedule on each weekday, every week in the date range (0–4).",
+    "weekdays": {
+      "0": "Sun",
+      "1": "Mon",
+      "2": "Tue",
+      "3": "Wed",
+      "4": "Thu"
+    },
+    "generate": "Generate sessions"
   },
   "notes": {
     "title": "Notes",
@@ -96,5 +114,41 @@
     "loading": "Loading…",
     "search": "Search",
     "language": "Language"
+  },
+  "join": {
+    "studentTitle": "Join as a student",
+    "parentTitle": "Join as a parent",
+    "subTitle": "You've been invited to \"{{className}}\"",
+    "invalidTitle": "Invite link not valid",
+    "invalidBody": "This invite link has expired or doesn't exist. Ask your teacher for a new one.",
+    "imOnRoster": "I'm on the roster",
+    "notListed": "My name isn't listed",
+    "selectYourName": "Select your name",
+    "selectChild": "Select your child",
+    "selectChildPlaceholder": "Choose a student",
+    "yourName": "Your name",
+    "yourNamePlaceholder": "Enter your name",
+    "orEmail": "or use email",
+    "emailPlaceholder": "Email address",
+    "passwordPlaceholder": "Password",
+    "confirmPasswordPlaceholder": "Confirm password",
+    "createAccount": "Create account",
+    "haveAccountAlready": "Already have an account? Sign in instead",
+    "needAccount": "Need an account? Create one instead",
+    "errorGeneric": "Something went wrong. Please try again.",
+    "errorPickName": "Please select your name from the list.",
+    "errorEnterName": "Please enter your name.",
+    "errorPickChild": "Please select your child.",
+    "errorEnterYourName": "Please enter your name.",
+    "errorPasswordMismatch": "Passwords don't match.",
+    "errorAuth": "We couldn't complete sign-up. Please check your details and try again."
+  },
+  "portal": {
+    "welcome": "Welcome",
+    "parentWelcome": "Your child",
+    "noBadgesYet": "No badges earned yet.",
+    "recentPoints": "Recent points",
+    "noPointsYet": "No points recorded yet.",
+    "noAttendanceYet": "No attendance recorded yet."
   }
 }

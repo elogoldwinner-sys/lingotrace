@@ -11,9 +11,48 @@ service cloud.firestore {
         get(/databases/$(database)/documents/classes/$(classId)).data.teacherId == request.auth.uid;
     }
 
+    // True if the signed-in user's own portal account (studentAccounts/{uid})
+    // is linked to the given studentId — i.e. "is this me?" for a student.
+    function isLinkedStudent(studentId) {
+      return isSignedIn() &&
+        exists(/databases/$(database)/documents/studentAccounts/$(request.auth.uid)) &&
+        get(/databases/$(database)/documents/studentAccounts/$(request.auth.uid)).data.studentId == studentId;
+    }
+
+    // True if the signed-in user is a parent account linked to the given studentId.
+    function isLinkedParent(studentId) {
+      return isSignedIn() &&
+        exists(/databases/$(database)/documents/parents/$(request.auth.uid)) &&
+        get(/databases/$(database)/documents/parents/$(request.auth.uid)).data.studentId == studentId;
+    }
+
     // Each teacher can read/write only their own profile document
     match /teachers/{uid} {
       allow read, write: if isSignedIn() && request.auth.uid == uid;
+    }
+
+    // A parent's portal account (doc id = their own auth uid)
+    match /parents/{uid} {
+      allow read: if isSignedIn() && request.auth.uid == uid;
+      allow create: if isSignedIn() && request.auth.uid == uid && request.resource.data.uid == uid;
+      allow update, delete: if false;
+    }
+
+    // Maps a student's auth uid -> their roster studentId (doc id = their own auth uid)
+    match /studentAccounts/{uid} {
+      allow read: if isSignedIn() && request.auth.uid == uid;
+      allow create: if isSignedIn() && request.auth.uid == uid && request.resource.data.uid == uid;
+      allow update, delete: if false;
+    }
+
+    // Class join links. Anyone with the exact token can read it (needed to
+    // resolve /join/:token before the visitor has signed in) — the collection
+    // is never listable, so a token must already be known to look it up.
+    match /invites/{token} {
+      allow get: if true;
+      allow list: if false;
+      allow create: if ownsClass(request.resource.data.classId);
+      allow update, delete: if false;
     }
 
     // A teacher can only manage classes they own
@@ -22,15 +61,28 @@ service cloud.firestore {
       allow create: if isSignedIn() && request.resource.data.teacherId == request.auth.uid;
     }
 
-    // Students, attendance, and sessions all belong to a class —
-    // access is granted if the requesting teacher owns that class
+    // Students belong to a class. The teacher who owns the class has full
+    // access. A signed-in student/parent can read their own linked record.
+    // Listing (without auth) is allowed so the public /join page can show a
+    // "pick your name" / "pick your child" roster for a specific class —
+    // note this means roster info (names, parent contact fields) for a class
+    // is readable by anyone who knows its classId, not just invite holders.
     match /students/{studentId} {
-      allow read, update, delete: if ownsClass(resource.data.classId);
-      allow create: if ownsClass(request.resource.data.classId);
+      allow get: if ownsClass(resource.data.classId) ||
+        isLinkedStudent(studentId) || isLinkedParent(studentId);
+      allow list: if true;
+      allow update: if ownsClass(resource.data.classId) ||
+        (isSignedIn() && resource.data.authUid == null &&
+          request.resource.data.authUid == request.auth.uid);
+      allow create: if ownsClass(request.resource.data.classId) ||
+        (isSignedIn() && request.resource.data.authUid == request.auth.uid);
+      allow delete: if ownsClass(resource.data.classId);
     }
 
     match /attendance/{recordId} {
-      allow read, update, delete: if ownsClass(resource.data.classId);
+      allow read: if ownsClass(resource.data.classId) ||
+        isLinkedStudent(resource.data.studentId) || isLinkedParent(resource.data.studentId);
+      allow update, delete: if ownsClass(resource.data.classId);
       allow create: if ownsClass(request.resource.data.classId);
     }
 
@@ -39,15 +91,21 @@ service cloud.firestore {
       allow create: if ownsClass(request.resource.data.classId);
     }
 
-    // Notes are owned directly by the teacher who authored them
+    // Notes are owned directly by the teacher who authored them. A parent may
+    // also read a note about their child once it's marked visibleToParent.
     match /notes/{noteId} {
-      allow read, update, delete: if isSignedIn() && resource.data.authorId == request.auth.uid;
+      allow read: if (isSignedIn() && resource.data.authorId == request.auth.uid) ||
+        (resource.data.visibleToParent == true && isLinkedParent(resource.data.studentId));
+      allow update, delete: if isSignedIn() && resource.data.authorId == request.auth.uid;
       allow create: if isSignedIn() && request.resource.data.authorId == request.auth.uid;
     }
 
-    // Points transactions are owned by the teacher who awarded them
+    // Points transactions are owned by the teacher who awarded them. The
+    // student they're about, or that student's parent, may also read them.
     match /pointsTransactions/{txnId} {
-      allow read, update, delete: if isSignedIn() && resource.data.awardedBy == request.auth.uid;
+      allow read: if (isSignedIn() && resource.data.awardedBy == request.auth.uid) ||
+        isLinkedStudent(resource.data.studentId) || isLinkedParent(resource.data.studentId);
+      allow update, delete: if isSignedIn() && resource.data.awardedBy == request.auth.uid;
       allow create: if isSignedIn() && request.resource.data.awardedBy == request.auth.uid;
     }
 

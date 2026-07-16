@@ -39,7 +39,10 @@
     "className": "اسم الصف",
     "description": "الوصف",
     "students": "طلاب",
-    "noClasses": "لا توجد صفوف بعد. أنشئ صفك الأول للبدء."
+    "noClasses": "لا توجد صفوف بعد. أنشئ صفك الأول للبدء.",
+    "studentInvite": "رابط دعوة الطالب",
+    "parentInvite": "رابط دعوة ولي الأمر",
+    "copied": "تم النسخ!"
   },
   "students": {
     "title": "الطلاب",
@@ -66,7 +69,22 @@
     "objectives": "أهداف التعلم",
     "rosterTitle": "قائمة الطلاب",
     "randomPick": "اختيار عشوائي",
-    "picking": "جارٍ الاختيار…"
+    "picking": "جارٍ الاختيار…",
+    "noSessions": "لا توجد جلسات بعد. أنشئ جلسة، أو ولّد مجموعة جلسات دفعة واحدة.",
+    "bulkGenerate": "توليد جلسات بالجملة",
+    "startDate": "تاريخ البدء",
+    "endDate": "تاريخ الانتهاء",
+    "titlePrefix": "عنوان الجلسة",
+    "weeklyDistribution": "التوزيع الأسبوعي",
+    "weeklyDistributionHint": "عدد الجلسات المجدولة في كل يوم من أيام الأسبوع، لكل أسبوع ضمن الفترة المحددة (0–4).",
+    "weekdays": {
+      "0": "الأحد",
+      "1": "الاثنين",
+      "2": "الثلاثاء",
+      "3": "الأربعاء",
+      "4": "الخميس"
+    },
+    "generate": "توليد الجلسات"
   },
   "notes": {
     "title": "الملاحظات",
@@ -96,5 +114,41 @@
     "loading": "جارٍ التحميل…",
     "search": "بحث",
     "language": "اللغة"
+  },
+  "join": {
+    "studentTitle": "الانضمام كطالب",
+    "parentTitle": "الانضمام كولي أمر",
+    "subTitle": "تمت دعوتك للانضمام إلى \"{{className}}\"",
+    "invalidTitle": "رابط الدعوة غير صالح",
+    "invalidBody": "انتهت صلاحية رابط الدعوة هذا أو أنه غير موجود. اطلب من معلمك رابطًا جديدًا.",
+    "imOnRoster": "اسمي موجود في القائمة",
+    "notListed": "اسمي غير مدرج",
+    "selectYourName": "اختر اسمك",
+    "selectChild": "اختر ابنك/ابنتك",
+    "selectChildPlaceholder": "اختر طالبًا",
+    "yourName": "اسمك",
+    "yourNamePlaceholder": "أدخل اسمك",
+    "orEmail": "أو استخدم البريد الإلكتروني",
+    "emailPlaceholder": "البريد الإلكتروني",
+    "passwordPlaceholder": "كلمة المرور",
+    "confirmPasswordPlaceholder": "تأكيد كلمة المرور",
+    "createAccount": "إنشاء حساب",
+    "haveAccountAlready": "لديك حساب بالفعل؟ سجّل الدخول بدلاً من ذلك",
+    "needAccount": "تحتاج إلى حساب؟ أنشئ واحدًا بدلاً من ذلك",
+    "errorGeneric": "حدث خطأ ما. يرجى المحاولة مرة أخرى.",
+    "errorPickName": "يرجى اختيار اسمك من القائمة.",
+    "errorEnterName": "يرجى إدخال اسمك.",
+    "errorPickChild": "يرجى اختيار ابنك/ابنتك.",
+    "errorEnterYourName": "يرجى إدخال اسمك.",
+    "errorPasswordMismatch": "كلمتا المرور غير متطابقتين.",
+    "errorAuth": "تعذّر إكمال إنشاء الحساب. يرجى التحقق من البيانات والمحاولة مرة أخرى."
+  },
+  "portal": {
+    "welcome": "مرحبًا",
+    "parentWelcome": "ابنك/ابنتك",
+    "noBadgesYet": "لم يتم الحصول على أي شارات بعد.",
+    "recentPoints": "النقاط الأخيرة",
+    "noPointsYet": "لم يتم تسجيل أي نقاط بعد.",
+    "noAttendanceYet": "لم يتم تسجيل أي حضور بعد."
   }
 }

@@ -9,6 +9,7 @@ import {
   where,
   orderBy,
   serverTimestamp,
+  writeBatch,
   type QueryConstraint,
 } from "firebase/firestore";
 import { db } from "./firebase";
@@ -58,5 +59,29 @@ export function createFirestoreService<T extends { id: string }>(
     await deleteDoc(doc(db, collectionName, id));
   }
 
-  return { subscribe, create, update, remove, where, orderBy };
+  /**
+   * Creates many documents at once using batched writes (used by bulk session
+   * generation). Firestore batches cap at 500 writes, so large sets are split
+   * into chunks of 400 to stay safely under that limit.
+   */
+  async function createMany(items: Omit<T, "id" | "createdAt">[]) {
+    const CHUNK_SIZE = 400;
+    const ids: string[] = [];
+    for (let i = 0; i < items.length; i += CHUNK_SIZE) {
+      const chunk = items.slice(i, i + CHUNK_SIZE);
+      const batch = writeBatch(db);
+      const chunkIds = chunk.map(() => doc(colRef).id);
+      chunk.forEach((data, idx) => {
+        batch.set(doc(db, collectionName, chunkIds[idx]), {
+          ...data,
+          createdAt: serverTimestamp(),
+        });
+      });
+      await batch.commit();
+      ids.push(...chunkIds);
+    }
+    return ids;
+  }
+
+  return { subscribe, create, update, remove, createMany, where, orderBy };
 }

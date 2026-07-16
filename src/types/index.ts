@@ -1,4 +1,4 @@
-export type UserRole = "teacher" | "admin";
+export type UserRole = "teacher" | "admin" | "student" | "parent";
 
 export interface UserProfile {
   uid: string;
@@ -6,6 +6,32 @@ export interface UserProfile {
   displayName: string;
   role: UserRole;
   photoURL?: string;
+  createdAt: number;
+}
+
+/** A parent's portal account — links a Firebase Auth uid to one child in one class. */
+export interface ParentProfile {
+  uid: string;
+  email: string;
+  displayName: string;
+  role: "parent";
+  classId: string;
+  studentId: string;
+  createdAt: number;
+}
+
+/**
+ * A shareable join link for a class. `id` is the random token used in the
+ * `/join/:token` URL. Anyone with the link can read this document (by exact
+ * id only — the collection is never listable) to discover which class/role
+ * it grants before they've signed in.
+ */
+export interface InviteRecord {
+  id: string;
+  classId: string;
+  className: string;
+  role: "student" | "parent";
+  createdBy: string;
   createdAt: number;
 }
 
@@ -28,6 +54,8 @@ export interface StudentRecord {
   photoURL?: string;
   points: number;
   badgeIds: string[];
+  /** Firebase Auth uid of the student's own portal account, once claimed via an invite link. */
+  authUid?: string;
   createdAt: number;
 }
 
@@ -40,6 +68,8 @@ export interface AttendanceRecord {
   date: string; // YYYY-MM-DD
   status: AttendanceStatus;
   note?: string;
+  /** Set when attendance was taken from within a specific session (a day can have more than one). */
+  sessionId?: string;
   recordedAt: number;
 }
 

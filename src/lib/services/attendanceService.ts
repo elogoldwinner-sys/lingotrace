@@ -28,12 +28,30 @@ export function subscribeToStudentAttendance(
   );
 }
 
+/**
+ * Attendance taken from inside a specific session (as opposed to the
+ * standalone by-date Attendance page). A day can have more than one session,
+ * so this is scoped by sessionId rather than just date.
+ */
+export function subscribeToAttendanceBySession(
+  sessionId: string,
+  onData: (records: AttendanceRecord[]) => void,
+  onError?: (error: Error) => void
+) {
+  return service.subscribe(
+    [service.where("sessionId", "==", sessionId)],
+    onData,
+    onError
+  );
+}
+
 export async function recordAttendance(data: {
   classId: string;
   studentId: string;
   date: string;
   status: AttendanceStatus;
   note?: string;
+  sessionId?: string;
 }) {
   return service.create({ ...data, recordedAt: Date.now() } as Omit<
     AttendanceRecord,

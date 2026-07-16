@@ -1,6 +1,7 @@
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider } from "./contexts/AuthContext";
 import ProtectedRoute from "./components/auth/ProtectedRoute";
+import PortalRoute from "./components/auth/PortalRoute";
 import AppLayout from "./components/layout/AppLayout";
 import LoginPage from "./pages/LoginPage";
 import DashboardPage from "./pages/DashboardPage";
@@ -10,6 +11,9 @@ import AttendancePage from "./pages/AttendancePage";
 import SessionsPage from "./pages/SessionsPage";
 import NotesPage from "./pages/NotesPage";
 import NotificationsPage from "./pages/NotificationsPage";
+import JoinPage from "./pages/JoinPage";
+import StudentPortalPage from "./pages/portal/StudentPortalPage";
+import ParentPortalPage from "./pages/portal/ParentPortalPage";
 
 export default function App() {
   return (
@@ -19,6 +23,24 @@ export default function App() {
           <Route path="/login" element={<LoginPage />} />
           <Route path="/sign-in" element={<Navigate to="/login" replace />} />
           <Route path="/sign-up" element={<Navigate to="/login" replace />} />
+          <Route path="/join/:token" element={<JoinPage />} />
+
+          <Route
+            path="/portal/student"
+            element={
+              <PortalRoute allow="student">
+                <StudentPortalPage />
+              </PortalRoute>
+            }
+          />
+          <Route
+            path="/portal/parent"
+            element={
+              <PortalRoute allow="parent">
+                <ParentPortalPage />
+              </PortalRoute>
+            }
+          />
 
           <Route
             element={

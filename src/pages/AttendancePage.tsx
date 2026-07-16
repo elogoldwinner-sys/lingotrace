@@ -80,25 +80,28 @@ export default function AttendancePage() {
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <h1 className="text-2xl font-semibold text-navy">{t("attendance.title")}</h1>
-        <div className="flex items-center gap-3">
-          <select
-            value={selectedClassId}
-            onChange={(e) => setSelectedClassId(e.target.value)}
-            className="input-field w-auto"
+        <input
+          type="date"
+          value={date}
+          onChange={(e) => setDate(e.target.value)}
+          className="input-field w-auto"
+        />
+      </div>
+
+      <div className="flex flex-wrap gap-2">
+        {classes.map((c) => (
+          <button
+            key={c.id}
+            onClick={() => setSelectedClassId(c.id)}
+            className={`rounded-lg px-4 py-2 text-sm font-semibold transition-colors ${
+              selectedClassId === c.id
+                ? "bg-navy text-cream-100"
+                : "bg-white text-navy border border-cream-400 hover:bg-cream-300"
+            }`}
           >
-            {classes.map((c) => (
-              <option key={c.id} value={c.id}>
-                {c.name}
-              </option>
-            ))}
-          </select>
-          <input
-            type="date"
-            value={date}
-            onChange={(e) => setDate(e.target.value)}
-            className="input-field w-auto"
-          />
-        </div>
+            {c.name}
+          </button>
+        ))}
       </div>
 
       {loading ? (
