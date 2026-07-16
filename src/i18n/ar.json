@@ -63,7 +63,10 @@
     "title": "الجلسات",
     "newSession": "جلسة جديدة",
     "topic": "الموضوع",
-    "objectives": "أهداف التعلم"
+    "objectives": "أهداف التعلم",
+    "rosterTitle": "قائمة الطلاب",
+    "randomPick": "اختيار عشوائي",
+    "picking": "جارٍ الاختيار…"
   },
   "notes": {
     "title": "الملاحظات",
@@ -73,7 +76,17 @@
   "points": {
     "award": "منح نقاط",
     "amount": "الكمية",
-    "reason": "السبب"
+    "reason": "السبب",
+    "deduct": "خصم نقاط",
+    "reasons": {
+      "participation": "المشاركة",
+      "homework": "الواجب المنزلي",
+      "behavior": "السلوك",
+      "attendance": "الحضور",
+      "assignment": "التكليف",
+      "manual": "يدوي",
+      "other": "أخرى"
+    }
   },
   "common": {
     "save": "حفظ",

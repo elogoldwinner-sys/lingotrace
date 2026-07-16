@@ -1,17 +1,29 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Plus, Trash2 } from "lucide-react";
+import { Plus, Minus, Trash2, Shuffle } from "lucide-react";
 import { useAuth } from "../contexts/AuthContext";
 import { subscribeToClasses } from "../lib/services/classesService";
+import { subscribeToStudents } from "../lib/services/studentsService";
+import { awardPoints } from "../lib/services/pointsService";
 import {
   subscribeToSessions,
   createSession,
   deleteSession,
 } from "../lib/services/sessionsService";
-import type { ClassRecord, SessionRecord } from "../types";
+import type { ClassRecord, SessionRecord, StudentRecord, PointsReason } from "../types";
 import Modal from "../components/common/Modal";
 import EmptyState from "../components/common/EmptyState";
 import Spinner from "../components/common/Spinner";
+
+const POINTS_REASONS: PointsReason[] = [
+  "participation",
+  "homework",
+  "behavior",
+  "attendance",
+  "assignment",
+  "manual",
+  "other",
+];
 
 function todayISO() {
   return new Date().toISOString().slice(0, 10);
@@ -31,6 +43,21 @@ export default function SessionsPage() {
   const [topic, setTopic] = useState("");
   const [objectives, setObjectives] = useState("");
 
+  const [students, setStudents] = useState<StudentRecord[]>([]);
+  const [pointsModalStudent, setPointsModalStudent] = useState<StudentRecord | null>(null);
+  const [pointsAmount, setPointsAmount] = useState(5);
+  const [pointsReason, setPointsReason] = useState<PointsReason>("participation");
+
+  const [isPicking, setIsPicking] = useState(false);
+  const [highlightedId, setHighlightedId] = useState<string | null>(null);
+  const pickIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (pickIntervalRef.current) clearInterval(pickIntervalRef.current);
+    };
+  }, []);
+
   useEffect(() => {
     if (!user) return;
     const unsubscribe = subscribeToClasses(user.uid, (data) => {
@@ -40,6 +67,15 @@ export default function SessionsPage() {
     return unsubscribe;
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user]);
+
+  useEffect(() => {
+    if (!selectedClassId) {
+      setStudents([]);
+      return;
+    }
+    const unsubscribe = subscribeToStudents(selectedClassId, setStudents);
+    return unsubscribe;
+  }, [selectedClassId]);
 
   useEffect(() => {
     if (!selectedClassId) return;
@@ -54,6 +90,49 @@ export default function SessionsPage() {
     );
     return unsubscribe;
   }, [selectedClassId]);
+
+  function openPointsModal(student: StudentRecord, direction: 1 | -1 = 1) {
+    setPointsAmount(direction * 5);
+    setPointsReason("participation");
+    setPointsModalStudent(student);
+  }
+
+  function handleRandomPick() {
+    if (students.length === 0 || isPicking) return;
+    setIsPicking(true);
+
+    const durationMs = 1800;
+    const tickMs = 90;
+    let elapsed = 0;
+
+    pickIntervalRef.current = setInterval(() => {
+      const randomIndex = Math.floor(Math.random() * students.length);
+      setHighlightedId(students[randomIndex].id);
+      elapsed += tickMs;
+
+      if (elapsed >= durationMs) {
+        if (pickIntervalRef.current) clearInterval(pickIntervalRef.current);
+        const winner = students[Math.floor(Math.random() * students.length)];
+        setHighlightedId(winner.id);
+        setIsPicking(false);
+        setTimeout(() => openPointsModal(winner), 450);
+      }
+    }, tickMs);
+  }
+
+  async function handleAwardPoints(e: React.FormEvent) {
+    e.preventDefault();
+    if (!pointsModalStudent || !user) return;
+    await awardPoints({
+      studentId: pointsModalStudent.id,
+      classId: pointsModalStudent.classId,
+      amount: pointsAmount,
+      reason: pointsReason,
+      awardedBy: user.uid,
+    });
+    setPointsModalStudent(null);
+    setHighlightedId(null);
+  }
 
   async function handleCreate(e: React.FormEvent) {
     e.preventDefault();
@@ -86,6 +165,69 @@ export default function SessionsPage() {
           </button>
         </div>
       </div>
+
+      {selectedClassId && students.length > 0 && (
+        <div className="card p-5 space-y-4">
+          <div className="flex items-center justify-between">
+            <h2 className="text-lg font-semibold text-navy">{t("sessions.rosterTitle")}</h2>
+            <button
+              onClick={handleRandomPick}
+              disabled={isPicking}
+              className="btn-gold py-1.5 px-3 text-sm disabled:opacity-60"
+            >
+              <Shuffle size={16} className={isPicking ? "animate-spin" : ""} />
+              {isPicking ? t("sessions.picking") : t("sessions.randomPick")}
+            </button>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+            {students.map((s) => (
+              <div
+                key={s.id}
+                className={`flex items-center gap-3 rounded-lg border px-3 py-2.5 transition ${
+                  highlightedId === s.id
+                    ? "border-gold bg-gold-50 scale-[1.02] shadow-sm"
+                    : "border-cream-300 bg-white"
+                }`}
+              >
+                {s.photoURL ? (
+                  <img
+                    src={s.photoURL}
+                    alt={s.name}
+                    className="h-9 w-9 rounded-full object-cover border border-gold/40 shrink-0"
+                  />
+                ) : (
+                  <div className="h-9 w-9 shrink-0 rounded-full bg-navy text-cream-100 flex items-center justify-center text-sm font-semibold">
+                    {s.name[0]?.toUpperCase()}
+                  </div>
+                )}
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-semibold text-navy truncate">{s.name}</p>
+                  <p className="text-xs text-cream-600">
+                    {s.points} {t("students.points")}
+                  </p>
+                </div>
+                <div className="flex items-center gap-1 shrink-0">
+                  <button
+                    onClick={() => openPointsModal(s, -1)}
+                    title={t("points.deduct")}
+                    className="h-7 w-7 flex items-center justify-center rounded-full border border-cream-300 text-cream-700 hover:border-red-400 hover:text-red-600 transition"
+                  >
+                    <Minus size={14} />
+                  </button>
+                  <button
+                    onClick={() => openPointsModal(s, 1)}
+                    title={t("points.award")}
+                    className="h-7 w-7 flex items-center justify-center rounded-full border border-cream-300 text-cream-700 hover:border-gold hover:text-gold transition"
+                  >
+                    <Plus size={14} />
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {loading ? (
         <Spinner />
@@ -133,6 +275,70 @@ export default function SessionsPage() {
           />
           <div className="flex justify-end gap-2">
             <button type="button" onClick={() => setModalOpen(false)} className="btn-secondary">
+              {t("common.cancel")}
+            </button>
+            <button type="submit" className="btn-primary">
+              {t("common.save")}
+            </button>
+          </div>
+        </form>
+      </Modal>
+
+      <Modal
+        open={!!pointsModalStudent}
+        onClose={() => setPointsModalStudent(null)}
+        title={`${t("points.award")} — ${pointsModalStudent?.name || ""}`}
+      >
+        <form onSubmit={handleAwardPoints} className="space-y-4">
+          <div>
+            <label className="label-eyebrow block mb-1.5">{t("points.amount")}</label>
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => setPointsAmount((v) => -Math.abs(v || 5))}
+                className={`h-9 w-9 shrink-0 flex items-center justify-center rounded-full border transition ${
+                  pointsAmount < 0
+                    ? "border-red-400 bg-red-50 text-red-600"
+                    : "border-cream-300 text-cream-600 hover:border-red-400 hover:text-red-600"
+                }`}
+              >
+                <Minus size={16} />
+              </button>
+              <input
+                type="number"
+                value={pointsAmount}
+                onChange={(e) => setPointsAmount(Number(e.target.value))}
+                className="input-field text-center"
+              />
+              <button
+                type="button"
+                onClick={() => setPointsAmount((v) => Math.abs(v || 5))}
+                className={`h-9 w-9 shrink-0 flex items-center justify-center rounded-full border transition ${
+                  pointsAmount > 0
+                    ? "border-gold bg-gold-50 text-gold"
+                    : "border-cream-300 text-cream-600 hover:border-gold hover:text-gold"
+                }`}
+              >
+                <Plus size={16} />
+              </button>
+            </div>
+          </div>
+          <div>
+            <label className="label-eyebrow block mb-1.5">{t("points.reason")}</label>
+            <select
+              value={pointsReason}
+              onChange={(e) => setPointsReason(e.target.value as PointsReason)}
+              className="input-field"
+            >
+              {POINTS_REASONS.map((reason) => (
+                <option key={reason} value={reason}>
+                  {t(`points.reasons.${reason}`)}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div className="flex justify-end gap-2">
+            <button type="button" onClick={() => setPointsModalStudent(null)} className="btn-secondary">
               {t("common.cancel")}
             </button>
             <button type="submit" className="btn-primary">

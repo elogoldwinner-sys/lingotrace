@@ -63,7 +63,10 @@
     "title": "Sessions",
     "newSession": "New session",
     "topic": "Topic",
-    "objectives": "Learning objectives"
+    "objectives": "Learning objectives",
+    "rosterTitle": "Class roster",
+    "randomPick": "Random pick",
+    "picking": "Picking…"
   },
   "notes": {
     "title": "Notes",
@@ -73,7 +76,17 @@
   "points": {
     "award": "Award points",
     "amount": "Amount",
-    "reason": "Reason"
+    "reason": "Reason",
+    "deduct": "Deduct points",
+    "reasons": {
+      "participation": "Participation",
+      "homework": "Homework",
+      "behavior": "Behavior",
+      "attendance": "Attendance",
+      "assignment": "Assignment",
+      "manual": "Manual",
+      "other": "Other"
+    }
   },
   "common": {
     "save": "Save",
