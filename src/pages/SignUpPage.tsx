@@ -5,40 +5,22 @@ import { useAuth } from "../contexts/AuthContext";
 
 export default function SignUpPage() {
   const { t } = useTranslation();
-  const { signUp, signInWithGoogle } = useAuth();
+  const { signInWithGoogle } = useAuth();
   const navigate = useNavigate();
 
-  const [displayName, setDisplayName] = useState("");
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [submitting, setSubmitting] = useState(false);
-  const [googleSubmitting, setGoogleSubmitting] = useState(false);
-
-  async function handleSubmit(e: React.FormEvent) {
-    e.preventDefault();
-    setError("");
-    setSubmitting(true);
-    try {
-      await signUp(email, password, displayName);
-      navigate("/dashboard");
-    } catch {
-      setError(t("auth.signUpError"));
-    } finally {
-      setSubmitting(false);
-    }
-  }
 
   async function handleGoogleSignIn() {
     setError("");
-    setGoogleSubmitting(true);
+    setSubmitting(true);
     try {
       await signInWithGoogle();
       navigate("/dashboard");
     } catch {
       setError(t("auth.googleError"));
     } finally {
-      setGoogleSubmitting(false);
+      setSubmitting(false);
     }
   }
 
@@ -65,7 +47,7 @@ export default function SignUpPage() {
         <button
           type="button"
           onClick={handleGoogleSignIn}
-          disabled={googleSubmitting}
+          disabled={submitting}
           className="w-full flex items-center justify-center gap-2 rounded-lg border border-cream-300 bg-white py-2.5 text-sm font-semibold text-navy hover:bg-cream-50 transition disabled:opacity-60"
         >
           <svg width="18" height="18" viewBox="0 0 18 18" xmlns="http://www.w3.org/2000/svg">
@@ -74,53 +56,8 @@ export default function SignUpPage() {
             <path fill="#FBBC05" d="M3.95 10.7A5.4 5.4 0 0 1 3.67 9c0-.59.1-1.17.28-1.7V4.97H.95A9 9 0 0 0 0 9c0 1.45.35 2.83.95 4.03l3-2.33z" />
             <path fill="#EA4335" d="M9 3.58c1.32 0 2.51.46 3.44 1.35l2.58-2.58C13.46.89 11.43 0 9 0A9 9 0 0 0 .95 4.97l3 2.33C4.66 5.17 6.65 3.58 9 3.58z" />
           </svg>
-          {googleSubmitting ? t("common.loading") : t("auth.continueWithGoogle")}
+          {submitting ? t("common.loading") : t("auth.continueWithGoogle")}
         </button>
-
-        <div className="flex items-center gap-3 my-5">
-          <div className="h-px flex-1 bg-cream-200" />
-          <span className="text-xs text-cream-500">{t("auth.or")}</span>
-          <div className="h-px flex-1 bg-cream-200" />
-        </div>
-
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div>
-            <label className="label-eyebrow block mb-1.5">{t("auth.displayName")}</label>
-            <input
-              required
-              value={displayName}
-              onChange={(e) => setDisplayName(e.target.value)}
-              className="input-field"
-              placeholder="Mahmoud Badawi"
-            />
-          </div>
-          <div>
-            <label className="label-eyebrow block mb-1.5">{t("auth.email")}</label>
-            <input
-              type="email"
-              required
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              className="input-field"
-              placeholder="you@school.edu"
-            />
-          </div>
-          <div>
-            <label className="label-eyebrow block mb-1.5">{t("auth.password")}</label>
-            <input
-              type="password"
-              required
-              minLength={6}
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              className="input-field"
-              placeholder="••••••••"
-            />
-          </div>
-          <button type="submit" disabled={submitting} className="btn-primary w-full">
-            {submitting ? t("common.loading") : t("auth.signUp")}
-          </button>
-        </form>
 
         <p className="mt-6 text-center text-sm text-cream-600">
           {t("auth.haveAccount")}{" "}

@@ -25,7 +25,6 @@ interface AuthContextValue {
 }
 
 const AuthContext = createContext<AuthContextValue | undefined>(undefined);
-
 const googleProvider = new GoogleAuthProvider();
 
 export function AuthProvider({ children }: { children: ReactNode }) {
@@ -61,7 +60,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   async function signInWithGoogle() {
     const credential = await signInWithPopup(auth, googleProvider);
     const firebaseUser = credential.user;
-
     const profileRef = doc(db, "teachers", firebaseUser.uid);
     const snapshot = await getDoc(profileRef);
 
@@ -74,12 +72,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         photoURL: firebaseUser.photoURL || undefined,
         createdAt: Date.now(),
       };
-
       await setDoc(profileRef, {
         ...newProfile,
         createdAt: serverTimestamp(),
       });
-
       setProfile(newProfile);
     } else {
       setProfile(snapshot.data() as UserProfile);
