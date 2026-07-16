@@ -2,12 +2,59 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // Each teacher can read/write only their own profile document
-    match /teachers/{uid} {
-      allow read, write: if request.auth != null && request.auth.uid == uid;
+    function isSignedIn() {
+      return request.auth != null;
     }
 
-    // Add rules for your other collections (classes, students, sessions, etc.)
-    // as needed — default deny applies to anything not explicitly matched.
+    function ownsClass(classId) {
+      return isSignedIn() &&
+        get(/databases/$(database)/documents/classes/$(classId)).data.teacherId == request.auth.uid;
+    }
+
+    // Each teacher can read/write only their own profile document
+    match /teachers/{uid} {
+      allow read, write: if isSignedIn() && request.auth.uid == uid;
+    }
+
+    // A teacher can only manage classes they own
+    match /classes/{classId} {
+      allow read, update, delete: if isSignedIn() && resource.data.teacherId == request.auth.uid;
+      allow create: if isSignedIn() && request.resource.data.teacherId == request.auth.uid;
+    }
+
+    // Students, attendance, and sessions all belong to a class —
+    // access is granted if the requesting teacher owns that class
+    match /students/{studentId} {
+      allow read, update, delete: if ownsClass(resource.data.classId);
+      allow create: if ownsClass(request.resource.data.classId);
+    }
+
+    match /attendance/{recordId} {
+      allow read, update, delete: if ownsClass(resource.data.classId);
+      allow create: if ownsClass(request.resource.data.classId);
+    }
+
+    match /sessions/{sessionId} {
+      allow read, update, delete: if ownsClass(resource.data.classId);
+      allow create: if ownsClass(request.resource.data.classId);
+    }
+
+    // Notes are owned directly by the teacher who authored them
+    match /notes/{noteId} {
+      allow read, update, delete: if isSignedIn() && resource.data.authorId == request.auth.uid;
+      allow create: if isSignedIn() && request.resource.data.authorId == request.auth.uid;
+    }
+
+    // Points transactions are owned by the teacher who awarded them
+    match /pointsTransactions/{txnId} {
+      allow read, update, delete: if isSignedIn() && resource.data.awardedBy == request.auth.uid;
+      allow create: if isSignedIn() && request.resource.data.awardedBy == request.auth.uid;
+    }
+
+    // Notifications belong to the teacher they were sent to
+    match /notifications/{notificationId} {
+      allow read, update, delete: if isSignedIn() && resource.data.recipientId == request.auth.uid;
+      allow create: if isSignedIn() && request.resource.data.recipientId == request.auth.uid;
+    }
   }
 }
