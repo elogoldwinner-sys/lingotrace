@@ -10,7 +10,7 @@ export default function Topbar() {
 
   async function handleSignOut() {
     await signOut();
-    navigate("/sign-in");
+    navigate("/login");
   }
 
   function toggleLanguage() {

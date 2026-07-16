@@ -2,7 +2,7 @@ import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider } from "./contexts/AuthContext";
 import ProtectedRoute from "./components/auth/ProtectedRoute";
 import AppLayout from "./components/layout/AppLayout";
-import SignInPage from "./pages/SignInPage";
+import LoginPage from "./pages/LoginPage";
 import DashboardPage from "./pages/DashboardPage";
 import ClassesPage from "./pages/ClassesPage";
 import StudentsPage from "./pages/StudentsPage";
@@ -16,7 +16,9 @@ export default function App() {
     <AuthProvider>
       <BrowserRouter basename={import.meta.env.BASE_URL}>
         <Routes>
-          <Route path="/sign-in" element={<SignInPage />} />
+          <Route path="/login" element={<LoginPage />} />
+          <Route path="/sign-in" element={<Navigate to="/login" replace />} />
+          <Route path="/sign-up" element={<Navigate to="/login" replace />} />
 
           <Route
             element={
