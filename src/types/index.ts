@@ -83,13 +83,18 @@ export interface SessionRecord {
   createdAt: number;
 }
 
+export type NoteSentiment = "positive" | "negative";
+
 export interface NoteRecord {
   id: string;
   studentId: string;
   classId: string;
   authorId: string;
   content: string;
+  sentiment: NoteSentiment;
   visibleToParent: boolean;
+  /** Set when the note was added from inside a specific session's roster. */
+  sessionId?: string;
   createdAt: number;
 }
 

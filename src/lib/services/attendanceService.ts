@@ -1,7 +1,36 @@
+import { collection, getDocs, query, where } from "firebase/firestore";
+import { db } from "../firebase";
 import { createFirestoreService } from "../firestoreService";
 import type { AttendanceRecord, AttendanceStatus } from "../../types";
 
 const service = createFirestoreService<AttendanceRecord>("attendance");
+
+/**
+ * Real-time feed of every attendance record for a class (no date filter, no
+ * orderBy — a single equality clause needs no composite index). Used by the
+ * Attendance report page, which then slices by date range on the client.
+ */
+export function subscribeToAttendanceByClass(
+  classId: string,
+  onData: (records: AttendanceRecord[]) => void,
+  onError?: (error: Error) => void
+) {
+  return service.subscribe([service.where("classId", "==", classId)], onData, onError);
+}
+
+/** One-off (non-realtime) fetch of a student's attendance within a date range, for report emails. */
+export async function getAttendanceForStudentInRange(
+  studentId: string,
+  startDate: string,
+  endDate: string
+): Promise<AttendanceRecord[]> {
+  const snapshot = await getDocs(
+    query(collection(db, "attendance"), where("studentId", "==", studentId))
+  );
+  return snapshot.docs
+    .map((d) => ({ id: d.id, ...d.data() } as AttendanceRecord))
+    .filter((r) => r.date >= startDate && r.date <= endDate);
+}
 
 export function subscribeToAttendanceByDate(
   classId: string,

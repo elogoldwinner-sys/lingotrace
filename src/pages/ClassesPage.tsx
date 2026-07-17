@@ -24,6 +24,7 @@ export default function ClassesPage() {
   const [description, setDescription] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [copiedKey, setCopiedKey] = useState("");
+  const [inviteError, setInviteError] = useState("");
 
   useEffect(() => {
     if (!user) return;
@@ -58,11 +59,16 @@ export default function ClassesPage() {
 
   async function handleCopyInvite(classItem: ClassRecord, role: "student" | "parent") {
     if (!user) return;
-    const invite = await getOrCreateInvite(classItem.id, classItem.name, role, user.uid);
-    await navigator.clipboard.writeText(buildInviteUrl(invite.id));
-    const key = `${classItem.id}-${role}`;
-    setCopiedKey(key);
-    setTimeout(() => setCopiedKey(""), 2000);
+    setInviteError("");
+    try {
+      const invite = await getOrCreateInvite(classItem.id, classItem.name, role, user.uid);
+      await navigator.clipboard.writeText(buildInviteUrl(invite.id));
+      const key = `${classItem.id}-${role}`;
+      setCopiedKey(key);
+      setTimeout(() => setCopiedKey(""), 2000);
+    } catch {
+      setInviteError(t("classes.inviteError"));
+    }
   }
 
   return (
@@ -74,6 +80,12 @@ export default function ClassesPage() {
           {t("classes.newClass")}
         </button>
       </div>
+
+      {inviteError && (
+        <div className="rounded-lg bg-red-50 border border-red-200 px-3 py-2 text-sm text-red-700">
+          {inviteError}
+        </div>
+      )}
 
       {loading ? (
         <Spinner />

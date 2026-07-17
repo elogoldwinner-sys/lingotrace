@@ -50,7 +50,13 @@ service cloud.firestore {
     // is never listable, so a token must already be known to look it up.
     match /invites/{token} {
       allow get: if true;
-      allow list: if false;
+      // A teacher looking up "do I already have an invite for this class+role"
+      // (getOrCreateInvite) needs to run a `where(classId==, role==)` query.
+      // That's a list operation, so it must be explicitly allowed here — this
+      // was previously `if false`, which silently broke the invite-link
+      // buttons (Firestore rejected the query with permission-denied before
+      // any invite could ever be created or copied).
+      allow list: if isSignedIn() && ownsClass(resource.data.classId);
       allow create: if ownsClass(request.resource.data.classId);
       allow update, delete: if false;
     }

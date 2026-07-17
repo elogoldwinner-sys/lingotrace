@@ -6,14 +6,15 @@ interface ModalProps {
   onClose: () => void;
   title: string;
   children: ReactNode;
+  widthClassName?: string;
 }
 
-export default function Modal({ open, onClose, title, children }: ModalProps) {
+export default function Modal({ open, onClose, title, children, widthClassName }: ModalProps) {
   if (!open) return null;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-navy/40 backdrop-blur-sm px-4">
-      <div className="card w-full max-w-lg p-6">
+      <div className={`card w-full ${widthClassName || "max-w-lg"} p-6 max-h-[85vh] overflow-y-auto`}>
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-lg font-semibold text-navy">{title}</h2>
           <button

@@ -17,9 +17,6 @@ export interface BulkSessionInput {
   startDate: string; // YYYY-MM-DD
   endDate: string; // YYYY-MM-DD
   weekdayCounts: WeekdaySessionCounts;
-  titlePrefix: string;
-  topic?: string;
-  objectives?: string;
 }
 
 /** Pure date-math helper (exported for testing) — builds the list of session drafts a bulk-generate request will create. */
@@ -40,10 +37,8 @@ export function buildBulkSessionDrafts(
       for (let slot = 1; slot <= count; slot++) {
         drafts.push({
           classId: input.classId,
-          title: count > 1 ? `${input.titlePrefix} (${slot})` : input.titlePrefix,
+          title: count > 1 ? `${dateStr} (${slot})` : dateStr,
           date: dateStr,
-          topic: input.topic,
-          objectives: input.objectives,
         });
       }
     }
@@ -70,14 +65,12 @@ export function subscribeToSessions(
   );
 }
 
-export async function createSession(data: {
-  classId: string;
-  title: string;
-  date: string;
-  topic?: string;
-  objectives?: string;
-}) {
-  return service.create(data as Omit<SessionRecord, "id" | "createdAt">);
+export async function createSession(data: { classId: string; date: string }) {
+  return service.create({
+    classId: data.classId,
+    date: data.date,
+    title: data.date,
+  } as Omit<SessionRecord, "id" | "createdAt">);
 }
 
 export async function updateSession(id: string, data: Partial<SessionRecord>) {

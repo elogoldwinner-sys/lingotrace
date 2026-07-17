@@ -1,8 +1,9 @@
-import { doc, runTransaction, collection, serverTimestamp } from "firebase/firestore";
+import { doc, runTransaction, collection, serverTimestamp, getDocs, query, where } from "firebase/firestore";
 import { db } from "../firebase";
 import { createFirestoreService } from "../firestoreService";
 import type { PointsTransaction, PointsReason } from "../../types";
 import { evaluateBadgesForStudent } from "./badgesService";
+import { toMillis } from "../timestamps";
 
 const service = createFirestoreService<PointsTransaction>("pointsTransactions");
 
@@ -62,4 +63,21 @@ export async function awardPoints(data: {
   await evaluateBadgesForStudent(data.studentId, newTotal);
 
   return { newTotal };
+}
+
+/** One-off (non-realtime) fetch of a student's points transactions within a date range, for report emails. */
+export async function getPointsForStudentInRange(
+  studentId: string,
+  startMs: number,
+  endMs: number
+): Promise<PointsTransaction[]> {
+  const snapshot = await getDocs(
+    query(collection(db, "pointsTransactions"), where("studentId", "==", studentId))
+  );
+  return snapshot.docs
+    .map((d) => ({ id: d.id, ...d.data() } as PointsTransaction))
+    .filter((txn) => {
+      const created = toMillis(txn.createdAt);
+      return created >= startMs && created <= endMs;
+    });
 }

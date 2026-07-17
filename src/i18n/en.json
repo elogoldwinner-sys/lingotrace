@@ -42,7 +42,8 @@
     "noClasses": "No classes yet. Create your first class to get started.",
     "studentInvite": "Student invite link",
     "parentInvite": "Parent invite link",
-    "copied": "Copied!"
+    "copied": "Copied!",
+    "inviteError": "Couldn't create the invite link. Please try again."
   },
   "students": {
     "title": "Students",
@@ -60,21 +61,28 @@
     "absent": "Absent",
     "late": "Late",
     "excused": "Excused",
-    "save": "Save attendance"
+    "save": "Save attendance",
+    "report": "Report",
+    "sendReport": "Send report",
+    "sent": "Sent!",
+    "sendError": "Couldn't send the report. Please try again.",
+    "noParentEmail": "No parent email on file for this student."
   },
   "sessions": {
     "title": "Sessions",
     "newSession": "New session",
+    "date": "Date",
     "topic": "Topic",
     "objectives": "Learning objectives",
     "rosterTitle": "Class roster",
     "randomPick": "Random pick",
+    "randomPickHint": "Only students flagged present or late are eligible for random pick.",
+    "noEligibleForPick": "No present/late students to pick from yet — flag attendance first.",
     "picking": "Picking…",
     "noSessions": "No sessions yet. Create one, or generate a batch of sessions at once.",
     "bulkGenerate": "Bulk generate",
     "startDate": "Start date",
     "endDate": "End date",
-    "titlePrefix": "Session title",
     "weeklyDistribution": "Weekly distribution",
     "weeklyDistributionHint": "How many sessions to schedule on each weekday, every week in the date range (0–4).",
     "weekdays": {
@@ -89,7 +97,11 @@
   "notes": {
     "title": "Notes",
     "add": "Add note",
-    "visibleToParent": "Visible to parent"
+    "positive": "Positive",
+    "negative": "Negative",
+    "contentPlaceholder": "What happened?",
+    "visibleToParent": "Visible to parent",
+    "noneYet": "No notes yet."
   },
   "points": {
     "award": "Award points",

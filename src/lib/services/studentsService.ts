@@ -1,4 +1,4 @@
-import { arrayUnion, doc, getDocs, onSnapshot, query, setDoc, updateDoc, where, collection } from "firebase/firestore";
+import { arrayUnion, doc, getDoc, getDocs, onSnapshot, query, setDoc, updateDoc, where, collection } from "firebase/firestore";
 import { db } from "../firebase";
 import { createFirestoreService } from "../firestoreService";
 import type { StudentRecord } from "../../types";
@@ -65,6 +65,13 @@ export async function createStudentAccountMapping(uid: string, studentId: string
 export async function linkStudentAccount(studentId: string, authUid: string, classId: string) {
   await updateDoc(doc(db, "students", studentId), { authUid });
   await createStudentAccountMapping(authUid, studentId, classId);
+}
+
+/** One-off (non-realtime) fetch of a single student — used when composing a parent report. */
+export async function getStudentOnce(studentId: string): Promise<StudentRecord | null> {
+  const snapshot = await getDoc(doc(db, "students", studentId));
+  if (!snapshot.exists()) return null;
+  return { id: snapshot.id, ...snapshot.data() } as StudentRecord;
 }
 
 /** Real-time listener for a single student — used by the parent portal to watch one child. */

@@ -1,10 +1,11 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Plus, Minus, Trash2, Shuffle, X, Layers } from "lucide-react";
+import { Plus, Minus, Trash2, Shuffle, X, Layers, NotebookPen } from "lucide-react";
 import { useAuth } from "../contexts/AuthContext";
 import { subscribeToClasses } from "../lib/services/classesService";
 import { subscribeToStudents } from "../lib/services/studentsService";
 import { awardPoints } from "../lib/services/pointsService";
+import { createNote } from "../lib/services/notesService";
 import {
   subscribeToSessions,
   createSession,
@@ -24,10 +25,12 @@ import type {
   PointsReason,
   AttendanceRecord,
   AttendanceStatus,
+  NoteSentiment,
 } from "../types";
 import Modal from "../components/common/Modal";
 import EmptyState from "../components/common/EmptyState";
 import Spinner from "../components/common/Spinner";
+import ClassSelector from "../components/common/ClassSelector";
 
 const POINTS_REASONS: PointsReason[] = [
   "participation",
@@ -51,6 +54,9 @@ const STATUS_STYLES: Record<AttendanceStatus, string> = {
 // Sunday-first, 5-day school week.
 const WEEKDAY_LABELS = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday"];
 
+// Only students flagged present or late in the active session are eligible for random pick.
+const RANDOM_PICK_ELIGIBLE_STATUSES: AttendanceStatus[] = ["present", "late"];
+
 function todayISO() {
   return new Date().toISOString().slice(0, 10);
 }
@@ -66,17 +72,11 @@ export default function SessionsPage() {
   const [bulkModalOpen, setBulkModalOpen] = useState(false);
   const [bulkSubmitting, setBulkSubmitting] = useState(false);
 
-  const [title, setTitle] = useState("");
   const [date, setDate] = useState(todayISO());
-  const [topic, setTopic] = useState("");
-  const [objectives, setObjectives] = useState("");
 
-  // Bulk-generation form state
+  // Bulk-generation form state — just the date range + weekly distribution now.
   const [bulkStart, setBulkStart] = useState(todayISO());
   const [bulkEnd, setBulkEnd] = useState(todayISO());
-  const [bulkTitlePrefix, setBulkTitlePrefix] = useState(t("sessions.title"));
-  const [bulkTopic, setBulkTopic] = useState("");
-  const [bulkObjectives, setBulkObjectives] = useState("");
   const [weekdayCounts, setWeekdayCounts] = useState<WeekdaySessionCounts>([0, 1, 1, 1, 1]);
 
   const [students, setStudents] = useState<StudentRecord[]>([]);
@@ -84,8 +84,15 @@ export default function SessionsPage() {
   const [pointsAmount, setPointsAmount] = useState(5);
   const [pointsReason, setPointsReason] = useState<PointsReason>("participation");
 
+  const [noteModalStudent, setNoteModalStudent] = useState<StudentRecord | null>(null);
+  const [noteContent, setNoteContent] = useState("");
+  const [noteSentiment, setNoteSentiment] = useState<NoteSentiment>("positive");
+  const [noteVisibleToParent, setNoteVisibleToParent] = useState(true);
+  const [noteSubmitting, setNoteSubmitting] = useState(false);
+
   const [isPicking, setIsPicking] = useState(false);
   const [highlightedId, setHighlightedId] = useState<string | null>(null);
+  const [pickNotice, setPickNotice] = useState("");
   const pickIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   // Active session (the one currently expanded to apply session procedures)
@@ -158,8 +165,24 @@ export default function SessionsPage() {
     setPointsModalStudent(student);
   }
 
+  function openNoteModal(student: StudentRecord) {
+    setNoteContent("");
+    setNoteSentiment("positive");
+    setNoteVisibleToParent(true);
+    setNoteModalStudent(student);
+  }
+
   function handleRandomPick() {
-    if (students.length === 0 || isPicking) return;
+    if (isPicking) return;
+    const eligible = students.filter((st) => {
+      const status = sessionAttendanceByStudent.get(st.id)?.status;
+      return status && RANDOM_PICK_ELIGIBLE_STATUSES.includes(status);
+    });
+    if (eligible.length === 0) {
+      setPickNotice(t("sessions.noEligibleForPick"));
+      return;
+    }
+    setPickNotice("");
     setIsPicking(true);
 
     const durationMs = 1800;
@@ -167,13 +190,13 @@ export default function SessionsPage() {
     let elapsed = 0;
 
     pickIntervalRef.current = setInterval(() => {
-      const randomIndex = Math.floor(Math.random() * students.length);
-      setHighlightedId(students[randomIndex].id);
+      const randomIndex = Math.floor(Math.random() * eligible.length);
+      setHighlightedId(eligible[randomIndex].id);
       elapsed += tickMs;
 
       if (elapsed >= durationMs) {
         if (pickIntervalRef.current) clearInterval(pickIntervalRef.current);
-        const winner = students[Math.floor(Math.random() * students.length)];
+        const winner = eligible[Math.floor(Math.random() * eligible.length)];
         setHighlightedId(winner.id);
         setIsPicking(false);
         setTimeout(() => openPointsModal(winner), 450);
@@ -195,12 +218,29 @@ export default function SessionsPage() {
     setHighlightedId(null);
   }
 
+  async function handleAddNote(e: React.FormEvent) {
+    e.preventDefault();
+    if (!noteModalStudent || !user || !noteContent.trim()) return;
+    setNoteSubmitting(true);
+    try {
+      await createNote({
+        studentId: noteModalStudent.id,
+        classId: noteModalStudent.classId,
+        authorId: user.uid,
+        content: noteContent.trim(),
+        sentiment: noteSentiment,
+        visibleToParent: noteVisibleToParent,
+        sessionId: activeSessionId || undefined,
+      });
+      setNoteModalStudent(null);
+    } finally {
+      setNoteSubmitting(false);
+    }
+  }
+
   async function handleCreate(e: React.FormEvent) {
     e.preventDefault();
-    await createSession({ classId: selectedClassId, title, date, topic, objectives });
-    setTitle("");
-    setTopic("");
-    setObjectives("");
+    await createSession({ classId: selectedClassId, date });
     setModalOpen(false);
   }
 
@@ -214,9 +254,6 @@ export default function SessionsPage() {
         startDate: bulkStart,
         endDate: bulkEnd,
         weekdayCounts,
-        titlePrefix: bulkTitlePrefix || t("sessions.title"),
-        topic: bulkTopic || undefined,
-        objectives: bulkObjectives || undefined,
       });
       setBulkModalOpen(false);
     } finally {
@@ -253,17 +290,6 @@ export default function SessionsPage() {
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <h1 className="text-2xl font-semibold text-navy">{t("sessions.title")}</h1>
         <div className="flex flex-wrap items-center gap-3">
-          <select
-            value={selectedClassId}
-            onChange={(e) => setSelectedClassId(e.target.value)}
-            className="input-field w-auto"
-          >
-            {classes.map((c) => (
-              <option key={c.id} value={c.id}>
-                {c.name}
-              </option>
-            ))}
-          </select>
           <button
             onClick={() => setBulkModalOpen(true)}
             className="btn-secondary"
@@ -278,6 +304,8 @@ export default function SessionsPage() {
           </button>
         </div>
       </div>
+
+      <ClassSelector classes={classes} selectedClassId={selectedClassId} onSelect={setSelectedClassId} />
 
       {loading ? (
         <Spinner />
@@ -317,7 +345,7 @@ export default function SessionsPage() {
 
               {activeSessionId === s.id && (
                 <div className="px-5 pb-5 space-y-4 bg-cream-100/60">
-                  <div className="flex items-center justify-between pt-2">
+                  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 pt-2">
                     <h3 className="text-sm font-semibold text-navy">{t("sessions.rosterTitle")}</h3>
                     <div className="flex items-center gap-2">
                       <button
@@ -336,6 +364,11 @@ export default function SessionsPage() {
                       </button>
                     </div>
                   </div>
+
+                  {pickNotice && (
+                    <p className="text-xs text-red-600 -mt-2">{pickNotice}</p>
+                  )}
+                  <p className="text-xs text-cream-600 -mt-2">{t("sessions.randomPickHint")}</p>
 
                   <div className="space-y-2">
                     {students.map((st) => {
@@ -368,6 +401,13 @@ export default function SessionsPage() {
                               </p>
                             </div>
                             <div className="flex items-center gap-1 shrink-0">
+                              <button
+                                onClick={() => openNoteModal(st)}
+                                title={t("notes.add")}
+                                className="h-7 w-7 flex items-center justify-center rounded-full border border-cream-300 text-cream-700 hover:border-navy hover:text-navy transition"
+                              >
+                                <NotebookPen size={14} />
+                              </button>
                               <button
                                 onClick={() => openPointsModal(st, -1)}
                                 title={t("points.deduct")}
@@ -417,21 +457,10 @@ export default function SessionsPage() {
 
       <Modal open={modalOpen} onClose={() => setModalOpen(false)} title={t("sessions.newSession")}>
         <form onSubmit={handleCreate} className="space-y-4">
-          <input required placeholder="Title" value={title} onChange={(e) => setTitle(e.target.value)} className="input-field" />
-          <input type="date" required value={date} onChange={(e) => setDate(e.target.value)} className="input-field" />
-          <input
-            placeholder={t("sessions.topic")}
-            value={topic}
-            onChange={(e) => setTopic(e.target.value)}
-            className="input-field"
-          />
-          <textarea
-            placeholder={t("sessions.objectives")}
-            value={objectives}
-            onChange={(e) => setObjectives(e.target.value)}
-            className="input-field"
-            rows={3}
-          />
+          <div>
+            <label className="label-eyebrow block mb-1.5">{t("sessions.date")}</label>
+            <input type="date" required value={date} onChange={(e) => setDate(e.target.value)} className="input-field" />
+          </div>
           <div className="flex justify-end gap-2">
             <button type="button" onClick={() => setModalOpen(false)} className="btn-secondary">
               {t("common.cancel")}
@@ -473,16 +502,6 @@ export default function SessionsPage() {
           </div>
 
           <div>
-            <label className="label-eyebrow block mb-1.5">{t("sessions.titlePrefix")}</label>
-            <input
-              required
-              value={bulkTitlePrefix}
-              onChange={(e) => setBulkTitlePrefix(e.target.value)}
-              className="input-field"
-            />
-          </div>
-
-          <div>
             <label className="label-eyebrow block mb-2">{t("sessions.weeklyDistribution")}</label>
             <p className="text-xs text-cream-600 mb-2">{t("sessions.weeklyDistributionHint")}</p>
             <div className="grid grid-cols-5 gap-2">
@@ -502,24 +521,6 @@ export default function SessionsPage() {
                 </div>
               ))}
             </div>
-          </div>
-
-          <div>
-            <label className="label-eyebrow block mb-1.5">{t("sessions.topic")}</label>
-            <input
-              value={bulkTopic}
-              onChange={(e) => setBulkTopic(e.target.value)}
-              className="input-field"
-            />
-          </div>
-          <div>
-            <label className="label-eyebrow block mb-1.5">{t("sessions.objectives")}</label>
-            <textarea
-              value={bulkObjectives}
-              onChange={(e) => setBulkObjectives(e.target.value)}
-              className="input-field"
-              rows={2}
-            />
           </div>
 
           <div className="flex justify-end gap-2">
@@ -591,6 +592,63 @@ export default function SessionsPage() {
               {t("common.cancel")}
             </button>
             <button type="submit" className="btn-primary">
+              {t("common.save")}
+            </button>
+          </div>
+        </form>
+      </Modal>
+
+      <Modal
+        open={!!noteModalStudent}
+        onClose={() => setNoteModalStudent(null)}
+        title={`${t("notes.add")} — ${noteModalStudent?.name || ""}`}
+      >
+        <form onSubmit={handleAddNote} className="space-y-4">
+          <div className="flex gap-2">
+            <button
+              type="button"
+              onClick={() => setNoteSentiment("positive")}
+              className={`flex-1 rounded-lg border px-3 py-2 text-sm font-semibold transition ${
+                noteSentiment === "positive"
+                  ? "border-green-400 bg-green-50 text-green-700"
+                  : "border-cream-300 text-cream-600 hover:border-green-300"
+              }`}
+            >
+              {t("notes.positive")}
+            </button>
+            <button
+              type="button"
+              onClick={() => setNoteSentiment("negative")}
+              className={`flex-1 rounded-lg border px-3 py-2 text-sm font-semibold transition ${
+                noteSentiment === "negative"
+                  ? "border-red-400 bg-red-50 text-red-700"
+                  : "border-cream-300 text-cream-600 hover:border-red-300"
+              }`}
+            >
+              {t("notes.negative")}
+            </button>
+          </div>
+          <textarea
+            required
+            value={noteContent}
+            onChange={(e) => setNoteContent(e.target.value)}
+            className="input-field"
+            rows={4}
+            placeholder={t("notes.contentPlaceholder")}
+          />
+          <label className="flex items-center gap-2 text-sm text-navy">
+            <input
+              type="checkbox"
+              checked={noteVisibleToParent}
+              onChange={(e) => setNoteVisibleToParent(e.target.checked)}
+            />
+            {t("notes.visibleToParent")}
+          </label>
+          <div className="flex justify-end gap-2">
+            <button type="button" onClick={() => setNoteModalStudent(null)} className="btn-secondary">
+              {t("common.cancel")}
+            </button>
+            <button type="submit" disabled={noteSubmitting} className="btn-primary">
               {t("common.save")}
             </button>
           </div>

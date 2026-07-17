@@ -9,10 +9,11 @@ import {
   createNote,
   deleteNote,
 } from "../lib/services/notesService";
-import type { ClassRecord, StudentRecord, NoteRecord } from "../types";
+import type { ClassRecord, StudentRecord, NoteRecord, NoteSentiment } from "../types";
 import Modal from "../components/common/Modal";
 import EmptyState from "../components/common/EmptyState";
 import Spinner from "../components/common/Spinner";
+import ClassSelector from "../components/common/ClassSelector";
 
 export default function NotesPage() {
   const { t } = useTranslation();
@@ -26,6 +27,7 @@ export default function NotesPage() {
   const [modalOpen, setModalOpen] = useState(false);
 
   const [content, setContent] = useState("");
+  const [sentiment, setSentiment] = useState<NoteSentiment>("positive");
   const [visibleToParent, setVisibleToParent] = useState(false);
 
   useEffect(() => {
@@ -74,9 +76,11 @@ export default function NotesPage() {
       classId: selectedClassId,
       authorId: user.uid,
       content,
+      sentiment,
       visibleToParent,
     });
     setContent("");
+    setSentiment("positive");
     setVisibleToParent(false);
     setModalOpen(false);
   }
@@ -86,11 +90,6 @@ export default function NotesPage() {
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <h1 className="text-2xl font-semibold text-navy">{t("notes.title")}</h1>
         <div className="flex flex-wrap items-center gap-3">
-          <select value={selectedClassId} onChange={(e) => setSelectedClassId(e.target.value)} className="input-field w-auto">
-            {classes.map((c) => (
-              <option key={c.id} value={c.id}>{c.name}</option>
-            ))}
-          </select>
           <select value={selectedStudentId} onChange={(e) => setSelectedStudentId(e.target.value)} className="input-field w-auto">
             {students.map((s) => (
               <option key={s.id} value={s.id}>{s.name}</option>
@@ -103,14 +102,21 @@ export default function NotesPage() {
         </div>
       </div>
 
+      <ClassSelector classes={classes} selectedClassId={selectedClassId} onSelect={setSelectedClassId} />
+
       {loading ? (
         <Spinner />
       ) : notes.length === 0 ? (
-        <EmptyState message={t("students.noStudents")} icon="🗒️" />
+        <EmptyState message={t("notes.noneYet")} icon="🗒️" />
       ) : (
         <div className="card divide-y divide-cream-400">
           {notes.map((n) => (
-            <div key={n.id} className="flex items-start justify-between gap-3 px-5 py-4">
+            <div
+              key={n.id}
+              className={`flex items-start justify-between gap-3 px-5 py-4 border-l-4 ${
+                n.sentiment === "positive" ? "border-l-green-400" : "border-l-red-400"
+              }`}
+            >
               <div className="flex items-start gap-2">
                 {n.visibleToParent ? (
                   <Eye size={16} className="mt-1 text-gold" />
@@ -129,6 +135,30 @@ export default function NotesPage() {
 
       <Modal open={modalOpen} onClose={() => setModalOpen(false)} title={t("notes.add")}>
         <form onSubmit={handleCreate} className="space-y-4">
+          <div className="flex gap-2">
+            <button
+              type="button"
+              onClick={() => setSentiment("positive")}
+              className={`flex-1 rounded-lg border px-3 py-2 text-sm font-semibold transition ${
+                sentiment === "positive"
+                  ? "border-green-400 bg-green-50 text-green-700"
+                  : "border-cream-300 text-cream-600 hover:border-green-300"
+              }`}
+            >
+              {t("notes.positive")}
+            </button>
+            <button
+              type="button"
+              onClick={() => setSentiment("negative")}
+              className={`flex-1 rounded-lg border px-3 py-2 text-sm font-semibold transition ${
+                sentiment === "negative"
+                  ? "border-red-400 bg-red-50 text-red-700"
+                  : "border-cream-300 text-cream-600 hover:border-red-300"
+              }`}
+            >
+              {t("notes.negative")}
+            </button>
+          </div>
           <textarea
             required
             value={content}

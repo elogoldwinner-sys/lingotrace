@@ -130,10 +130,17 @@ export default function ParentPortalPage() {
         {notes.length > 0 && (
           <div className="card p-6">
             <h2 className="text-lg font-semibold text-navy mb-4">{t("notes.title")}</h2>
-            <div className="divide-y divide-cream-400">
+            <div className="space-y-2">
               {notes.map((note) => (
-                <div key={note.id} className="py-3">
-                  <p className="text-sm text-navy">{note.content}</p>
+                <div
+                  key={note.id}
+                  className={`rounded-lg border px-3 py-2.5 ${
+                    note.sentiment === "positive"
+                      ? "border-green-300 bg-green-50 text-green-800"
+                      : "border-red-300 bg-red-50 text-red-800"
+                  }`}
+                >
+                  <p className="text-sm">{note.content}</p>
                 </div>
               ))}
             </div>
