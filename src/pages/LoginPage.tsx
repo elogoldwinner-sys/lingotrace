@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../contexts/AuthContext";
 
 export default function LoginPage() {
@@ -17,8 +17,12 @@ export default function LoginPage() {
     try {
       await signInWithGoogle();
       navigate("/dashboard");
-    } catch {
-      setError(t("auth.googleError"));
+    } catch (err) {
+      if (err instanceof Error && err.message === "account-is-not-a-teacher") {
+        setError(t("auth.notATeacherError"));
+      } else {
+        setError(t("auth.googleError"));
+      }
     } finally {
       setSubmitting(false);
     }
@@ -58,6 +62,13 @@ export default function LoginPage() {
           </svg>
           {submitting ? t("common.loading") : t("auth.continueWithGoogle")}
         </button>
+
+        <p className="mt-6 text-center text-sm text-cream-600">
+          {t("auth.areYouAStudent")}{" "}
+          <Link to="/portal-login" className="font-semibold text-gold hover:underline">
+            {t("auth.portalLoginLink")}
+          </Link>
+        </p>
       </div>
     </div>
   );

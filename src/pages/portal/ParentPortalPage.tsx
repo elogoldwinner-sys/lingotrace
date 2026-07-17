@@ -53,7 +53,7 @@ export default function ParentPortalPage() {
 
   async function handleSignOut() {
     await signOut();
-    navigate("/login");
+    navigate("/portal-login");
   }
 
   function toggleLanguage() {

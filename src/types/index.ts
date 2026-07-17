@@ -47,7 +47,11 @@ export interface ClassRecord {
 
 export interface StudentRecord {
   id: string;
+  /** Full display name — derived from firstName/middleName/lastName at creation time. */
   name: string;
+  firstName: string;
+  middleName?: string;
+  lastName: string;
   classId: string;
   parentName?: string;
   parentEmail?: string;

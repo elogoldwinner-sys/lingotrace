@@ -79,7 +79,9 @@ service cloud.firestore {
       allow list: if true;
       allow update: if ownsClass(resource.data.classId) ||
         (isSignedIn() && resource.data.authUid == null &&
-          request.resource.data.authUid == request.auth.uid);
+          request.resource.data.authUid == request.auth.uid) ||
+        (isLinkedParent(studentId) &&
+          request.resource.data.diff(resource.data).affectedKeys().hasOnly(["parentName", "parentEmail"]));
       allow create: if ownsClass(request.resource.data.classId) ||
         (isSignedIn() && request.resource.data.authUid == request.auth.uid);
       allow delete: if ownsClass(resource.data.classId);

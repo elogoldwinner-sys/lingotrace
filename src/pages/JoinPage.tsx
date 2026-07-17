@@ -1,10 +1,10 @@
 import { useEffect, useState } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams, useNavigate, Link } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import type { User } from "firebase/auth";
 import { useAuth } from "../contexts/AuthContext";
 import { getInvite } from "../lib/services/invitesService";
-import { subscribeToStudents, createStudent, linkStudentAccount, createStudentAccountMapping } from "../lib/services/studentsService";
+import { subscribeToStudents, createStudent, createStudentAccountMapping, updateStudent } from "../lib/services/studentsService";
 import { createParentProfile } from "../lib/services/parentsService";
 import type { InviteRecord, StudentRecord } from "../types";
 import Spinner from "../components/common/Spinner";
@@ -18,7 +18,6 @@ export default function JoinPage() {
   const {
     signInWithGooglePopupOnly,
     registerWithEmail,
-    signInWithEmailPassword,
     refreshPortalRole,
   } = useAuth();
 
@@ -27,10 +26,11 @@ export default function JoinPage() {
   const [students, setStudents] = useState<StudentRecord[]>([]);
   const [error, setError] = useState("");
 
-  // Student-only fields
-  const [existingStudentId, setExistingStudentId] = useState("");
-  const [newStudentName, setNewStudentName] = useState("");
-  const [studentMode, setStudentMode] = useState<"existing" | "new">("existing");
+  // Student-only fields — every student joining is a brand-new self-registration
+  // (there's no teacher-maintained roster to match against anymore).
+  const [firstName, setFirstName] = useState("");
+  const [middleName, setMiddleName] = useState("");
+  const [lastName, setLastName] = useState("");
 
   // Parent-only fields
   const [childStudentId, setChildStudentId] = useState("");
@@ -40,7 +40,6 @@ export default function JoinPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
-  const [authMode, setAuthMode] = useState<"create" | "signin">("create");
 
   useEffect(() => {
     if (!token) return;
@@ -62,17 +61,11 @@ export default function JoinPage() {
     return unsub;
   }, [invite]);
 
-  const unclaimedStudents = students.filter((s) => !s.authUid);
-
   function validateSelection(): string | null {
     if (!invite) return t("join.errorGeneric");
     if (invite.role === "student") {
-      if (studentMode === "existing" && !existingStudentId) {
-        return t("join.errorPickName");
-      }
-      if (studentMode === "new" && !newStudentName.trim()) {
-        return t("join.errorEnterName");
-      }
+      if (!firstName.trim()) return t("join.errorEnterFirstName");
+      if (!lastName.trim()) return t("join.errorEnterLastName");
     } else {
       if (!childStudentId) return t("join.errorPickChild");
       if (!parentName.trim()) return t("join.errorEnterYourName");
@@ -83,16 +76,14 @@ export default function JoinPage() {
   async function finalizeJoin(firebaseUser: User) {
     if (!invite) return;
     if (invite.role === "student") {
-      if (studentMode === "existing") {
-        await linkStudentAccount(existingStudentId, firebaseUser.uid, invite.classId);
-      } else {
-        const newStudentId = await createStudent({
-          name: newStudentName.trim(),
-          classId: invite.classId,
-          authUid: firebaseUser.uid,
-        });
-        await createStudentAccountMapping(firebaseUser.uid, newStudentId, invite.classId);
-      }
+      const newStudentId = await createStudent({
+        firstName: firstName.trim(),
+        middleName: middleName.trim() || undefined,
+        lastName: lastName.trim(),
+        classId: invite.classId,
+        authUid: firebaseUser.uid,
+      });
+      await createStudentAccountMapping(firebaseUser.uid, newStudentId, invite.classId);
     } else {
       await createParentProfile({
         uid: firebaseUser.uid,
@@ -100,6 +91,13 @@ export default function JoinPage() {
         displayName: parentName.trim(),
         classId: invite.classId,
         studentId: childStudentId,
+      });
+      // Students no longer get parent contact info from a teacher-entered
+      // form — this is the only place it's captured, so the "send report"
+      // email feature has somewhere to send to.
+      await updateStudent(childStudentId, {
+        parentName: parentName.trim(),
+        parentEmail: firebaseUser.email || email,
       });
     }
     await refreshPortalRole();
@@ -133,17 +131,14 @@ export default function JoinPage() {
       setError(validationError);
       return;
     }
-    if (authMode === "create" && password !== confirmPassword) {
+    if (password !== confirmPassword) {
       setError(t("join.errorPasswordMismatch"));
       return;
     }
     setError("");
     setStage("submitting");
     try {
-      const firebaseUser =
-        authMode === "create"
-          ? await registerWithEmail(email, password)
-          : await signInWithEmailPassword(email, password);
+      const firebaseUser = await registerWithEmail(email, password);
       await finalizeJoin(firebaseUser);
     } catch {
       setError(t("join.errorAuth"));
@@ -194,7 +189,7 @@ export default function JoinPage() {
           </div>
         )}
 
-        {/* Identity selection */}
+        {/* Identity fields */}
         <div className="mb-6 space-y-3">
           {isParent ? (
             <>
@@ -222,44 +217,30 @@ export default function JoinPage() {
             </>
           ) : (
             <>
-              <div className="flex gap-2">
-                <button
-                  type="button"
-                  onClick={() => setStudentMode("existing")}
-                  className={`btn-secondary flex-1 ${studentMode === "existing" ? "bg-gold-50" : ""}`}
-                >
-                  {t("join.imOnRoster")}
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setStudentMode("new")}
-                  className={`btn-secondary flex-1 ${studentMode === "new" ? "bg-gold-50" : ""}`}
-                >
-                  {t("join.notListed")}
-                </button>
-              </div>
-              {studentMode === "existing" ? (
-                <select
-                  value={existingStudentId}
-                  onChange={(e) => setExistingStudentId(e.target.value)}
-                  className="input-field"
-                >
-                  <option value="">{t("join.selectYourName")}</option>
-                  {unclaimedStudents.map((s) => (
-                    <option key={s.id} value={s.id}>
-                      {s.name}
-                    </option>
-                  ))}
-                </select>
-              ) : (
+              <label className="label-eyebrow">{t("join.studentNameFields")}</label>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
                 <input
                   type="text"
-                  value={newStudentName}
-                  onChange={(e) => setNewStudentName(e.target.value)}
+                  value={firstName}
+                  onChange={(e) => setFirstName(e.target.value)}
                   className="input-field"
-                  placeholder={t("join.yourNamePlaceholder")}
+                  placeholder={t("join.firstNamePlaceholder")}
                 />
-              )}
+                <input
+                  type="text"
+                  value={middleName}
+                  onChange={(e) => setMiddleName(e.target.value)}
+                  className="input-field"
+                  placeholder={t("join.middleNamePlaceholder")}
+                />
+                <input
+                  type="text"
+                  value={lastName}
+                  onChange={(e) => setLastName(e.target.value)}
+                  className="input-field"
+                  placeholder={t("join.lastNamePlaceholder")}
+                />
+              </div>
             </>
           )}
         </div>
@@ -304,32 +285,26 @@ export default function JoinPage() {
             className="input-field"
             placeholder={t("join.passwordPlaceholder")}
           />
-          {authMode === "create" && (
-            <input
-              type="password"
-              required
-              minLength={6}
-              value={confirmPassword}
-              onChange={(e) => setConfirmPassword(e.target.value)}
-              className="input-field"
-              placeholder={t("join.confirmPasswordPlaceholder")}
-            />
-          )}
+          <input
+            type="password"
+            required
+            minLength={6}
+            value={confirmPassword}
+            onChange={(e) => setConfirmPassword(e.target.value)}
+            className="input-field"
+            placeholder={t("join.confirmPasswordPlaceholder")}
+          />
           <button type="submit" disabled={stage === "submitting"} className="btn-primary w-full">
-            {stage === "submitting"
-              ? t("common.loading")
-              : authMode === "create"
-                ? t("join.createAccount")
-                : t("auth.signIn")}
-          </button>
-          <button
-            type="button"
-            onClick={() => setAuthMode(authMode === "create" ? "signin" : "create")}
-            className="w-full text-center text-xs text-cream-600 hover:text-navy"
-          >
-            {authMode === "create" ? t("join.haveAccountAlready") : t("join.needAccount")}
+            {stage === "submitting" ? t("common.loading") : t("join.createAccount")}
           </button>
         </form>
+
+        <p className="mt-6 text-center text-sm text-cream-600">
+          {t("join.haveAccountAlready")}{" "}
+          <Link to="/portal-login" className="font-semibold text-gold hover:underline">
+            {t("auth.portalLoginLink")}
+          </Link>
+        </p>
       </div>
     </div>
   );

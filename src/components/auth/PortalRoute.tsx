@@ -22,14 +22,14 @@ export default function PortalRoute({
   }
 
   if (!user) {
-    return <Navigate to="/login" replace />;
+    return <Navigate to="/portal-login" replace />;
   }
 
   if (role !== allow) {
     if (role === "teacher") return <Navigate to="/dashboard" replace />;
     if (role === "student") return <Navigate to="/portal/student" replace />;
     if (role === "parent") return <Navigate to="/portal/parent" replace />;
-    return <Navigate to="/login" replace />;
+    return <Navigate to="/portal-login" replace />;
   }
 
   return <>{children}</>;

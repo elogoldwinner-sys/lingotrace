@@ -39,7 +39,7 @@ export default function StudentPortalPage() {
 
   async function handleSignOut() {
     await signOut();
-    navigate("/login");
+    navigate("/portal-login");
   }
 
   function toggleLanguage() {

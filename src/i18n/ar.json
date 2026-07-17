@@ -23,7 +23,16 @@
     "noAccount": "ليس لديك حساب؟",
     "haveAccount": "لديك حساب بالفعل؟",
     "continueWithGoogle": "المتابعة باستخدام جوجل",
-    "googleError": "تعذّر تسجيل الدخول باستخدام جوجل. يرجى المحاولة مرة أخرى."
+    "googleError": "تعذّر تسجيل الدخول باستخدام جوجل. يرجى المحاولة مرة أخرى.",
+    "notATeacherError": "هذا الحساب مسجّل بالفعل كطالب أو ولي أمر. يرجى استخدام تسجيل دخول الطلاب/أولياء الأمور بدلاً من ذلك.",
+    "areYouAStudent": "هل أنت طالب أو ولي أمر؟",
+    "portalLoginLink": "سجّل الدخول من هنا",
+    "portalWelcomeBack": "مرحبًا بعودتك",
+    "portalWelcomeBackSub": "سجّل الدخول إلى بوابة الطالب أو ولي الأمر",
+    "notRegisteredError": "تعذّر العثور على حساب طالب أو ولي أمر لبيانات الدخول هذه. اطلب من معلمك رابط دعوة.",
+    "noPortalAccount": "جديد هنا؟ استخدم رابط الدعوة الذي أرسله معلمك للانضمام.",
+    "areYouATeacher": "هل أنت معلم؟",
+    "teacherLoginLink": "سجّل الدخول من هنا"
   },
   "dashboard": {
     "title": "لوحة التحكم",
@@ -47,13 +56,12 @@
   },
   "students": {
     "title": "الطلاب",
-    "newStudent": "طالب جديد",
-    "name": "اسم الطالب",
     "parentName": "اسم ولي الأمر",
     "parentEmail": "بريد ولي الأمر الإلكتروني",
     "points": "النقاط",
     "badges": "الشارات",
-    "noStudents": "لا يوجد طلاب بعد."
+    "noStudents": "لا يوجد طلاب بعد.",
+    "joinViaInviteHint": "ينضم الطلاب بأنفسهم عبر رابط دعوة الصف (صفحة الصفوف)."
   },
   "attendance": {
     "title": "الحضور",
@@ -133,9 +141,6 @@
     "subTitle": "تمت دعوتك للانضمام إلى \"{{className}}\"",
     "invalidTitle": "رابط الدعوة غير صالح",
     "invalidBody": "انتهت صلاحية رابط الدعوة هذا أو أنه غير موجود. اطلب من معلمك رابطًا جديدًا.",
-    "imOnRoster": "اسمي موجود في القائمة",
-    "notListed": "اسمي غير مدرج",
-    "selectYourName": "اختر اسمك",
     "selectChild": "اختر ابنك/ابنتك",
     "selectChildPlaceholder": "اختر طالبًا",
     "yourName": "اسمك",
@@ -146,14 +151,17 @@
     "confirmPasswordPlaceholder": "تأكيد كلمة المرور",
     "createAccount": "إنشاء حساب",
     "haveAccountAlready": "لديك حساب بالفعل؟ سجّل الدخول بدلاً من ذلك",
-    "needAccount": "تحتاج إلى حساب؟ أنشئ واحدًا بدلاً من ذلك",
     "errorGeneric": "حدث خطأ ما. يرجى المحاولة مرة أخرى.",
-    "errorPickName": "يرجى اختيار اسمك من القائمة.",
-    "errorEnterName": "يرجى إدخال اسمك.",
     "errorPickChild": "يرجى اختيار ابنك/ابنتك.",
     "errorEnterYourName": "يرجى إدخال اسمك.",
     "errorPasswordMismatch": "كلمتا المرور غير متطابقتين.",
-    "errorAuth": "تعذّر إكمال إنشاء الحساب. يرجى التحقق من البيانات والمحاولة مرة أخرى."
+    "errorAuth": "تعذّر إكمال إنشاء الحساب. يرجى التحقق من البيانات والمحاولة مرة أخرى.",
+    "studentNameFields": "اسمك",
+    "firstNamePlaceholder": "الاسم الأول",
+    "middleNamePlaceholder": "الاسم الأوسط (اختياري)",
+    "lastNamePlaceholder": "اسم العائلة",
+    "errorEnterFirstName": "يرجى إدخال اسمك الأول.",
+    "errorEnterLastName": "يرجى إدخال اسم العائلة."
   },
   "portal": {
     "welcome": "مرحبًا",

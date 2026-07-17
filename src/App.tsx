@@ -4,6 +4,7 @@ import ProtectedRoute from "./components/auth/ProtectedRoute";
 import PortalRoute from "./components/auth/PortalRoute";
 import AppLayout from "./components/layout/AppLayout";
 import LoginPage from "./pages/LoginPage";
+import PortalLoginPage from "./pages/PortalLoginPage";
 import DashboardPage from "./pages/DashboardPage";
 import ClassesPage from "./pages/ClassesPage";
 import StudentsPage from "./pages/StudentsPage";
@@ -21,6 +22,7 @@ export default function App() {
       <BrowserRouter basename={import.meta.env.BASE_URL}>
         <Routes>
           <Route path="/login" element={<LoginPage />} />
+          <Route path="/portal-login" element={<PortalLoginPage />} />
           <Route path="/sign-in" element={<Navigate to="/login" replace />} />
           <Route path="/sign-up" element={<Navigate to="/login" replace />} />
           <Route path="/join/:token" element={<JoinPage />} />

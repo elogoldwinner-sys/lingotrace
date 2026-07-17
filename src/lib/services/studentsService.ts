@@ -17,8 +17,14 @@ export function subscribeToStudents(
   );
 }
 
+function buildFullName(firstName: string, middleName: string | undefined, lastName: string) {
+  return [firstName.trim(), middleName?.trim(), lastName.trim()].filter(Boolean).join(" ");
+}
+
 export async function createStudent(data: {
-  name: string;
+  firstName: string;
+  middleName?: string;
+  lastName: string;
   classId: string;
   parentName?: string;
   parentEmail?: string;
@@ -27,6 +33,7 @@ export async function createStudent(data: {
 }) {
   return service.create({
     ...data,
+    name: buildFullName(data.firstName, data.middleName, data.lastName),
     points: 0,
     badgeIds: [],
   } as Omit<StudentRecord, "id" | "createdAt">);

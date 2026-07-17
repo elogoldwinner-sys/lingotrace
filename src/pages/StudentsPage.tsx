@@ -1,19 +1,17 @@
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useSearchParams } from "react-router-dom";
-import { Plus, Trash2, Award, Send, Check } from "lucide-react";
+import { Trash2, Award, Send, Check } from "lucide-react";
 import { useAuth } from "../contexts/AuthContext";
 import { subscribeToClasses } from "../lib/services/classesService";
 import {
   subscribeToStudents,
-  createStudent,
   deleteStudent,
 } from "../lib/services/studentsService";
 import { awardPoints, subscribeToStudentPointsHistory } from "../lib/services/pointsService";
 import { subscribeToStudentAttendance } from "../lib/services/attendanceService";
 import { subscribeToStudentNotes } from "../lib/services/notesService";
 import { sendPeriodReportToParent } from "../lib/services/reportService";
-import { uploadToCloudinary } from "../lib/cloudinary";
 import { getBadgeDefinition } from "../lib/services/badgesService";
 import type {
   ClassRecord,
@@ -49,13 +47,6 @@ export default function StudentsPage() {
   const [selectedClassId, setSelectedClassId] = useState(preselectedClassId);
   const [students, setStudents] = useState<StudentRecord[]>([]);
   const [loading, setLoading] = useState(true);
-
-  const [modalOpen, setModalOpen] = useState(false);
-  const [name, setName] = useState("");
-  const [parentName, setParentName] = useState("");
-  const [parentEmail, setParentEmail] = useState("");
-  const [photoFile, setPhotoFile] = useState<File | null>(null);
-  const [submitting, setSubmitting] = useState(false);
 
   const [pointsModalStudent, setPointsModalStudent] = useState<StudentRecord | null>(null);
   const [pointsAmount, setPointsAmount] = useState(5);
@@ -114,33 +105,6 @@ export default function StudentsPage() {
     };
   }, [detailStudent]);
 
-  async function handleCreate(e: React.FormEvent) {
-    e.preventDefault();
-    if (!selectedClassId) return;
-    setSubmitting(true);
-    try {
-      let photoURL: string | undefined;
-      if (photoFile) {
-        const result = await uploadToCloudinary(photoFile, "lingotrace/students");
-        photoURL = result.secure_url;
-      }
-      await createStudent({
-        name,
-        classId: selectedClassId,
-        parentName,
-        parentEmail,
-        photoURL,
-      });
-      setName("");
-      setParentName("");
-      setParentEmail("");
-      setPhotoFile(null);
-      setModalOpen(false);
-    } finally {
-      setSubmitting(false);
-    }
-  }
-
   async function handleDelete(id: string) {
     await deleteStudent(id);
   }
@@ -198,14 +162,7 @@ export default function StudentsPage() {
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <h1 className="text-2xl font-semibold text-navy">{t("students.title")}</h1>
-        <button
-          onClick={() => setModalOpen(true)}
-          className="btn-primary"
-          disabled={!selectedClassId}
-        >
-          <Plus size={16} />
-          {t("students.newStudent")}
-        </button>
+        <p className="text-sm text-cream-600">{t("students.joinViaInviteHint")}</p>
       </div>
 
       <ClassSelector classes={classes} selectedClassId={selectedClassId} onSelect={setSelectedClassId} />
@@ -290,45 +247,6 @@ export default function StudentsPage() {
           ))}
         </div>
       )}
-
-      <Modal open={modalOpen} onClose={() => setModalOpen(false)} title={t("students.newStudent")}>
-        <form onSubmit={handleCreate} className="space-y-4">
-          <div>
-            <label className="label-eyebrow block mb-1.5">{t("students.name")}</label>
-            <input required value={name} onChange={(e) => setName(e.target.value)} className="input-field" />
-          </div>
-          <div>
-            <label className="label-eyebrow block mb-1.5">{t("students.parentName")}</label>
-            <input value={parentName} onChange={(e) => setParentName(e.target.value)} className="input-field" />
-          </div>
-          <div>
-            <label className="label-eyebrow block mb-1.5">{t("students.parentEmail")}</label>
-            <input
-              type="email"
-              value={parentEmail}
-              onChange={(e) => setParentEmail(e.target.value)}
-              className="input-field"
-            />
-          </div>
-          <div>
-            <label className="label-eyebrow block mb-1.5">Photo</label>
-            <input
-              type="file"
-              accept="image/*"
-              onChange={(e) => setPhotoFile(e.target.files?.[0] || null)}
-              className="input-field"
-            />
-          </div>
-          <div className="flex justify-end gap-2">
-            <button type="button" onClick={() => setModalOpen(false)} className="btn-secondary">
-              {t("common.cancel")}
-            </button>
-            <button type="submit" disabled={submitting} className="btn-primary">
-              {t("common.save")}
-            </button>
-          </div>
-        </form>
-      </Modal>
 
       <Modal
         open={!!pointsModalStudent}

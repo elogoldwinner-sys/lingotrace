@@ -23,7 +23,16 @@
     "noAccount": "Don't have an account?",
     "haveAccount": "Already have an account?",
     "continueWithGoogle": "Continue with Google",
-    "googleError": "We couldn't sign you in with Google. Please try again."
+    "googleError": "We couldn't sign you in with Google. Please try again.",
+    "notATeacherError": "This account is already registered as a student or parent. Please use the student/parent login instead.",
+    "areYouAStudent": "Are you a student or parent?",
+    "portalLoginLink": "Sign in here",
+    "portalWelcomeBack": "Welcome back",
+    "portalWelcomeBackSub": "Sign in to your student or parent portal",
+    "notRegisteredError": "We couldn't find a student or parent account for this login. Ask your teacher for an invite link.",
+    "noPortalAccount": "New here? Use the invite link your teacher sent you to join.",
+    "areYouATeacher": "Are you a teacher?",
+    "teacherLoginLink": "Sign in here"
   },
   "dashboard": {
     "title": "Dashboard",
@@ -47,13 +56,12 @@
   },
   "students": {
     "title": "Students",
-    "newStudent": "New student",
-    "name": "Student name",
     "parentName": "Parent name",
     "parentEmail": "Parent email",
     "points": "Points",
     "badges": "Badges",
-    "noStudents": "No students yet."
+    "noStudents": "No students yet.",
+    "joinViaInviteHint": "Students join themselves using your class's invite link (Classes page)."
   },
   "attendance": {
     "title": "Attendance",
@@ -133,9 +141,6 @@
     "subTitle": "You've been invited to \"{{className}}\"",
     "invalidTitle": "Invite link not valid",
     "invalidBody": "This invite link has expired or doesn't exist. Ask your teacher for a new one.",
-    "imOnRoster": "I'm on the roster",
-    "notListed": "My name isn't listed",
-    "selectYourName": "Select your name",
     "selectChild": "Select your child",
     "selectChildPlaceholder": "Choose a student",
     "yourName": "Your name",
@@ -146,14 +151,17 @@
     "confirmPasswordPlaceholder": "Confirm password",
     "createAccount": "Create account",
     "haveAccountAlready": "Already have an account? Sign in instead",
-    "needAccount": "Need an account? Create one instead",
     "errorGeneric": "Something went wrong. Please try again.",
-    "errorPickName": "Please select your name from the list.",
-    "errorEnterName": "Please enter your name.",
     "errorPickChild": "Please select your child.",
     "errorEnterYourName": "Please enter your name.",
     "errorPasswordMismatch": "Passwords don't match.",
-    "errorAuth": "We couldn't complete sign-up. Please check your details and try again."
+    "errorAuth": "We couldn't complete sign-up. Please check your details and try again.",
+    "studentNameFields": "Your name",
+    "firstNamePlaceholder": "First name",
+    "middleNamePlaceholder": "Middle name (optional)",
+    "lastNamePlaceholder": "Last name",
+    "errorEnterFirstName": "Please enter your first name.",
+    "errorEnterLastName": "Please enter your last name."
   },
   "portal": {
     "welcome": "Welcome",

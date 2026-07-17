@@ -110,10 +110,25 @@ export function AuthProvider({ children }: { children: ReactNode }) {
    * the first time a Google account signs in, a matching `teachers/{uid}`
    * Firestore profile is created automatically (using the name/photo Google
    * provides); on every later sign-in the existing profile is just loaded.
+   *
+   * Guarded so an account that's already registered as a student or parent
+   * portal account can never also become a teacher just by visiting the
+   * teacher login page — previously this silently granted teacher access to
+   * anyone, regardless of their existing role.
    */
   async function signInWithGoogle() {
     const credential = await signInWithPopup(auth, googleProvider);
     const firebaseUser = credential.user;
+
+    const [existingParent, existingStudent] = await Promise.all([
+      getParentProfile(firebaseUser.uid),
+      findStudentByAuthUid(firebaseUser.uid),
+    ]);
+    if (existingParent || existingStudent) {
+      await firebaseSignOut(auth);
+      throw new Error("account-is-not-a-teacher");
+    }
+
     const profileRef = doc(db, "teachers", firebaseUser.uid);
     const snapshot = await getDoc(profileRef);
 
