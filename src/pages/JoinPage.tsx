@@ -189,18 +189,14 @@ export default function JoinPage() {
     try {
       const firebaseUser = await signInWithGooglePopupOnly();
       await finalizeJoin(firebaseUser);
-    } catch (err) {
-      const code = (err as { code?: string })?.code || "";
-      const isPopupIssue =
-        code === "auth/popup-blocked" ||
-        code === "auth/cancelled-popup-request" ||
-        code === "auth/popup-closed-by-user" ||
-        code === "auth/operation-not-supported-in-this-environment";
-
-      if (isPopupIssue && token) {
-        // Popup didn't work (common on mobile/tablet browsers) — fall back
-        // to a full-page redirect instead. Save the form fields first since
-        // the page is about to fully reload.
+    } catch {
+      // Google's accounts.google.com page sets a strict Cross-Origin-Opener
+      // -Policy that can break the popup flow in ways that don't produce a
+      // recognizable Firebase error code (e.g. a raw COOP/window.closed
+      // failure). Rather than trying to allowlist every possible error,
+      // treat any popup failure as a reason to fall back to redirect —
+      // popup sign-in just isn't reliable enough here to trust otherwise.
+      if (token) {
         savePendingJoin({
           token,
           firstName,
@@ -210,8 +206,12 @@ export default function JoinPage() {
           parentName,
           email,
         });
-        await signInWithGoogleRedirect();
-        return; // page is navigating away
+        try {
+          await signInWithGoogleRedirect();
+          return; // page is navigating away
+        } catch {
+          clearPendingJoin();
+        }
       }
 
       setError(t("join.errorAuth"));

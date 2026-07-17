@@ -38,17 +38,18 @@ export default function LoginPage() {
       await signInWithGoogle();
       navigate("/dashboard");
     } catch (err) {
-      const code = (err as { code?: string })?.code || "";
-      const isPopupIssue =
-        code === "auth/popup-blocked" ||
-        code === "auth/cancelled-popup-request" ||
-        code === "auth/popup-closed-by-user" ||
-        code === "auth/operation-not-supported-in-this-environment";
-      if (isPopupIssue) {
+      if (err instanceof Error && err.message === "account-is-not-a-teacher") {
+        handleAuthError(err);
+        return;
+      }
+      // Any other popup failure falls back to redirect — Google's own COOP
+      // headers can break the popup without a recognizable error code.
+      try {
         await signInWithGoogleRedirect();
         return; // page is navigating away
+      } catch {
+        handleAuthError(err);
       }
-      handleAuthError(err);
     } finally {
       setSubmitting(false);
     }

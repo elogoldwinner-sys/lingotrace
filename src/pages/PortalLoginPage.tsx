@@ -67,18 +67,15 @@ export default function PortalLoginPage() {
     try {
       await signInWithGooglePopupOnly();
       await routeByRole();
-    } catch (err) {
-      const code = (err as { code?: string })?.code || "";
-      const isPopupIssue =
-        code === "auth/popup-blocked" ||
-        code === "auth/cancelled-popup-request" ||
-        code === "auth/popup-closed-by-user" ||
-        code === "auth/operation-not-supported-in-this-environment";
-      if (isPopupIssue) {
+    } catch {
+      // Any popup failure falls back to redirect — Google's own COOP
+      // headers can break the popup without a recognizable error code.
+      try {
         await signInWithGoogleRedirect();
         return; // page is navigating away
+      } catch {
+        setError(t("auth.googleError"));
       }
-      setError(t("auth.googleError"));
     } finally {
       setSubmitting(false);
     }
