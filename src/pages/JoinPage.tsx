@@ -11,12 +11,47 @@ import Spinner from "../components/common/Spinner";
 
 type Stage = "loading" | "invalid" | "form" | "submitting" | "done";
 
+// A Google redirect sign-in fully reloads the page, so the form fields have
+// to be stashed somewhere that survives that round-trip.
+const PENDING_JOIN_KEY = "lingotrace_pending_join";
+
+interface PendingJoinData {
+  token: string;
+  firstName: string;
+  middleName: string;
+  lastName: string;
+  childStudentId: string;
+  parentName: string;
+  email: string;
+}
+
+function savePendingJoin(data: PendingJoinData) {
+  sessionStorage.setItem(PENDING_JOIN_KEY, JSON.stringify(data));
+}
+
+function loadPendingJoin(token: string): PendingJoinData | null {
+  const raw = sessionStorage.getItem(PENDING_JOIN_KEY);
+  if (!raw) return null;
+  try {
+    const parsed = JSON.parse(raw) as PendingJoinData;
+    return parsed.token === token ? parsed : null;
+  } catch {
+    return null;
+  }
+}
+
+function clearPendingJoin() {
+  sessionStorage.removeItem(PENDING_JOIN_KEY);
+}
+
 export default function JoinPage() {
   const { token } = useParams<{ token: string }>();
   const { t } = useTranslation();
   const navigate = useNavigate();
   const {
     signInWithGooglePopupOnly,
+    signInWithGoogleRedirect,
+    getGoogleRedirectResult,
     registerWithEmail,
     refreshPortalRole,
   } = useAuth();
@@ -73,13 +108,21 @@ export default function JoinPage() {
     return null;
   }
 
-  async function finalizeJoin(firebaseUser: User) {
+  async function finalizeJoin(firebaseUser: User, overrides?: PendingJoinData) {
     if (!invite) return;
+    const fields = {
+      firstName: overrides?.firstName ?? firstName,
+      middleName: overrides?.middleName ?? middleName,
+      lastName: overrides?.lastName ?? lastName,
+      childStudentId: overrides?.childStudentId ?? childStudentId,
+      parentName: overrides?.parentName ?? parentName,
+      email: overrides?.email ?? email,
+    };
     if (invite.role === "student") {
       const newStudentId = await createStudent({
-        firstName: firstName.trim(),
-        middleName: middleName.trim() || undefined,
-        lastName: lastName.trim(),
+        firstName: fields.firstName.trim(),
+        middleName: fields.middleName.trim() || undefined,
+        lastName: fields.lastName.trim(),
         classId: invite.classId,
         authUid: firebaseUser.uid,
       });
@@ -87,25 +130,53 @@ export default function JoinPage() {
     } else {
       await createParentProfile({
         uid: firebaseUser.uid,
-        email: firebaseUser.email || email,
-        displayName: parentName.trim(),
+        email: firebaseUser.email || fields.email,
+        displayName: fields.parentName.trim(),
         classId: invite.classId,
-        studentId: childStudentId,
+        studentId: fields.childStudentId,
       });
       // Students no longer get parent contact info from a teacher-entered
       // form — this is the only place it's captured, so the "send report"
       // email feature has somewhere to send to.
-      await updateStudent(childStudentId, {
-        parentName: parentName.trim(),
-        parentEmail: firebaseUser.email || email,
+      await updateStudent(fields.childStudentId, {
+        parentName: fields.parentName.trim(),
+        parentEmail: firebaseUser.email || fields.email,
       });
     }
+    clearPendingJoin();
     await refreshPortalRole();
     setStage("done");
     navigate(invite.role === "student" ? "/portal/student" : "/portal/parent", {
       replace: true,
     });
   }
+
+  // On mount, check whether we're landing back from a Google redirect
+  // sign-in (the popup fallback for mobile/tablet browsers that block or
+  // silently kill popups). If so, restore the form fields that were stashed
+  // right before the redirect and finish the join automatically.
+  useEffect(() => {
+    if (!invite || !token) return;
+    getGoogleRedirectResult()
+      .then((firebaseUser) => {
+        if (!firebaseUser) return;
+        const pending = loadPendingJoin(token);
+        if (!pending) return;
+        setFirstName(pending.firstName);
+        setMiddleName(pending.middleName);
+        setLastName(pending.lastName);
+        setChildStudentId(pending.childStudentId);
+        setParentName(pending.parentName);
+        setEmail(pending.email);
+        setStage("submitting");
+        return finalizeJoin(firebaseUser, pending);
+      })
+      .catch(() => {
+        setError(t("join.errorAuth"));
+        setStage("form");
+      });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [invite, token]);
 
   async function handleGoogle() {
     const validationError = validateSelection();
@@ -118,7 +189,31 @@ export default function JoinPage() {
     try {
       const firebaseUser = await signInWithGooglePopupOnly();
       await finalizeJoin(firebaseUser);
-    } catch {
+    } catch (err) {
+      const code = (err as { code?: string })?.code || "";
+      const isPopupIssue =
+        code === "auth/popup-blocked" ||
+        code === "auth/cancelled-popup-request" ||
+        code === "auth/popup-closed-by-user" ||
+        code === "auth/operation-not-supported-in-this-environment";
+
+      if (isPopupIssue && token) {
+        // Popup didn't work (common on mobile/tablet browsers) — fall back
+        // to a full-page redirect instead. Save the form fields first since
+        // the page is about to fully reload.
+        savePendingJoin({
+          token,
+          firstName,
+          middleName,
+          lastName,
+          childStudentId,
+          parentName,
+          email,
+        });
+        await signInWithGoogleRedirect();
+        return; // page is navigating away
+      }
+
       setError(t("join.errorAuth"));
       setStage("form");
     }

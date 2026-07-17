@@ -1,15 +1,35 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../contexts/AuthContext";
 
 export default function LoginPage() {
   const { t } = useTranslation();
-  const { signInWithGoogle } = useAuth();
+  const { signInWithGoogle, signInWithGoogleRedirect, completeTeacherGoogleRedirect } = useAuth();
   const navigate = useNavigate();
 
   const [error, setError] = useState("");
   const [submitting, setSubmitting] = useState(false);
+
+  function handleAuthError(err: unknown) {
+    if (err instanceof Error && err.message === "account-is-not-a-teacher") {
+      setError(t("auth.notATeacherError"));
+    } else {
+      setError(t("auth.googleError"));
+    }
+  }
+
+  // Pick up the result if we're landing back from a Google redirect
+  // sign-in (the popup fallback below, for mobile/tablet browsers that
+  // block or silently kill the popup).
+  useEffect(() => {
+    completeTeacherGoogleRedirect()
+      .then((handled) => {
+        if (handled) navigate("/dashboard");
+      })
+      .catch(handleAuthError);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   async function handleGoogleSignIn() {
     setError("");
@@ -18,11 +38,17 @@ export default function LoginPage() {
       await signInWithGoogle();
       navigate("/dashboard");
     } catch (err) {
-      if (err instanceof Error && err.message === "account-is-not-a-teacher") {
-        setError(t("auth.notATeacherError"));
-      } else {
-        setError(t("auth.googleError"));
+      const code = (err as { code?: string })?.code || "";
+      const isPopupIssue =
+        code === "auth/popup-blocked" ||
+        code === "auth/cancelled-popup-request" ||
+        code === "auth/popup-closed-by-user" ||
+        code === "auth/operation-not-supported-in-this-environment";
+      if (isPopupIssue) {
+        await signInWithGoogleRedirect();
+        return; // page is navigating away
       }
+      handleAuthError(err);
     } finally {
       setSubmitting(false);
     }

@@ -8,6 +8,8 @@ import {
 import {
   onAuthStateChanged,
   signInWithPopup,
+  signInWithRedirect,
+  getRedirectResult,
   createUserWithEmailAndPassword,
   signInWithEmailAndPassword,
   GoogleAuthProvider,
@@ -30,8 +32,11 @@ interface AuthContextValue {
   portalParent: ParentProfile | null;
   loading: boolean;
   signInWithGoogle: () => Promise<void>;
+  completeTeacherGoogleRedirect: () => Promise<boolean>;
   /** Google sign-in for the /join flow — does NOT create a teacher profile. */
   signInWithGooglePopupOnly: () => Promise<User>;
+  signInWithGoogleRedirect: () => Promise<void>;
+  getGoogleRedirectResult: () => Promise<User | null>;
   registerWithEmail: (email: string, password: string) => Promise<User>;
   signInWithEmailPassword: (email: string, password: string) => Promise<User>;
   refreshPortalRole: () => Promise<void>;
@@ -105,21 +110,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }
 
-  /**
-   * Signs the teacher in with Google. There is no separate sign-up flow —
-   * the first time a Google account signs in, a matching `teachers/{uid}`
-   * Firestore profile is created automatically (using the name/photo Google
-   * provides); on every later sign-in the existing profile is just loaded.
-   *
-   * Guarded so an account that's already registered as a student or parent
-   * portal account can never also become a teacher just by visiting the
-   * teacher login page — previously this silently granted teacher access to
-   * anyone, regardless of their existing role.
-   */
-  async function signInWithGoogle() {
-    const credential = await signInWithPopup(auth, googleProvider);
-    const firebaseUser = credential.user;
-
+  async function ensureTeacherAccount(firebaseUser: User) {
     const [existingParent, existingStudent] = await Promise.all([
       getParentProfile(firebaseUser.uid),
       findStudentByAuthUid(firebaseUser.uid),
@@ -154,10 +145,59 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setPortalParent(null);
   }
 
+  /**
+   * Signs the teacher in with Google. There is no separate sign-up flow —
+   * the first time a Google account signs in, a matching `teachers/{uid}`
+   * Firestore profile is created automatically (using the name/photo Google
+   * provides); on every later sign-in the existing profile is just loaded.
+   *
+   * Guarded so an account that's already registered as a student or parent
+   * portal account can never also become a teacher just by visiting the
+   * teacher login page — previously this silently granted teacher access to
+   * anyone, regardless of their existing role.
+   */
+  async function signInWithGoogle() {
+    const credential = await signInWithPopup(auth, googleProvider);
+    await ensureTeacherAccount(credential.user);
+  }
+
+  /**
+   * Redirect-flow counterpart to signInWithGoogle, for mobile/tablet
+   * browsers that block or silently kill the popup. Call
+   * `signInWithGoogleRedirect` first (below), then call this on mount of
+   * the page the browser lands back on to finish the same teacher guard +
+   * profile creation/load that the popup path does.
+   */
+  async function completeTeacherGoogleRedirect(): Promise<boolean> {
+    const result = await getRedirectResult(auth);
+    if (!result?.user) return false;
+    await ensureTeacherAccount(result.user);
+    return true;
+  }
+
   /** Google sign-in used by the /join page. Deliberately does not touch `teachers/` — the join page decides what profile (student/parent) to create. */
   async function signInWithGooglePopupOnly() {
     const credential = await signInWithPopup(auth, googleProvider);
     return credential.user;
+  }
+
+  /**
+   * Mobile/tablet browsers frequently block or silently kill Google's
+   * sign-in popup (auth/popup-blocked, auth/cancelled-popup-request,
+   * auth/operation-not-supported-in-this-environment, and sometimes
+   * auth/popup-closed-by-user even though the person never touched it).
+   * This sends them through Google's full-page redirect flow instead, which
+   * works everywhere. The page fully reloads, so call sites must save
+   * anything they need (form fields, invite token) before calling this.
+   */
+  async function signInWithGoogleRedirect() {
+    await signInWithRedirect(auth, googleProvider);
+  }
+
+  /** Call on mount to pick up the result once the redirect round-trip lands back on the page. */
+  async function getGoogleRedirectResult() {
+    const result = await getRedirectResult(auth);
+    return result?.user || null;
   }
 
   async function registerWithEmail(email: string, password: string) {
@@ -184,7 +224,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         portalParent,
         loading,
         signInWithGoogle,
+        completeTeacherGoogleRedirect,
         signInWithGooglePopupOnly,
+        signInWithGoogleRedirect,
+        getGoogleRedirectResult,
         registerWithEmail,
         signInWithEmailPassword,
         refreshPortalRole,

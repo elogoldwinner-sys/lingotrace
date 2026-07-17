@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../contexts/AuthContext";
@@ -16,7 +16,13 @@ import { auth } from "../lib/firebase";
  */
 export default function PortalLoginPage() {
   const { t } = useTranslation();
-  const { signInWithGooglePopupOnly, signInWithEmailPassword, refreshPortalRole } = useAuth();
+  const {
+    signInWithGooglePopupOnly,
+    signInWithGoogleRedirect,
+    getGoogleRedirectResult,
+    signInWithEmailPassword,
+    refreshPortalRole,
+  } = useAuth();
   const navigate = useNavigate();
 
   const [email, setEmail] = useState("");
@@ -42,13 +48,36 @@ export default function PortalLoginPage() {
     setError(t("auth.notRegisteredError"));
   }
 
+  // Pick up the result if we're landing back from a Google redirect
+  // sign-in (the popup fallback below, for mobile/tablet browsers that
+  // block or silently kill the popup).
+  useEffect(() => {
+    getGoogleRedirectResult()
+      .then((firebaseUser) => {
+        if (!firebaseUser) return;
+        return routeByRole();
+      })
+      .catch(() => setError(t("auth.googleError")));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   async function handleGoogleSignIn() {
     setError("");
     setSubmitting(true);
     try {
       await signInWithGooglePopupOnly();
       await routeByRole();
-    } catch {
+    } catch (err) {
+      const code = (err as { code?: string })?.code || "";
+      const isPopupIssue =
+        code === "auth/popup-blocked" ||
+        code === "auth/cancelled-popup-request" ||
+        code === "auth/popup-closed-by-user" ||
+        code === "auth/operation-not-supported-in-this-environment";
+      if (isPopupIssue) {
+        await signInWithGoogleRedirect();
+        return; // page is navigating away
+      }
       setError(t("auth.googleError"));
     } finally {
       setSubmitting(false);

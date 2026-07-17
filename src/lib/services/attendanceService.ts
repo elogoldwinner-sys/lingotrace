@@ -50,15 +50,9 @@ export function subscribeToStudentAttendance(
   onData: (records: AttendanceRecord[]) => void,
   onError?: (error: Error) => void
 ) {
-  // Single equality filter only (no orderBy) — this needs no composite
-  // index, so it always updates live. Sorted newest-first on the client
-  // instead of on the server.
   return service.subscribe(
-    [service.where("studentId", "==", studentId)],
-    (records) => {
-      const sorted = [...records].sort((a, b) => (a.date < b.date ? 1 : -1));
-      onData(sorted);
-    },
+    [service.where("studentId", "==", studentId), service.orderBy("date", "desc")],
+    onData,
     onError
   );
 }
