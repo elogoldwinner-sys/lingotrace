@@ -1,53 +1,33 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Link, useNavigate } from "react-router-dom";
-import { useAuth } from "../contexts/AuthContext";
-import Spinner from "../components/common/Spinner";
+import { useAuth, isDismissedPopupError } from "../contexts/AuthContext";
 
 export default function LoginPage() {
   const { t } = useTranslation();
-  const { signInTeacherWithGoogle, completeTeacherSignIn } = useAuth();
+  const { signInTeacherWithGoogle } = useAuth();
   const navigate = useNavigate();
 
   const [error, setError] = useState("");
-  const [checkingRedirect, setCheckingRedirect] = useState(true);
   const [submitting, setSubmitting] = useState(false);
-
-  // Pick up the result if we're landing back from the Google redirect.
-  useEffect(() => {
-    completeTeacherSignIn()
-      .then((handled) => {
-        if (handled) navigate("/dashboard", { replace: true });
-      })
-      .catch((err) => {
-        if (err instanceof Error && err.message === "account-is-not-a-teacher") {
-          setError(t("auth.notATeacherError"));
-        } else {
-          setError(t("auth.googleError"));
-        }
-      })
-      .finally(() => setCheckingRedirect(false));
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
 
   async function handleGoogleSignIn() {
     setError("");
     setSubmitting(true);
     try {
       await signInTeacherWithGoogle();
-      // page is navigating away to Google
-    } catch {
-      setError(t("auth.googleError"));
+      navigate("/dashboard", { replace: true });
+    } catch (err) {
+      if (isDismissedPopupError(err)) {
+        // User closed the popup or a second click superseded it — no error to show.
+      } else if (err instanceof Error && err.message === "account-is-not-a-teacher") {
+        setError(t("auth.notATeacherError"));
+      } else {
+        setError(t("auth.googleError"));
+      }
+    } finally {
       setSubmitting(false);
     }
-  }
-
-  if (checkingRedirect) {
-    return (
-      <div className="min-h-screen bg-cream flex items-center justify-center">
-        <Spinner />
-      </div>
-    );
   }
 
   return (

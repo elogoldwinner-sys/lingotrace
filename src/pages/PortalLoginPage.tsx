@@ -1,11 +1,9 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Link, useNavigate } from "react-router-dom";
-import { useAuth } from "../contexts/AuthContext";
+import { useAuth, isDismissedPopupError } from "../contexts/AuthContext";
 import { getParentProfile } from "../lib/services/parentsService";
 import { findStudentByAuthUid } from "../lib/services/studentsService";
-import { auth } from "../lib/firebase";
-import Spinner from "../components/common/Spinner";
 
 /**
  * Separate login surface for students and parents. Deliberately never
@@ -17,17 +15,14 @@ import Spinner from "../components/common/Spinner";
  */
 export default function PortalLoginPage() {
   const { t } = useTranslation();
-  const { beginGoogleSignIn, completeGoogleSignIn, refreshPortalRole } = useAuth();
+  const { beginGoogleSignIn, refreshPortalRole } = useAuth();
   const navigate = useNavigate();
 
   const [error, setError] = useState("");
-  const [checkingRedirect, setCheckingRedirect] = useState(true);
   const [submitting, setSubmitting] = useState(false);
 
-  async function routeByRole() {
+  async function routeByRole(uid: string) {
     await refreshPortalRole();
-    const uid = auth.currentUser?.uid;
-    if (!uid) return;
 
     const parent = await getParentProfile(uid);
     if (parent) {
@@ -42,36 +37,19 @@ export default function PortalLoginPage() {
     setError(t("auth.notRegisteredError"));
   }
 
-  // Pick up the result if we're landing back from the Google redirect.
-  useEffect(() => {
-    completeGoogleSignIn()
-      .then((firebaseUser) => {
-        if (!firebaseUser) return;
-        return routeByRole();
-      })
-      .catch(() => setError(t("auth.googleError")))
-      .finally(() => setCheckingRedirect(false));
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
   async function handleGoogleSignIn() {
     setError("");
     setSubmitting(true);
     try {
-      await beginGoogleSignIn();
-      // page is navigating away to Google
-    } catch {
-      setError(t("auth.googleError"));
+      const firebaseUser = await beginGoogleSignIn();
+      await routeByRole(firebaseUser.uid);
+    } catch (err) {
+      if (!isDismissedPopupError(err)) {
+        setError(t("auth.googleError"));
+      }
+    } finally {
       setSubmitting(false);
     }
-  }
-
-  if (checkingRedirect) {
-    return (
-      <div className="min-h-screen bg-cream flex items-center justify-center">
-        <Spinner />
-      </div>
-    );
   }
 
   return (

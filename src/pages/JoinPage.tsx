@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import type { User } from "firebase/auth";
-import { useAuth } from "../contexts/AuthContext";
+import { useAuth, isDismissedPopupError } from "../contexts/AuthContext";
 import { getInvite } from "../lib/services/invitesService";
 import {
   subscribeToStudents,
@@ -17,40 +17,11 @@ import Spinner from "../components/common/Spinner";
 
 type Stage = "loading" | "invalid" | "form" | "submitting" | "done";
 
-// A Google redirect sign-in fully reloads the page, so which invite (and,
-// for a parent, which child) was being joined has to be stashed somewhere
-// that survives that round-trip.
-const PENDING_JOIN_KEY = "lingotrace_pending_join";
-
-interface PendingJoinData {
-  token: string;
-  childStudentId?: string;
-}
-
-function savePendingJoin(data: PendingJoinData) {
-  sessionStorage.setItem(PENDING_JOIN_KEY, JSON.stringify(data));
-}
-
-function loadPendingJoin(token: string): PendingJoinData | null {
-  const raw = sessionStorage.getItem(PENDING_JOIN_KEY);
-  if (!raw) return null;
-  try {
-    const parsed = JSON.parse(raw) as PendingJoinData;
-    return parsed.token === token ? parsed : null;
-  } catch {
-    return null;
-  }
-}
-
-function clearPendingJoin() {
-  sessionStorage.removeItem(PENDING_JOIN_KEY);
-}
-
 export default function JoinPage() {
   const { token } = useParams<{ token: string }>();
   const { t } = useTranslation();
   const navigate = useNavigate();
-  const { beginGoogleSignIn, completeGoogleSignIn, refreshPortalRole } = useAuth();
+  const { beginGoogleSignIn, refreshPortalRole } = useAuth();
 
   const [stage, setStage] = useState<Stage>("loading");
   const [invite, setInvite] = useState<InviteRecord | null>(null);
@@ -78,7 +49,7 @@ export default function JoinPage() {
     return unsub;
   }, [invite]);
 
-  async function finalizeJoin(firebaseUser: User, pending: PendingJoinData) {
+  async function finalizeJoin(firebaseUser: User, childStudentId?: string) {
     if (!invite) return;
 
     // Guard against creating a duplicate record: if this Google account has
@@ -90,7 +61,6 @@ export default function JoinPage() {
       findStudentByAuthUid(firebaseUser.uid),
     ]);
     if (existingParent || existingStudent) {
-      clearPendingJoin();
       await refreshPortalRole();
       setStage("done");
       navigate(existingParent ? "/portal/parent" : "/portal/student", { replace: true });
@@ -106,7 +76,7 @@ export default function JoinPage() {
       });
       await createStudentAccountMapping(firebaseUser.uid, newStudentId, invite.classId);
     } else {
-      const studentId = pending.childStudentId;
+      const studentId = childStudentId;
       if (!studentId) {
         setError(t("join.errorPickChild"));
         setStage("form");
@@ -126,30 +96,12 @@ export default function JoinPage() {
         parentEmail: firebaseUser.email || "",
       });
     }
-    clearPendingJoin();
     await refreshPortalRole();
     setStage("done");
     navigate(invite.role === "student" ? "/portal/student" : "/portal/parent", {
       replace: true,
     });
   }
-
-  // On mount, check whether we're landing back from the Google redirect.
-  useEffect(() => {
-    if (!invite || !token) return;
-    completeGoogleSignIn()
-      .then((firebaseUser) => {
-        if (!firebaseUser) return;
-        const pending = loadPendingJoin(token) || { token };
-        setStage("submitting");
-        return finalizeJoin(firebaseUser, pending);
-      })
-      .catch(() => {
-        setError(t("join.errorAuth"));
-        setStage("form");
-      });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [invite, token]);
 
   async function handleGoogle() {
     if (!token) return;
@@ -160,11 +112,13 @@ export default function JoinPage() {
     setError("");
     setStage("submitting");
     try {
-      savePendingJoin({ token, childStudentId: childStudentId || undefined });
-      await beginGoogleSignIn();
-      // page is navigating away to Google
-    } catch {
-      clearPendingJoin();
+      const firebaseUser = await beginGoogleSignIn();
+      await finalizeJoin(firebaseUser, childStudentId || undefined);
+    } catch (err) {
+      if (isDismissedPopupError(err)) {
+        setStage("form");
+        return;
+      }
       setError(t("join.errorAuth"));
       setStage("form");
     }
