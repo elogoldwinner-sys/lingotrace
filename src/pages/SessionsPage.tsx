@@ -15,8 +15,7 @@ import {
 } from "../lib/services/sessionsService";
 import {
   subscribeToAttendanceBySession,
-  recordAttendance,
-  updateAttendance,
+  setAttendanceStatusWithPoints,
 } from "../lib/services/attendanceService";
 import type {
   ClassRecord,
@@ -282,34 +281,21 @@ export default function SessionsPage() {
     const existing = sessionAttendanceByStudent.get(studentId);
     const newPoints = ATTENDANCE_POINTS[status];
     const previousPoints = existing?.pointsAwarded || 0;
-    const delta = newPoints - previousPoints;
 
-    if (existing) {
-      await updateAttendance(existing.id, { status, pointsAwarded: newPoints });
-    } else {
-      await recordAttendance({
-        classId: activeSession.classId,
-        studentId,
-        date: activeSession.date,
-        status,
-        sessionId: activeSession.id,
-        pointsAwarded: newPoints,
-      });
-    }
-
-    // Award/deduct only the difference so switching status never double-counts.
-    // This updates the student's total in the same transaction awardPoints
-    // already uses, so the score on screen changes instantly — no navigating
-    // away and back needed.
-    if (delta !== 0) {
-      await awardPoints({
-        studentId,
-        classId: activeSession.classId,
-        amount: delta,
-        reason: "attendance",
-        awardedBy: user.uid,
-      });
-    }
+    // One transaction writes the attendance status AND awards/adjusts points
+    // together, so both the pill and the score update from the same commit —
+    // no more waiting on a second round-trip for the score to catch up.
+    await setAttendanceStatusWithPoints({
+      attendanceId: existing?.id,
+      classId: activeSession.classId,
+      studentId,
+      date: activeSession.date,
+      sessionId: activeSession.id,
+      status,
+      newPoints,
+      previousPoints,
+      awardedBy: user.uid,
+    });
   }
 
   return (
