@@ -72,6 +72,8 @@ export interface AttendanceRecord {
   note?: string;
   /** Set when attendance was taken from within a specific session (a day can have more than one). */
   sessionId?: string;
+  /** Points already granted to the student for this record's current status, so re-marking (e.g. present → absent) adjusts the student's total instead of double-counting. */
+  pointsAwarded?: number;
   recordedAt: number;
 }
 
