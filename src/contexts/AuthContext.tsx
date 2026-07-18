@@ -7,16 +7,13 @@ import {
 } from "react";
 import {
   onAuthStateChanged,
-  signInWithPopup,
   signInWithRedirect,
   getRedirectResult,
-  createUserWithEmailAndPassword,
-  signInWithEmailAndPassword,
   GoogleAuthProvider,
   signOut as firebaseSignOut,
   type User,
 } from "firebase/auth";
-import { doc, getDoc, setDoc, serverTimestamp } from "firebase/firestore";
+import { doc, getDoc, setDoc, updateDoc, serverTimestamp } from "firebase/firestore";
 import { auth, db } from "../lib/firebase";
 import type { ParentProfile, StudentRecord, UserProfile } from "../types";
 import { findStudentByAuthUid } from "../lib/services/studentsService";
@@ -31,14 +28,15 @@ interface AuthContextValue {
   portalStudent: StudentRecord | null;
   portalParent: ParentProfile | null;
   loading: boolean;
-  signInWithGoogle: () => Promise<void>;
-  completeTeacherGoogleRedirect: () => Promise<boolean>;
-  /** Google sign-in for the /join flow — does NOT create a teacher profile. */
-  signInWithGooglePopupOnly: () => Promise<User>;
-  signInWithGoogleRedirect: () => Promise<void>;
-  getGoogleRedirectResult: () => Promise<User | null>;
-  registerWithEmail: (email: string, password: string) => Promise<User>;
-  signInWithEmailPassword: (email: string, password: string) => Promise<User>;
+  /** Teacher login: sends the browser to Google, full-page. */
+  signInTeacherWithGoogle: () => Promise<void>;
+  /** Call on mount of the teacher login page to pick up the result after Google redirects back. Returns true if a fresh sign-in was completed. */
+  completeTeacherSignIn: () => Promise<boolean>;
+  /** Join/portal-login: sends the browser to Google, full-page — does NOT create a teacher profile. */
+  beginGoogleSignIn: () => Promise<void>;
+  /** Call on mount of the join/portal-login page to pick up the result after Google redirects back. Returns the signed-in user, or null if this load isn't a redirect return. */
+  completeGoogleSignIn: () => Promise<User | null>;
+  updateTeacherPhoto: (photoURL: string) => Promise<void>;
   refreshPortalRole: () => Promise<void>;
   signOut: () => Promise<void>;
 }
@@ -46,6 +44,16 @@ interface AuthContextValue {
 const AuthContext = createContext<AuthContextValue | undefined>(undefined);
 const googleProvider = new GoogleAuthProvider();
 
+/**
+ * Everywhere in this app that signs a person in with Google uses the
+ * *redirect* flow (signInWithRedirect + getRedirectResult), never
+ * signInWithPopup. Google's own sign-in page sets a strict
+ * Cross-Origin-Opener-Policy header that breaks Firebase's popup flow in
+ * ways that don't produce a recognizable error — it's not reliably
+ * catchable, so the fix is to not use popups at all. Redirect is a plain
+ * full-page navigation and doesn't depend on window.closed monitoring, so
+ * it isn't affected by COOP.
+ */
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [profile, setProfile] = useState<UserProfile | null>(null);
@@ -146,68 +154,42 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }
 
   /**
-   * Signs the teacher in with Google. There is no separate sign-up flow —
-   * the first time a Google account signs in, a matching `teachers/{uid}`
-   * Firestore profile is created automatically (using the name/photo Google
-   * provides); on every later sign-in the existing profile is just loaded.
+   * Sends the browser to Google for the teacher login page. There is no
+   * separate sign-up flow — the first time a Google account signs in, a
+   * matching `teachers/{uid}` Firestore profile is created automatically
+   * (using the name/photo Google provides); on every later sign-in the
+   * existing profile is just loaded.
    *
    * Guarded so an account that's already registered as a student or parent
    * portal account can never also become a teacher just by visiting the
-   * teacher login page — previously this silently granted teacher access to
-   * anyone, regardless of their existing role.
+   * teacher login page.
    */
-  async function signInWithGoogle() {
-    const credential = await signInWithPopup(auth, googleProvider);
-    await ensureTeacherAccount(credential.user);
+  async function signInTeacherWithGoogle() {
+    await signInWithRedirect(auth, googleProvider);
   }
 
-  /**
-   * Redirect-flow counterpart to signInWithGoogle, for mobile/tablet
-   * browsers that block or silently kill the popup. Call
-   * `signInWithGoogleRedirect` first (below), then call this on mount of
-   * the page the browser lands back on to finish the same teacher guard +
-   * profile creation/load that the popup path does.
-   */
-  async function completeTeacherGoogleRedirect(): Promise<boolean> {
+  async function completeTeacherSignIn(): Promise<boolean> {
     const result = await getRedirectResult(auth);
     if (!result?.user) return false;
     await ensureTeacherAccount(result.user);
     return true;
   }
 
-  /** Google sign-in used by the /join page. Deliberately does not touch `teachers/` — the join page decides what profile (student/parent) to create. */
-  async function signInWithGooglePopupOnly() {
-    const credential = await signInWithPopup(auth, googleProvider);
-    return credential.user;
-  }
-
-  /**
-   * Mobile/tablet browsers frequently block or silently kill Google's
-   * sign-in popup (auth/popup-blocked, auth/cancelled-popup-request,
-   * auth/operation-not-supported-in-this-environment, and sometimes
-   * auth/popup-closed-by-user even though the person never touched it).
-   * This sends them through Google's full-page redirect flow instead, which
-   * works everywhere. The page fully reloads, so call sites must save
-   * anything they need (form fields, invite token) before calling this.
-   */
-  async function signInWithGoogleRedirect() {
+  /** Google sign-in used by the /join and /portal-login pages. Deliberately does not touch `teachers/` — the calling page decides what profile (student/parent) to create or look up. */
+  async function beginGoogleSignIn() {
     await signInWithRedirect(auth, googleProvider);
   }
 
-  /** Call on mount to pick up the result once the redirect round-trip lands back on the page. */
-  async function getGoogleRedirectResult() {
+  async function completeGoogleSignIn(): Promise<User | null> {
     const result = await getRedirectResult(auth);
     return result?.user || null;
   }
 
-  async function registerWithEmail(email: string, password: string) {
-    const credential = await createUserWithEmailAndPassword(auth, email, password);
-    return credential.user;
-  }
-
-  async function signInWithEmailPassword(email: string, password: string) {
-    const credential = await signInWithEmailAndPassword(auth, email, password);
-    return credential.user;
+  /** Lets a teacher replace their Google-provided photo with their own upload. */
+  async function updateTeacherPhoto(photoURL: string) {
+    if (!auth.currentUser) return;
+    await updateDoc(doc(db, "teachers", auth.currentUser.uid), { photoURL });
+    setProfile((prev) => (prev ? { ...prev, photoURL } : prev));
   }
 
   async function signOut() {
@@ -223,13 +205,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         portalStudent,
         portalParent,
         loading,
-        signInWithGoogle,
-        completeTeacherGoogleRedirect,
-        signInWithGooglePopupOnly,
-        signInWithGoogleRedirect,
-        getGoogleRedirectResult,
-        registerWithEmail,
-        signInWithEmailPassword,
+        signInTeacherWithGoogle,
+        completeTeacherSignIn,
+        beginGoogleSignIn,
+        completeGoogleSignIn,
+        updateTeacherPhoto,
         refreshPortalRole,
         signOut,
       }}

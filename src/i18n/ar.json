@@ -14,14 +14,6 @@
     "signOut": "تسجيل الخروج"
   },
   "auth": {
-    "signIn": "تسجيل الدخول",
-    "signUp": "إنشاء حساب",
-    "welcomeBack": "مرحبًا بعودتك",
-    "welcomeBackSub": "سجّل الدخول للوصول إلى لوحة التحكم",
-    "createAccount": "إنشاء حسابك",
-    "createAccountSub": "ابدأ بمتابعة صفوفك مع لينغوتريس",
-    "noAccount": "ليس لديك حساب؟",
-    "haveAccount": "لديك حساب بالفعل؟",
     "continueWithGoogle": "المتابعة باستخدام جوجل",
     "googleError": "تعذّر تسجيل الدخول باستخدام جوجل. يرجى المحاولة مرة أخرى.",
     "notATeacherError": "هذا الحساب مسجّل بالفعل كطالب أو ولي أمر. يرجى استخدام تسجيل دخول الطلاب/أولياء الأمور بدلاً من ذلك.",
@@ -32,7 +24,10 @@
     "notRegisteredError": "تعذّر العثور على حساب طالب أو ولي أمر لبيانات الدخول هذه. اطلب من معلمك رابط دعوة.",
     "noPortalAccount": "جديد هنا؟ استخدم رابط الدعوة الذي أرسله معلمك للانضمام.",
     "areYouATeacher": "هل أنت معلم؟",
-    "teacherLoginLink": "سجّل الدخول من هنا"
+    "teacherLoginLink": "سجّل الدخول من هنا",
+    "teacherLoginTitle": "تسجيل دخول المعلم",
+    "teacherLoginSub": "سجّل الدخول باستخدام جوجل لإدارة صفوفك",
+    "changePhoto": "تغيير الصورة"
   },
   "dashboard": {
     "title": "لوحة التحكم",
@@ -108,8 +103,8 @@
     "positive": "إيجابية",
     "negative": "سلبية",
     "contentPlaceholder": "ماذا حدث؟",
-    "visibleToParent": "مرئية لولي الأمر",
-    "noneYet": "لا توجد ملاحظات بعد."
+    "noneYet": "لا توجد ملاحظات بعد.",
+    "parentOnlyHint": "سيرى ولي الأمر هذه الملاحظة فقط — وليس الطالب."
   },
   "points": {
     "award": "منح نقاط",
@@ -141,27 +136,12 @@
     "subTitle": "تمت دعوتك للانضمام إلى \"{{className}}\"",
     "invalidTitle": "رابط الدعوة غير صالح",
     "invalidBody": "انتهت صلاحية رابط الدعوة هذا أو أنه غير موجود. اطلب من معلمك رابطًا جديدًا.",
-    "selectChild": "اختر ابنك/ابنتك",
-    "selectChildPlaceholder": "اختر طالبًا",
-    "yourName": "اسمك",
-    "yourNamePlaceholder": "أدخل اسمك",
-    "orEmail": "أو استخدم البريد الإلكتروني",
-    "emailPlaceholder": "البريد الإلكتروني",
-    "passwordPlaceholder": "كلمة المرور",
-    "confirmPasswordPlaceholder": "تأكيد كلمة المرور",
-    "createAccount": "إنشاء حساب",
-    "haveAccountAlready": "لديك حساب بالفعل؟ سجّل الدخول بدلاً من ذلك",
-    "errorGeneric": "حدث خطأ ما. يرجى المحاولة مرة أخرى.",
-    "errorPickChild": "يرجى اختيار ابنك/ابنتك.",
-    "errorEnterYourName": "يرجى إدخال اسمك.",
-    "errorPasswordMismatch": "كلمتا المرور غير متطابقتين.",
-    "errorAuth": "تعذّر إكمال إنشاء الحساب. يرجى التحقق من البيانات والمحاولة مرة أخرى.",
-    "studentNameFields": "اسمك",
-    "firstNamePlaceholder": "الاسم الأول",
-    "middleNamePlaceholder": "الاسم الأوسط (اختياري)",
-    "lastNamePlaceholder": "اسم العائلة",
-    "errorEnterFirstName": "يرجى إدخال اسمك الأول.",
-    "errorEnterLastName": "يرجى إدخال اسم العائلة."
+    "selectChild": "اختر طفلك",
+    "selectChildPlaceholder": "اختر طفلك",
+    "selectChildHint": "اختر طفلك قبل المتابعة باستخدام جوجل.",
+    "haveAccountAlready": "انضممت من قبل؟",
+    "errorPickChild": "يرجى اختيار طفلك أولاً.",
+    "errorAuth": "تعذّر إكمال التسجيل. يرجى المحاولة مرة أخرى."
   },
   "portal": {
     "welcome": "مرحبًا",

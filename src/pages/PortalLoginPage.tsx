@@ -5,29 +5,23 @@ import { useAuth } from "../contexts/AuthContext";
 import { getParentProfile } from "../lib/services/parentsService";
 import { findStudentByAuthUid } from "../lib/services/studentsService";
 import { auth } from "../lib/firebase";
+import Spinner from "../components/common/Spinner";
 
 /**
- * Separate login surface for students and parents. Deliberately never calls
- * `signInWithGoogle` (the teacher path, which auto-provisions a `teachers/`
- * profile) — it only authenticates and then routes based on whichever
- * portal role (student/parent) the account already resolves to. Creating a
- * *new* student/parent account only ever happens through a teacher's
- * class-specific `/join/:token` invite link, never here.
+ * Separate login surface for students and parents. Deliberately never
+ * touches the teachers collection — it only authenticates via Google and
+ * then routes based on whichever portal role (student/parent) the account
+ * already resolves to. Creating a *new* student/parent account only ever
+ * happens through a teacher's class-specific `/join/:token` invite link,
+ * never here.
  */
 export default function PortalLoginPage() {
   const { t } = useTranslation();
-  const {
-    signInWithGooglePopupOnly,
-    signInWithGoogleRedirect,
-    getGoogleRedirectResult,
-    signInWithEmailPassword,
-    refreshPortalRole,
-  } = useAuth();
+  const { beginGoogleSignIn, completeGoogleSignIn, refreshPortalRole } = useAuth();
   const navigate = useNavigate();
 
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
   const [error, setError] = useState("");
+  const [checkingRedirect, setCheckingRedirect] = useState(true);
   const [submitting, setSubmitting] = useState(false);
 
   async function routeByRole() {
@@ -48,16 +42,15 @@ export default function PortalLoginPage() {
     setError(t("auth.notRegisteredError"));
   }
 
-  // Pick up the result if we're landing back from a Google redirect
-  // sign-in (the popup fallback below, for mobile/tablet browsers that
-  // block or silently kill the popup).
+  // Pick up the result if we're landing back from the Google redirect.
   useEffect(() => {
-    getGoogleRedirectResult()
+    completeGoogleSignIn()
       .then((firebaseUser) => {
         if (!firebaseUser) return;
         return routeByRole();
       })
-      .catch(() => setError(t("auth.googleError")));
+      .catch(() => setError(t("auth.googleError")))
+      .finally(() => setCheckingRedirect(false));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -65,40 +58,26 @@ export default function PortalLoginPage() {
     setError("");
     setSubmitting(true);
     try {
-      await signInWithGooglePopupOnly();
-      await routeByRole();
+      await beginGoogleSignIn();
+      // page is navigating away to Google
     } catch {
-      // Any popup failure falls back to redirect — Google's own COOP
-      // headers can break the popup without a recognizable error code.
-      try {
-        await signInWithGoogleRedirect();
-        return; // page is navigating away
-      } catch {
-        setError(t("auth.googleError"));
-      }
-    } finally {
+      setError(t("auth.googleError"));
       setSubmitting(false);
     }
   }
 
-  async function handleEmailSubmit(e: React.FormEvent) {
-    e.preventDefault();
-    setError("");
-    setSubmitting(true);
-    try {
-      await signInWithEmailPassword(email, password);
-      await routeByRole();
-    } catch {
-      setError(t("join.errorAuth"));
-    } finally {
-      setSubmitting(false);
-    }
+  if (checkingRedirect) {
+    return (
+      <div className="min-h-screen bg-cream flex items-center justify-center">
+        <Spinner />
+      </div>
+    );
   }
 
   return (
     <div className="min-h-screen bg-cream flex items-center justify-center px-4">
-      <div className="card w-full max-w-md p-8">
-        <div className="flex items-center gap-2 mb-6">
+      <div className="card w-full max-w-md p-8 text-center">
+        <div className="flex items-center justify-center gap-2 mb-6">
           <span className="text-2xl">🍪</span>
           <span className="font-serif text-xl font-semibold text-navy">{t("app.name")}</span>
         </div>
@@ -115,7 +94,7 @@ export default function PortalLoginPage() {
           type="button"
           onClick={handleGoogleSignIn}
           disabled={submitting}
-          className="w-full flex items-center justify-center gap-2 rounded-lg border border-cream-300 bg-white py-2.5 text-sm font-semibold text-navy hover:bg-cream-50 transition disabled:opacity-60 mb-4"
+          className="w-full flex items-center justify-center gap-2 rounded-lg border border-cream-300 bg-white py-2.5 text-sm font-semibold text-navy hover:bg-cream-50 transition disabled:opacity-60"
         >
           <svg width="18" height="18" viewBox="0 0 18 18" xmlns="http://www.w3.org/2000/svg">
             <path fill="#4285F4" d="M17.64 9.2c0-.64-.06-1.25-.16-1.84H9v3.48h4.84a4.14 4.14 0 0 1-1.8 2.72v2.26h2.9c1.7-1.57 2.7-3.88 2.7-6.62z" />
@@ -123,40 +102,10 @@ export default function PortalLoginPage() {
             <path fill="#FBBC05" d="M3.95 10.7A5.4 5.4 0 0 1 3.67 9c0-.59.1-1.17.28-1.7V4.97H.95A9 9 0 0 0 0 9c0 1.45.35 2.83.95 4.03l3-2.33z" />
             <path fill="#EA4335" d="M9 3.58c1.32 0 2.51.46 3.44 1.35l2.58-2.58C13.46.89 11.43 0 9 0A9 9 0 0 0 .95 4.97l3 2.33C4.66 5.17 6.65 3.58 9 3.58z" />
           </svg>
-          {t("auth.continueWithGoogle")}
+          {submitting ? t("common.loading") : t("auth.continueWithGoogle")}
         </button>
 
-        <div className="flex items-center gap-3 mb-4">
-          <div className="h-px flex-1 bg-cream-400" />
-          <span className="text-xs text-cream-600">{t("join.orEmail")}</span>
-          <div className="h-px flex-1 bg-cream-400" />
-        </div>
-
-        <form onSubmit={handleEmailSubmit} className="space-y-3">
-          <input
-            type="email"
-            required
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            className="input-field"
-            placeholder={t("join.emailPlaceholder")}
-          />
-          <input
-            type="password"
-            required
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            className="input-field"
-            placeholder={t("join.passwordPlaceholder")}
-          />
-          <button type="submit" disabled={submitting} className="btn-primary w-full">
-            {submitting ? t("common.loading") : t("auth.signIn")}
-          </button>
-        </form>
-
-        <p className="mt-6 text-center text-sm text-cream-600">
-          {t("auth.noPortalAccount")}
-        </p>
+        <p className="mt-6 text-center text-sm text-cream-600">{t("auth.noPortalAccount")}</p>
         <p className="mt-2 text-center text-sm text-cream-600">
           {t("auth.areYouATeacher")}{" "}
           <Link to="/login" className="font-semibold text-gold hover:underline">

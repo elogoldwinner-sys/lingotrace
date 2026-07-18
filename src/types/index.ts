@@ -47,14 +47,12 @@ export interface ClassRecord {
 
 export interface StudentRecord {
   id: string;
-  /** Full display name — derived from firstName/middleName/lastName at creation time. */
+  /** Comes directly from the student's Google account displayName at join time. */
   name: string;
-  firstName: string;
-  middleName?: string;
-  lastName: string;
   classId: string;
   parentName?: string;
   parentEmail?: string;
+  /** Comes from Google at join time; the student can replace it with their own upload afterward. */
   photoURL?: string;
   points: number;
   badgeIds: string[];

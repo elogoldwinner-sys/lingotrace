@@ -87,7 +87,6 @@ export default function SessionsPage() {
   const [noteModalStudent, setNoteModalStudent] = useState<StudentRecord | null>(null);
   const [noteContent, setNoteContent] = useState("");
   const [noteSentiment, setNoteSentiment] = useState<NoteSentiment>("positive");
-  const [noteVisibleToParent, setNoteVisibleToParent] = useState(true);
   const [noteSubmitting, setNoteSubmitting] = useState(false);
 
   const [isPicking, setIsPicking] = useState(false);
@@ -168,7 +167,6 @@ export default function SessionsPage() {
   function openNoteModal(student: StudentRecord) {
     setNoteContent("");
     setNoteSentiment("positive");
-    setNoteVisibleToParent(true);
     setNoteModalStudent(student);
   }
 
@@ -229,7 +227,7 @@ export default function SessionsPage() {
         authorId: user.uid,
         content: noteContent.trim(),
         sentiment: noteSentiment,
-        visibleToParent: noteVisibleToParent,
+        visibleToParent: true,
         sessionId: activeSessionId || undefined,
       });
       setNoteModalStudent(null);
@@ -636,14 +634,7 @@ export default function SessionsPage() {
             rows={4}
             placeholder={t("notes.contentPlaceholder")}
           />
-          <label className="flex items-center gap-2 text-sm text-navy">
-            <input
-              type="checkbox"
-              checked={noteVisibleToParent}
-              onChange={(e) => setNoteVisibleToParent(e.target.checked)}
-            />
-            {t("notes.visibleToParent")}
-          </label>
+          <p className="text-xs text-cream-600">{t("notes.parentOnlyHint")}</p>
           <div className="flex justify-end gap-2">
             <button type="button" onClick={() => setNoteModalStudent(null)} className="btn-secondary">
               {t("common.cancel")}

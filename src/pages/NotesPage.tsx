@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Plus, Trash2, Eye, EyeOff } from "lucide-react";
+import { Plus, Trash2 } from "lucide-react";
 import { useAuth } from "../contexts/AuthContext";
 import { subscribeToClasses } from "../lib/services/classesService";
 import { subscribeToStudents } from "../lib/services/studentsService";
@@ -28,7 +28,6 @@ export default function NotesPage() {
 
   const [content, setContent] = useState("");
   const [sentiment, setSentiment] = useState<NoteSentiment>("positive");
-  const [visibleToParent, setVisibleToParent] = useState(false);
 
   useEffect(() => {
     if (!user) return;
@@ -77,11 +76,10 @@ export default function NotesPage() {
       authorId: user.uid,
       content,
       sentiment,
-      visibleToParent,
+      visibleToParent: true,
     });
     setContent("");
     setSentiment("positive");
-    setVisibleToParent(false);
     setModalOpen(false);
   }
 
@@ -118,11 +116,6 @@ export default function NotesPage() {
               }`}
             >
               <div className="flex items-start gap-2">
-                {n.visibleToParent ? (
-                  <Eye size={16} className="mt-1 text-gold" />
-                ) : (
-                  <EyeOff size={16} className="mt-1 text-cream-600" />
-                )}
                 <p className="text-sm text-navy">{n.content}</p>
               </div>
               <button onClick={() => deleteNote(n.id)} className="text-cream-600 hover:text-red-600 p-1">
@@ -166,14 +159,7 @@ export default function NotesPage() {
             className="input-field"
             rows={4}
           />
-          <label className="flex items-center gap-2 text-sm text-navy">
-            <input
-              type="checkbox"
-              checked={visibleToParent}
-              onChange={(e) => setVisibleToParent(e.target.checked)}
-            />
-            {t("notes.visibleToParent")}
-          </label>
+          <p className="text-xs text-cream-600">{t("notes.parentOnlyHint")}</p>
           <div className="flex justify-end gap-2">
             <button type="button" onClick={() => setModalOpen(false)} className="btn-secondary">
               {t("common.cancel")}

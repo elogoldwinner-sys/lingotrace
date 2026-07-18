@@ -14,14 +14,6 @@
     "signOut": "Sign out"
   },
   "auth": {
-    "signIn": "Sign in",
-    "signUp": "Create account",
-    "welcomeBack": "Welcome back",
-    "welcomeBackSub": "Sign in to your LingoTrace dashboard",
-    "createAccount": "Create your account",
-    "createAccountSub": "Start tracking your classes with LingoTrace",
-    "noAccount": "Don't have an account?",
-    "haveAccount": "Already have an account?",
     "continueWithGoogle": "Continue with Google",
     "googleError": "We couldn't sign you in with Google. Please try again.",
     "notATeacherError": "This account is already registered as a student or parent. Please use the student/parent login instead.",
@@ -32,7 +24,10 @@
     "notRegisteredError": "We couldn't find a student or parent account for this login. Ask your teacher for an invite link.",
     "noPortalAccount": "New here? Use the invite link your teacher sent you to join.",
     "areYouATeacher": "Are you a teacher?",
-    "teacherLoginLink": "Sign in here"
+    "teacherLoginLink": "Sign in here",
+    "teacherLoginTitle": "Teacher sign in",
+    "teacherLoginSub": "Sign in with Google to manage your classes",
+    "changePhoto": "Change photo"
   },
   "dashboard": {
     "title": "Dashboard",
@@ -108,8 +103,8 @@
     "positive": "Positive",
     "negative": "Negative",
     "contentPlaceholder": "What happened?",
-    "visibleToParent": "Visible to parent",
-    "noneYet": "No notes yet."
+    "noneYet": "No notes yet.",
+    "parentOnlyHint": "Only the parent will see this note — not the student."
   },
   "points": {
     "award": "Award points",
@@ -142,26 +137,11 @@
     "invalidTitle": "Invite link not valid",
     "invalidBody": "This invite link has expired or doesn't exist. Ask your teacher for a new one.",
     "selectChild": "Select your child",
-    "selectChildPlaceholder": "Choose a student",
-    "yourName": "Your name",
-    "yourNamePlaceholder": "Enter your name",
-    "orEmail": "or use email",
-    "emailPlaceholder": "Email address",
-    "passwordPlaceholder": "Password",
-    "confirmPasswordPlaceholder": "Confirm password",
-    "createAccount": "Create account",
-    "haveAccountAlready": "Already have an account? Sign in instead",
-    "errorGeneric": "Something went wrong. Please try again.",
-    "errorPickChild": "Please select your child.",
-    "errorEnterYourName": "Please enter your name.",
-    "errorPasswordMismatch": "Passwords don't match.",
-    "errorAuth": "We couldn't complete sign-up. Please check your details and try again.",
-    "studentNameFields": "Your name",
-    "firstNamePlaceholder": "First name",
-    "middleNamePlaceholder": "Middle name (optional)",
-    "lastNamePlaceholder": "Last name",
-    "errorEnterFirstName": "Please enter your first name.",
-    "errorEnterLastName": "Please enter your last name."
+    "selectChildPlaceholder": "Choose your child",
+    "selectChildHint": "Pick your child before continuing with Google.",
+    "haveAccountAlready": "Already joined before?",
+    "errorPickChild": "Please select your child first.",
+    "errorAuth": "We couldn't complete sign-up. Please try again."
   },
   "portal": {
     "welcome": "Welcome",

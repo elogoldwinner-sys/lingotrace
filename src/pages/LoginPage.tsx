@@ -2,32 +2,31 @@ import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../contexts/AuthContext";
+import Spinner from "../components/common/Spinner";
 
 export default function LoginPage() {
   const { t } = useTranslation();
-  const { signInWithGoogle, signInWithGoogleRedirect, completeTeacherGoogleRedirect } = useAuth();
+  const { signInTeacherWithGoogle, completeTeacherSignIn } = useAuth();
   const navigate = useNavigate();
 
   const [error, setError] = useState("");
+  const [checkingRedirect, setCheckingRedirect] = useState(true);
   const [submitting, setSubmitting] = useState(false);
 
-  function handleAuthError(err: unknown) {
-    if (err instanceof Error && err.message === "account-is-not-a-teacher") {
-      setError(t("auth.notATeacherError"));
-    } else {
-      setError(t("auth.googleError"));
-    }
-  }
-
-  // Pick up the result if we're landing back from a Google redirect
-  // sign-in (the popup fallback below, for mobile/tablet browsers that
-  // block or silently kill the popup).
+  // Pick up the result if we're landing back from the Google redirect.
   useEffect(() => {
-    completeTeacherGoogleRedirect()
+    completeTeacherSignIn()
       .then((handled) => {
-        if (handled) navigate("/dashboard");
+        if (handled) navigate("/dashboard", { replace: true });
       })
-      .catch(handleAuthError);
+      .catch((err) => {
+        if (err instanceof Error && err.message === "account-is-not-a-teacher") {
+          setError(t("auth.notATeacherError"));
+        } else {
+          setError(t("auth.googleError"));
+        }
+      })
+      .finally(() => setCheckingRedirect(false));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -35,39 +34,31 @@ export default function LoginPage() {
     setError("");
     setSubmitting(true);
     try {
-      await signInWithGoogle();
-      navigate("/dashboard");
-    } catch (err) {
-      if (err instanceof Error && err.message === "account-is-not-a-teacher") {
-        handleAuthError(err);
-        return;
-      }
-      // Any other popup failure falls back to redirect — Google's own COOP
-      // headers can break the popup without a recognizable error code.
-      try {
-        await signInWithGoogleRedirect();
-        return; // page is navigating away
-      } catch {
-        handleAuthError(err);
-      }
-    } finally {
+      await signInTeacherWithGoogle();
+      // page is navigating away to Google
+    } catch {
+      setError(t("auth.googleError"));
       setSubmitting(false);
     }
   }
 
+  if (checkingRedirect) {
+    return (
+      <div className="min-h-screen bg-cream flex items-center justify-center">
+        <Spinner />
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-cream flex items-center justify-center px-4">
-      <div className="card w-full max-w-md p-8">
-        <div className="flex items-center gap-2 mb-6">
+      <div className="card w-full max-w-md p-8 text-center">
+        <div className="flex items-center justify-center gap-2 mb-6">
           <span className="text-2xl">🍪</span>
-          <span className="font-serif text-xl font-semibold text-navy">
-            {t("app.name")}
-          </span>
+          <span className="font-serif text-xl font-semibold text-navy">{t("app.name")}</span>
         </div>
-        <h1 className="text-2xl font-semibold text-navy mb-1">
-          {t("auth.welcomeBack")}
-        </h1>
-        <p className="text-sm text-cream-600 mb-6">{t("auth.welcomeBackSub")}</p>
+        <h1 className="text-2xl font-semibold text-navy mb-1">{t("auth.teacherLoginTitle")}</h1>
+        <p className="text-sm text-cream-600 mb-6">{t("auth.teacherLoginSub")}</p>
 
         {error && (
           <div className="mb-4 rounded-lg bg-red-50 border border-red-200 px-3 py-2 text-sm text-red-700">

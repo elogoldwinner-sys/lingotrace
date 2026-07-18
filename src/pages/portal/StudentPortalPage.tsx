@@ -1,10 +1,12 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
-import { LogOut, Globe } from "lucide-react";
+import { LogOut, Globe, Camera } from "lucide-react";
 import { useAuth } from "../../contexts/AuthContext";
 import { subscribeToStudentPointsHistory } from "../../lib/services/pointsService";
 import { subscribeToStudentAttendance } from "../../lib/services/attendanceService";
+import { updateStudent } from "../../lib/services/studentsService";
+import { uploadToCloudinary } from "../../lib/cloudinary";
 import { getBadgeDefinition } from "../../lib/services/badgesService";
 import type { PointsTransaction, AttendanceRecord, AttendanceStatus } from "../../types";
 import Spinner from "../../components/common/Spinner";
@@ -19,10 +21,12 @@ const STATUS_STYLES: Record<AttendanceStatus, string> = {
 export default function StudentPortalPage() {
   const { t, i18n } = useTranslation();
   const navigate = useNavigate();
-  const { portalStudent, signOut } = useAuth();
+  const { portalStudent, signOut, refreshPortalRole } = useAuth();
   const [pointsHistory, setPointsHistory] = useState<PointsTransaction[]>([]);
   const [attendance, setAttendance] = useState<AttendanceRecord[]>([]);
   const [loading, setLoading] = useState(true);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [uploadingPhoto, setUploadingPhoto] = useState(false);
 
   useEffect(() => {
     if (!portalStudent) return;
@@ -44,6 +48,20 @@ export default function StudentPortalPage() {
 
   function toggleLanguage() {
     i18n.changeLanguage(i18n.language === "ar" ? "en" : "ar");
+  }
+
+  async function handlePhotoSelected(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (!file || !portalStudent) return;
+    setUploadingPhoto(true);
+    try {
+      const result = await uploadToCloudinary(file, "lingotrace/students");
+      await updateStudent(portalStudent.id, { photoURL: result.secure_url });
+      await refreshPortalRole();
+    } finally {
+      setUploadingPhoto(false);
+    }
   }
 
   if (!portalStudent) {
@@ -81,8 +99,41 @@ export default function StudentPortalPage() {
 
       <main className="max-w-3xl mx-auto px-4 py-8 space-y-6">
         <div className="card p-6">
-          <p className="label-eyebrow mb-1">{t("portal.welcome")}</p>
-          <h1 className="text-2xl font-semibold text-navy">{portalStudent.name}</h1>
+          <div className="flex items-center gap-4">
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/*"
+              className="hidden"
+              onChange={handlePhotoSelected}
+            />
+            <button
+              type="button"
+              onClick={() => fileInputRef.current?.click()}
+              disabled={uploadingPhoto}
+              title={t("auth.changePhoto")}
+              className="relative h-16 w-16 shrink-0 rounded-full group disabled:opacity-60"
+            >
+              {portalStudent.photoURL ? (
+                <img
+                  src={portalStudent.photoURL}
+                  alt={portalStudent.name}
+                  className="h-16 w-16 rounded-full object-cover border border-gold/40"
+                />
+              ) : (
+                <div className="h-16 w-16 rounded-full bg-navy text-cream-100 flex items-center justify-center text-xl font-semibold">
+                  {portalStudent.name[0]?.toUpperCase()}
+                </div>
+              )}
+              <span className="absolute inset-0 flex items-center justify-center rounded-full bg-navy/50 opacity-0 group-hover:opacity-100 transition">
+                <Camera size={18} className="text-cream-100" />
+              </span>
+            </button>
+            <div>
+              <p className="label-eyebrow mb-1">{t("portal.welcome")}</p>
+              <h1 className="text-2xl font-semibold text-navy">{portalStudent.name}</h1>
+            </div>
+          </div>
           <div className="mt-4 flex items-center gap-3">
             <span className="text-3xl font-bold text-gold">{portalStudent.points}</span>
             <span className="text-sm text-cream-600">{t("students.points")}</span>

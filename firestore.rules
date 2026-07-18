@@ -81,7 +81,9 @@ service cloud.firestore {
         (isSignedIn() && resource.data.authUid == null &&
           request.resource.data.authUid == request.auth.uid) ||
         (isLinkedParent(studentId) &&
-          request.resource.data.diff(resource.data).affectedKeys().hasOnly(["parentName", "parentEmail"]));
+          request.resource.data.diff(resource.data).affectedKeys().hasOnly(["parentName", "parentEmail"])) ||
+        (isLinkedStudent(studentId) &&
+          request.resource.data.diff(resource.data).affectedKeys().hasOnly(["photoURL"]));
       allow create: if ownsClass(request.resource.data.classId) ||
         (isSignedIn() && request.resource.data.authUid == request.auth.uid);
       allow delete: if ownsClass(resource.data.classId);

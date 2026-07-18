@@ -17,14 +17,9 @@ export function subscribeToStudents(
   );
 }
 
-function buildFullName(firstName: string, middleName: string | undefined, lastName: string) {
-  return [firstName.trim(), middleName?.trim(), lastName.trim()].filter(Boolean).join(" ");
-}
-
+/** Creates a student record at join time, using the name/photo their Google account provided. */
 export async function createStudent(data: {
-  firstName: string;
-  middleName?: string;
-  lastName: string;
+  name: string;
   classId: string;
   parentName?: string;
   parentEmail?: string;
@@ -33,7 +28,6 @@ export async function createStudent(data: {
 }) {
   return service.create({
     ...data,
-    name: buildFullName(data.firstName, data.middleName, data.lastName),
     points: 0,
     badgeIds: [],
   } as Omit<StudentRecord, "id" | "createdAt">);
@@ -68,12 +62,6 @@ export async function createStudentAccountMapping(uid: string, studentId: string
   });
 }
 
-/** Links a Firebase Auth uid to an *existing* (teacher-created) roster entry — the "I'm on the roster" join branch. */
-export async function linkStudentAccount(studentId: string, authUid: string, classId: string) {
-  await updateDoc(doc(db, "students", studentId), { authUid });
-  await createStudentAccountMapping(authUid, studentId, classId);
-}
-
 /** One-off (non-realtime) fetch of a single student — used when composing a parent report. */
 export async function getStudentOnce(studentId: string): Promise<StudentRecord | null> {
   const snapshot = await getDoc(doc(db, "students", studentId));
@@ -96,7 +84,7 @@ export function subscribeToStudent(
   );
 }
 
-/** Finds the roster entry linked to a given Firebase Auth uid, if any (student portal lookup). */
+/** Finds the roster entry linked to a given Firebase Auth uid, if any (student portal lookup, and duplicate-join guard). */
 export async function findStudentByAuthUid(
   authUid: string
 ): Promise<StudentRecord | null> {
