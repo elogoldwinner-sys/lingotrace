@@ -1,4 +1,14 @@
-import { collection, doc, getDocs, query, runTransaction, serverTimestamp, where } from "firebase/firestore";
+import {
+  collection,
+  doc,
+  getDocs,
+  increment,
+  query,
+  serverTimestamp,
+  setDoc,
+  updateDoc,
+  where,
+} from "firebase/firestore";
 import { db } from "../firebase";
 import { createFirestoreService } from "../firestoreService";
 import type { AttendanceRecord, AttendanceStatus } from "../../types";
@@ -97,14 +107,19 @@ export async function updateAttendance(
 }
 
 /**
- * Marks a student's attendance status AND awards/adjusts their points in a
- * single Firestore transaction. Previously these were two separate awaited
- * calls (record attendance, then a second round-trip to award points), so
- * the status pill turned green instantly but the score sat stale for a
- * second or more until the second write landed. Bundling both writes into
- * one transaction means they commit together, so the listeners driving the
- * roster and the score fire at the same time — the score updates the
- * instant the button is pressed.
+ * Marks a student's attendance status AND awards/adjusts their points.
+ *
+ * IMPORTANT: this intentionally does NOT use a Firestore transaction.
+ * `runTransaction` always waits for a server round-trip before it resolves —
+ * the SDK can't apply it to the local cache optimistically the way a plain
+ * write can. Using a transaction here previously made BOTH the status pill
+ * and the score wait on the network, which felt slower than before.
+ *
+ * Plain writes (setDoc/updateDoc), on the other hand, are echoed to local
+ * onSnapshot listeners immediately — before the network round-trip even
+ * finishes — which is what made the status pill feel instant in the first
+ * place. Using `increment()` for the points field gets the same instant
+ * local echo for the score, without needing to read the current value first.
  */
 export async function setAttendanceStatusWithPoints(params: {
   attendanceId?: string; // existing record id, if this student already has one for this session
@@ -122,19 +137,9 @@ export async function setAttendanceStatusWithPoints(params: {
     ? doc(db, "attendance", params.attendanceId)
     : doc(collection(db, "attendance"));
   const delta = params.newPoints - params.previousPoints;
-  const pointsTxnRef = delta !== 0 ? doc(collection(db, "pointsTransactions")) : null;
 
-  await runTransaction(db, async (tx) => {
-    let currentPoints = 0;
-    if (pointsTxnRef) {
-      const studentSnap = await tx.get(studentRef);
-      if (!studentSnap.exists()) {
-        throw new Error("Student not found.");
-      }
-      currentPoints = (studentSnap.data().points as number) || 0;
-    }
-
-    tx.set(
+  const writes: Promise<unknown>[] = [
+    setDoc(
       attendanceRef,
       {
         classId: params.classId,
@@ -146,11 +151,13 @@ export async function setAttendanceStatusWithPoints(params: {
         recordedAt: Date.now(),
       },
       { merge: true }
-    );
+    ),
+  ];
 
-    if (pointsTxnRef) {
-      tx.update(studentRef, { points: currentPoints + delta });
-      tx.set(pointsTxnRef, {
+  if (delta !== 0) {
+    writes.push(
+      updateDoc(studentRef, { points: increment(delta) }),
+      setDoc(doc(collection(db, "pointsTransactions")), {
         studentId: params.studentId,
         classId: params.classId,
         amount: delta,
@@ -158,9 +165,12 @@ export async function setAttendanceStatusWithPoints(params: {
         note: "",
         awardedBy: params.awardedBy,
         createdAt: serverTimestamp(),
-      });
-    }
-  });
+      })
+    );
+  }
+
+  // Fired together (not chained), so neither write waits on the other.
+  await Promise.all(writes);
 
   return attendanceRef.id;
 }
