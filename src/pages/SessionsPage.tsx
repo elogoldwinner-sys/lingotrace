@@ -44,6 +44,16 @@ const POINTS_REASONS: PointsReason[] = [
 
 const ATTENDANCE_STATUSES: AttendanceStatus[] = ["present", "absent", "late", "excused"];
 
+// Points auto-granted the instant a status is marked. Showing up (present/late)
+// earns the default point; absent/excused earn none. Re-marking a student to a
+// different status only awards/deducts the difference (see setSessionAttendanceStatus).
+const ATTENDANCE_POINTS: Record<AttendanceStatus, number> = {
+  present: 1,
+  late: 1,
+  absent: 0,
+  excused: 0,
+};
+
 const STATUS_STYLES: Record<AttendanceStatus, string> = {
   present: "bg-green-100 text-green-700 border-green-300",
   absent: "bg-red-100 text-red-700 border-red-300",
@@ -81,7 +91,7 @@ export default function SessionsPage() {
 
   const [students, setStudents] = useState<StudentRecord[]>([]);
   const [pointsModalStudent, setPointsModalStudent] = useState<StudentRecord | null>(null);
-  const [pointsAmount, setPointsAmount] = useState(5);
+  const [pointsAmount, setPointsAmount] = useState(1);
   const [pointsReason, setPointsReason] = useState<PointsReason>("participation");
 
   const [noteModalStudent, setNoteModalStudent] = useState<StudentRecord | null>(null);
@@ -159,7 +169,7 @@ export default function SessionsPage() {
   }, [sessionAttendance]);
 
   function openPointsModal(student: StudentRecord, direction: 1 | -1 = 1) {
-    setPointsAmount(direction * 5);
+    setPointsAmount(direction * 1);
     setPointsReason("participation");
     setPointsModalStudent(student);
   }
@@ -268,10 +278,14 @@ export default function SessionsPage() {
   }
 
   async function setSessionAttendanceStatus(studentId: string, status: AttendanceStatus) {
-    if (!activeSession) return;
+    if (!activeSession || !user) return;
     const existing = sessionAttendanceByStudent.get(studentId);
+    const newPoints = ATTENDANCE_POINTS[status];
+    const previousPoints = existing?.pointsAwarded || 0;
+    const delta = newPoints - previousPoints;
+
     if (existing) {
-      await updateAttendance(existing.id, { status });
+      await updateAttendance(existing.id, { status, pointsAwarded: newPoints });
     } else {
       await recordAttendance({
         classId: activeSession.classId,
@@ -279,6 +293,21 @@ export default function SessionsPage() {
         date: activeSession.date,
         status,
         sessionId: activeSession.id,
+        pointsAwarded: newPoints,
+      });
+    }
+
+    // Award/deduct only the difference so switching status never double-counts.
+    // This updates the student's total in the same transaction awardPoints
+    // already uses, so the score on screen changes instantly — no navigating
+    // away and back needed.
+    if (delta !== 0) {
+      await awardPoints({
+        studentId,
+        classId: activeSession.classId,
+        amount: delta,
+        reason: "attendance",
+        awardedBy: user.uid,
       });
     }
   }
@@ -543,7 +572,7 @@ export default function SessionsPage() {
             <div className="flex items-center gap-2">
               <button
                 type="button"
-                onClick={() => setPointsAmount((v) => -Math.abs(v || 5))}
+                onClick={() => setPointsAmount((v) => -Math.abs(v || 1))}
                 className={`h-9 w-9 shrink-0 flex items-center justify-center rounded-full border transition ${
                   pointsAmount < 0
                     ? "border-red-400 bg-red-50 text-red-600"
@@ -560,7 +589,7 @@ export default function SessionsPage() {
               />
               <button
                 type="button"
-                onClick={() => setPointsAmount((v) => Math.abs(v || 5))}
+                onClick={() => setPointsAmount((v) => Math.abs(v || 1))}
                 className={`h-9 w-9 shrink-0 flex items-center justify-center rounded-full border transition ${
                   pointsAmount > 0
                     ? "border-gold bg-gold-50 text-gold"
@@ -573,17 +602,22 @@ export default function SessionsPage() {
           </div>
           <div>
             <label className="label-eyebrow block mb-1.5">{t("points.reason")}</label>
-            <select
-              value={pointsReason}
-              onChange={(e) => setPointsReason(e.target.value as PointsReason)}
-              className="input-field"
-            >
+            <div className="flex flex-wrap gap-2">
               {POINTS_REASONS.map((reason) => (
-                <option key={reason} value={reason}>
+                <button
+                  key={reason}
+                  type="button"
+                  onClick={() => setPointsReason(reason)}
+                  className={`rounded-lg border px-3 py-1.5 text-sm font-semibold transition ${
+                    pointsReason === reason
+                      ? "border-gold bg-gold-50 text-gold"
+                      : "border-cream-300 text-cream-600 hover:border-gold/50 hover:text-gold"
+                  }`}
+                >
                   {t(`points.reasons.${reason}`)}
-                </option>
+                </button>
               ))}
-            </select>
+            </div>
           </div>
           <div className="flex justify-end gap-2">
             <button type="button" onClick={() => setPointsModalStudent(null)} className="btn-secondary">

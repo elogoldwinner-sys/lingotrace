@@ -27,6 +27,16 @@ import EmptyState from "../components/common/EmptyState";
 import Spinner from "../components/common/Spinner";
 import ClassSelector from "../components/common/ClassSelector";
 
+const POINTS_REASONS: PointsReason[] = [
+  "participation",
+  "homework",
+  "behavior",
+  "attendance",
+  "assignment",
+  "manual",
+  "other",
+];
+
 function todayISO() {
   return new Date().toISOString().slice(0, 10);
 }
@@ -49,7 +59,7 @@ export default function StudentsPage() {
   const [loading, setLoading] = useState(true);
 
   const [pointsModalStudent, setPointsModalStudent] = useState<StudentRecord | null>(null);
-  const [pointsAmount, setPointsAmount] = useState(5);
+  const [pointsAmount, setPointsAmount] = useState(1);
   const [pointsReason, setPointsReason] = useState<PointsReason>("participation");
 
   // Performance detail panel
@@ -120,7 +130,7 @@ export default function StudentsPage() {
       awardedBy: user.uid,
     });
     setPointsModalStudent(null);
-    setPointsAmount(5);
+    setPointsAmount(1);
   }
 
   function openDetail(student: StudentRecord) {
@@ -215,7 +225,7 @@ export default function StudentsPage() {
                 <button
                   onClick={(e) => {
                     e.stopPropagation();
-                    setPointsAmount(5);
+                    setPointsAmount(1);
                     setPointsReason("participation");
                     setPointsModalStudent(s);
                   }}
@@ -265,19 +275,22 @@ export default function StudentsPage() {
           </div>
           <div>
             <label className="label-eyebrow block mb-1.5">{t("points.reason")}</label>
-            <select
-              value={pointsReason}
-              onChange={(e) => setPointsReason(e.target.value as PointsReason)}
-              className="input-field"
-            >
-              <option value="participation">Participation</option>
-              <option value="homework">Homework</option>
-              <option value="behavior">Behavior</option>
-              <option value="attendance">Attendance</option>
-              <option value="assignment">Assignment</option>
-              <option value="manual">Manual</option>
-              <option value="other">Other</option>
-            </select>
+            <div className="flex flex-wrap gap-2">
+              {POINTS_REASONS.map((reason) => (
+                <button
+                  key={reason}
+                  type="button"
+                  onClick={() => setPointsReason(reason)}
+                  className={`rounded-lg border px-3 py-1.5 text-sm font-semibold transition ${
+                    pointsReason === reason
+                      ? "border-gold bg-gold-50 text-gold"
+                      : "border-cream-300 text-cream-600 hover:border-gold/50 hover:text-gold"
+                  }`}
+                >
+                  {t(`points.reasons.${reason}`)}
+                </button>
+              ))}
+            </div>
           </div>
           <div className="flex justify-end gap-2">
             <button type="button" onClick={() => setPointsModalStudent(null)} className="btn-secondary">
