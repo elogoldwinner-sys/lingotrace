@@ -58,8 +58,16 @@ export function subscribeToSessions(
   onData: (sessions: SessionRecord[]) => void,
   onError?: (error: Error) => void
 ) {
+  // Ordered by the real session date first (earliest first). `title` is the
+  // secondary sort key so that when a day has more than one session (e.g.
+  // "2026-07-18 (1)", "2026-07-18 (2)") session 1 always lists before
+  // session 2 instead of relying on Firestore's arbitrary tie-break.
   return service.subscribe(
-    [service.where("classId", "==", classId), service.orderBy("date", "desc")],
+    [
+      service.where("classId", "==", classId),
+      service.orderBy("date", "asc"),
+      service.orderBy("title", "asc"),
+    ],
     onData,
     onError
   );

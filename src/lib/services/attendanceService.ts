@@ -81,6 +81,7 @@ export async function recordAttendance(data: {
   status: AttendanceStatus;
   note?: string;
   sessionId?: string;
+  pointsAwarded?: number;
 }) {
   return service.create({ ...data, recordedAt: Date.now() } as Omit<
     AttendanceRecord,
