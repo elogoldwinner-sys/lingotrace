@@ -177,6 +177,12 @@ export default function SubmitProjectPage() {
             {t("submit.alreadyGraded")}
             <br />
             <span className="font-semibold">{t("submit.yourMark", { mark: submission?.awardedMark })}</span>
+            {submission?.teacherNote && (
+              <>
+                <p className="label-eyebrow mt-2 mb-0.5">{t("submit.teacherFeedback")}</p>
+                <p>{submission.teacherNote}</p>
+              </>
+            )}
           </div>
         )}
         {!alreadyGraded && deadlinePassed && (

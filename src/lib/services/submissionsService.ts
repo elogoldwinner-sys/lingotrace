@@ -93,6 +93,7 @@ export async function gradeSubmission(data: {
   studentId: string;
   classId: string;
   mark: number;
+  teacherNote?: string;
   awardedBy: string;
 }) {
   const subRef = doc(db, "submissions", data.submissionId);
@@ -100,7 +101,11 @@ export async function gradeSubmission(data: {
   const previousMark = snapshot.exists() ? ((snapshot.data().awardedMark as number) || 0) : 0;
   const delta = data.mark - previousMark;
 
-  await setDoc(subRef, { awardedMark: data.mark, gradedAt: Date.now() }, { merge: true });
+  await setDoc(
+    subRef,
+    { awardedMark: data.mark, teacherNote: data.teacherNote || "", gradedAt: Date.now() },
+    { merge: true }
+  );
 
   if (delta !== 0) {
     await awardPoints({
@@ -108,6 +113,7 @@ export async function gradeSubmission(data: {
       classId: data.classId,
       amount: delta,
       reason: "project",
+      note: data.teacherNote || undefined,
       awardedBy: data.awardedBy,
     });
   }

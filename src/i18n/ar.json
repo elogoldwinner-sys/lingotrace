@@ -177,6 +177,10 @@
     "saveMark": "حفظ الدرجة",
     "submissionLinkLabel": "رابط المشروع",
     "studentNote": "ملاحظة الطالب",
+    "openSubmission": "فتح رابط التسليم",
+    "feedbackNote": "ملاحظة التقييم",
+    "feedbackNotePlaceholder": "أي شيء تود إخبار الطالب به عن مشروعه؟",
+    "feedbackNoteHint": "تظهر للطالب ولولي أمره بمجرد حفظ الدرجة.",
     "permissionError": "تعذّر الحفظ — قد لا تسمح قواعد Firestore بذلك بعد. تأكد من نشر القواعد الخاصة بمجموعتي projects وsubmissions في وحدة تحكم Firebase."
   },
   "submit": {
@@ -195,6 +199,7 @@
     "updateButton": "تحديث التسليم",
     "submittedBody": "تم تسليم مشروعك. يمكنك تحديثه حتى يقوم معلمك بتقييمه.",
     "alreadyGraded": "تم تقييم هذا التسليم ولم يعد قابلاً للتعديل.",
-    "yourMark": "درجتك: {{mark}}"
+    "yourMark": "درجتك: {{mark}}",
+    "teacherFeedback": "ملاحظة المعلم"
   }
 }

@@ -49,6 +49,7 @@ export default function ProjectsPage() {
   const [gradeStudent, setGradeStudent] = useState<StudentRecord | null>(null);
   const [gradeSubmissionRecord, setGradeSubmissionRecord] = useState<SubmissionRecord | null>(null);
   const [markValue, setMarkValue] = useState(DEFAULT_MARK);
+  const [feedbackNote, setFeedbackNote] = useState("");
   const [grading, setGrading] = useState(false);
 
   const [copiedProjectId, setCopiedProjectId] = useState("");
@@ -109,8 +110,14 @@ export default function ProjectsPage() {
       setSubmissions([]);
       return;
     }
-    const unsubStudents = subscribeToStudents(activeProject.classId, setStudents);
-    const unsubSubmissions = subscribeToSubmissionsForProject(activeProject.id, setSubmissions);
+    const unsubStudents = subscribeToStudents(activeProject.classId, setStudents, (error) =>
+      setPageError(describeError(error))
+    );
+    const unsubSubmissions = subscribeToSubmissionsForProject(
+      activeProject.id,
+      setSubmissions,
+      (error) => setPageError(describeError(error))
+    );
     return () => {
       unsubStudents();
       unsubSubmissions();
@@ -185,6 +192,7 @@ export default function ProjectsPage() {
     setGradeStudent(student);
     setGradeSubmissionRecord(submission);
     setMarkValue(submission?.awardedMark ?? DEFAULT_MARK);
+    setFeedbackNote(submission?.teacherNote || "");
   }
 
   async function handleSaveMark(e: React.FormEvent) {
@@ -198,6 +206,7 @@ export default function ProjectsPage() {
         studentId: gradeStudent.id,
         classId: activeProject.classId,
         mark: markValue,
+        teacherNote: feedbackNote,
         awardedBy: user.uid,
       });
       setGradeStudent(null);
@@ -279,6 +288,15 @@ export default function ProjectsPage() {
                             {submission.awardedMark} {t("students.points")}
                           </span>
                         )}
+                        <a
+                          href={submission.link}
+                          target="_blank"
+                          rel="noreferrer"
+                          title={t("projects.openSubmission")}
+                          className="btn-secondary py-1.5 px-2.5 text-xs"
+                        >
+                          <ExternalLink size={14} />
+                        </a>
                         <button onClick={() => openGrade(s)} className="btn-gold py-1.5 px-3 text-xs">
                           {typeof submission.awardedMark === "number" ? t("projects.regrade") : t("projects.grade")}
                         </button>
@@ -328,6 +346,17 @@ export default function ProjectsPage() {
                   onChange={(e) => setMarkValue(Number(e.target.value))}
                   className="input-field"
                 />
+              </div>
+              <div>
+                <label className="label-eyebrow block mb-1.5">{t("projects.feedbackNote")}</label>
+                <textarea
+                  value={feedbackNote}
+                  onChange={(e) => setFeedbackNote(e.target.value)}
+                  placeholder={t("projects.feedbackNotePlaceholder")}
+                  className="input-field"
+                  rows={3}
+                />
+                <p className="text-xs text-cream-600 mt-1">{t("projects.feedbackNoteHint")}</p>
               </div>
               <div className="flex justify-end gap-2">
                 <button type="button" onClick={() => setGradeStudent(null)} className="btn-secondary">

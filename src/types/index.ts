@@ -114,6 +114,8 @@ export interface SubmissionRecord {
   note?: string;
   submittedAt: number;
   awardedMark?: number;
+  /** Teacher's feedback on the graded submission — shown to the student on their submission page, and to both the student and parent via the resulting points-transaction note. */
+  teacherNote?: string;
   gradedAt?: number;
 }
 
