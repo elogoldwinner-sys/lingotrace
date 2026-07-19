@@ -8,6 +8,7 @@ import {
   createClass,
   deleteClass,
 } from "../lib/services/classesService";
+import { subscribeToStudentCounts } from "../lib/services/studentsService";
 import { getOrCreateInvite, buildInviteUrl } from "../lib/services/invitesService";
 import type { ClassRecord } from "../types";
 import Modal from "../components/common/Modal";
@@ -18,6 +19,7 @@ export default function ClassesPage() {
   const { t } = useTranslation();
   const { user } = useAuth();
   const [classes, setClasses] = useState<ClassRecord[]>([]);
+  const [studentCounts, setStudentCounts] = useState<Record<string, number>>({});
   const [loading, setLoading] = useState(true);
   const [modalOpen, setModalOpen] = useState(false);
   const [name, setName] = useState("");
@@ -38,6 +40,13 @@ export default function ClassesPage() {
     );
     return unsubscribe;
   }, [user]);
+
+  useEffect(() => {
+    const classIds = classes.map((c) => c.id);
+    const unsubscribe = subscribeToStudentCounts(classIds, setStudentCounts, console.error);
+    return unsubscribe;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [classes.map((c) => c.id).join(",")]);
 
   async function handleCreate(e: React.FormEvent) {
     e.preventDefault();
@@ -115,7 +124,7 @@ export default function ClassesPage() {
                 </button>
               </div>
               <span className="pill bg-gold-50 text-gold w-fit">
-                {c.studentIds?.length || 0} {t("classes.students")}
+                {studentCounts[c.id] || 0} {t("classes.students")}
               </span>
               <div className="flex gap-2 pt-1 border-t border-cream-400/70 mt-1">
                 <button

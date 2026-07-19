@@ -11,6 +11,7 @@ import {
 import { awardPoints, subscribeToStudentPointsHistory } from "../lib/services/pointsService";
 import { subscribeToStudentAttendance } from "../lib/services/attendanceService";
 import { subscribeToStudentNotes } from "../lib/services/notesService";
+import { subscribeToSessions } from "../lib/services/sessionsService";
 import { sendPeriodReportToParent } from "../lib/services/reportService";
 import { getBadgeDefinition } from "../lib/services/badgesService";
 import type {
@@ -21,6 +22,7 @@ import type {
   AttendanceRecord,
   AttendanceStatus,
   NoteRecord,
+  SessionRecord,
 } from "../types";
 import Modal from "../components/common/Modal";
 import EmptyState from "../components/common/EmptyState";
@@ -67,6 +69,7 @@ export default function StudentsPage() {
   const [detailPoints, setDetailPoints] = useState<PointsTransaction[]>([]);
   const [detailAttendance, setDetailAttendance] = useState<AttendanceRecord[]>([]);
   const [detailNotes, setDetailNotes] = useState<NoteRecord[]>([]);
+  const [detailSessions, setDetailSessions] = useState<SessionRecord[]>([]);
   const [reportStart, setReportStart] = useState(daysAgoISO(30));
   const [reportEnd, setReportEnd] = useState(todayISO());
   const [sendingReport, setSendingReport] = useState(false);
@@ -108,10 +111,12 @@ export default function StudentsPage() {
     const unsubPoints = subscribeToStudentPointsHistory(detailStudent.id, setDetailPoints);
     const unsubAttendance = subscribeToStudentAttendance(detailStudent.id, setDetailAttendance);
     const unsubNotes = subscribeToStudentNotes(detailStudent.id, setDetailNotes);
+    const unsubSessions = subscribeToSessions(detailStudent.classId, setDetailSessions);
     return () => {
       unsubPoints();
       unsubAttendance();
       unsubNotes();
+      unsubSessions();
     };
   }, [detailStudent]);
 
@@ -369,18 +374,26 @@ export default function StudentsPage() {
                 <p className="text-sm text-cream-600">{t("notes.noneYet")}</p>
               ) : (
                 <div className="space-y-2 max-h-40 overflow-y-auto">
-                  {detailNotes.map((n) => (
-                    <div
-                      key={n.id}
-                      className={`rounded-lg border px-3 py-2 text-sm ${
-                        n.sentiment === "positive"
-                          ? "border-green-300 bg-green-50 text-green-800"
-                          : "border-red-300 bg-red-50 text-red-800"
-                      }`}
-                    >
-                      {n.content}
-                    </div>
-                  ))}
+                  {detailNotes.map((n) => {
+                    const noteSession = n.sessionId
+                      ? detailSessions.find((se) => se.id === n.sessionId)
+                      : undefined;
+                    return (
+                      <div
+                        key={n.id}
+                        className={`rounded-lg border px-3 py-2 text-sm ${
+                          n.sentiment === "positive"
+                            ? "border-green-300 bg-green-50 text-green-800"
+                            : "border-red-300 bg-red-50 text-red-800"
+                        }`}
+                      >
+                        {noteSession && (
+                          <p className="text-xs font-semibold opacity-70 mb-0.5">{noteSession.title}</p>
+                        )}
+                        {n.content}
+                      </div>
+                    );
+                  })}
                 </div>
               )}
             </div>

@@ -84,6 +84,51 @@ export function subscribeToStudent(
   );
 }
 
+/**
+ * Live per-class student counts for a set of classes. Used by the Dashboard
+ * and Classes list views instead of the `ClassRecord.studentIds` array,
+ * which is never actually written to when a student is created (via the
+ * join flow) or deleted — reading the real `students` collection directly
+ * avoids that drift entirely.
+ */
+export function subscribeToStudentCounts(
+  classIds: string[],
+  onData: (counts: Record<string, number>) => void,
+  onError?: (error: Error) => void
+) {
+  if (classIds.length === 0) {
+    onData({});
+    return () => {};
+  }
+  // Firestore "in" queries cap at 30 values; chunk defensively in case a
+  // teacher ever has more classes than that.
+  const chunks: string[][] = [];
+  for (let i = 0; i < classIds.length; i += 30) {
+    chunks.push(classIds.slice(i, i + 30));
+  }
+
+  const chunkCounts: Record<string, number>[] = chunks.map(() => ({}));
+  const unsubscribers = chunks.map((chunk, chunkIndex) =>
+    onSnapshot(
+      query(collection(db, "students"), where("classId", "in", chunk)),
+      (snapshot) => {
+        const counts: Record<string, number> = {};
+        snapshot.docs.forEach((d) => {
+          const classId = (d.data() as StudentRecord).classId;
+          counts[classId] = (counts[classId] || 0) + 1;
+        });
+        chunkCounts[chunkIndex] = counts;
+        const merged: Record<string, number> = {};
+        chunkCounts.forEach((c) => Object.assign(merged, c));
+        onData(merged);
+      },
+      (error) => onError?.(error)
+    )
+  );
+
+  return () => unsubscribers.forEach((unsub) => unsub());
+}
+
 /** Finds the roster entry linked to a given Firebase Auth uid, if any (student portal lookup, and duplicate-join guard). */
 export async function findStudentByAuthUid(
   authUid: string

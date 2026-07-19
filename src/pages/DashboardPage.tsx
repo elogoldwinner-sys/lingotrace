@@ -3,6 +3,7 @@ import { useTranslation } from "react-i18next";
 import { BookOpen, Users, CalendarCheck } from "lucide-react";
 import { useAuth } from "../contexts/AuthContext";
 import { subscribeToClasses } from "../lib/services/classesService";
+import { subscribeToStudentCounts } from "../lib/services/studentsService";
 import type { ClassRecord } from "../types";
 
 function StatCard({
@@ -31,6 +32,7 @@ export default function DashboardPage() {
   const { t } = useTranslation();
   const { user } = useAuth();
   const [classes, setClasses] = useState<ClassRecord[]>([]);
+  const [studentCounts, setStudentCounts] = useState<Record<string, number>>({});
 
   useEffect(() => {
     if (!user) return;
@@ -38,8 +40,15 @@ export default function DashboardPage() {
     return unsubscribe;
   }, [user]);
 
+  useEffect(() => {
+    const classIds = classes.map((c) => c.id);
+    const unsubscribe = subscribeToStudentCounts(classIds, setStudentCounts, console.error);
+    return unsubscribe;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [classes.map((c) => c.id).join(",")]);
+
   const totalStudents = classes.reduce(
-    (sum, c) => sum + (c.studentIds?.length || 0),
+    (sum, c) => sum + (studentCounts[c.id] || 0),
     0
   );
 
@@ -82,7 +91,7 @@ export default function DashboardPage() {
                   )}
                 </div>
                 <span className="pill bg-gold-50 text-gold">
-                  {c.studentIds?.length || 0} {t("classes.students")}
+                  {studentCounts[c.id] || 0} {t("classes.students")}
                 </span>
               </li>
             ))}

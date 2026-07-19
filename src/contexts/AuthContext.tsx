@@ -2,6 +2,7 @@ import {
   createContext,
   useContext,
   useEffect,
+  useRef,
   useState,
   type ReactNode,
 } from "react";
@@ -12,7 +13,7 @@ import {
   signOut as firebaseSignOut,
   type User,
 } from "firebase/auth";
-import { doc, getDoc, setDoc, updateDoc, serverTimestamp } from "firebase/firestore";
+import { doc, getDoc, setDoc, serverTimestamp } from "firebase/firestore";
 import { auth, db } from "../lib/firebase";
 import type { ParentProfile, StudentRecord, UserProfile } from "../types";
 import { findStudentByAuthUid } from "../lib/services/studentsService";
@@ -87,9 +88,25 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [portalParent, setPortalParent] = useState<ParentProfile | null>(null);
   const [loading, setLoading] = useState(true);
 
+  /**
+   * `onAuthStateChanged` fires its own `resolveRole` the instant Firebase
+   * notices a sign-in, which can run concurrently with the explicit
+   * `signInTeacherWithGoogle` -> `ensureTeacherAccount` flow that creates the
+   * `teachers/{uid}` doc on first login. Without ordering, whichever call's
+   * network round-trip finishes last wins — and if that's a `resolveRole`
+   * call whose read started before the doc was created, it stomps the good
+   * profile/role state with nulls (the teacher's own avatar/photo then
+   * silently stops working for the rest of the session). This token makes
+   * only the most recently *started* resolveRole call allowed to write
+   * state, so a stale, slower read can never overwrite a fresher one.
+   */
+  const resolveTokenRef = useRef(0);
+
   /** Resolves which role a signed-in user has: teacher, student, or parent. */
   async function resolveRole(firebaseUser: User) {
+    const token = ++resolveTokenRef.current;
     const teacherSnap = await getDoc(doc(db, "teachers", firebaseUser.uid));
+    if (token !== resolveTokenRef.current) return;
     if (teacherSnap.exists()) {
       setProfile(teacherSnap.data() as UserProfile);
       setRole("teacher");
@@ -100,6 +117,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setProfile(null);
 
     const parentProfile = await getParentProfile(firebaseUser.uid);
+    if (token !== resolveTokenRef.current) return;
     if (parentProfile) {
       setRole("parent");
       setPortalParent(parentProfile);
@@ -108,6 +126,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
 
     const student = await findStudentByAuthUid(firebaseUser.uid);
+    if (token !== resolveTokenRef.current) return;
     if (student) {
       setRole("student");
       setPortalStudent(student);
@@ -157,25 +176,24 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const snapshot = await getDoc(profileRef);
 
     if (!snapshot.exists()) {
-      const newProfile: UserProfile = {
+      const newProfile: Omit<UserProfile, "createdAt"> = {
         uid: firebaseUser.uid,
         email: firebaseUser.email || "",
         displayName: firebaseUser.displayName || "Teacher",
         role: "teacher",
         photoURL: firebaseUser.photoURL || undefined,
-        createdAt: Date.now(),
       };
-      await setDoc(profileRef, {
-        ...newProfile,
-        createdAt: serverTimestamp(),
-      });
-      setProfile(newProfile);
-    } else {
-      setProfile(snapshot.data() as UserProfile);
+      await setDoc(
+        profileRef,
+        { ...newProfile, createdAt: serverTimestamp() },
+        { merge: true }
+      );
     }
-    setRole("teacher");
-    setPortalStudent(null);
-    setPortalParent(null);
+    // Re-resolve from a fresh read now that the doc is guaranteed to exist,
+    // instead of setting local state directly here — this is the same
+    // token-guarded path `onAuthStateChanged` uses, so whichever call ran
+    // last always wins instead of racing it (see resolveRole above).
+    await resolveRole(firebaseUser);
   }
 
   /**
@@ -200,11 +218,32 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return result.user;
   }
 
-  /** Lets a teacher replace their Google-provided photo with their own upload. */
+  /**
+   * Lets a teacher replace their Google-provided photo with their own
+   * upload. Uses `setDoc(..., { merge: true })` rather than `updateDoc` so
+   * this can never silently fail with "no document to update" if the
+   * `teachers/{uid}` profile doc happens to be missing/incomplete — it
+   * self-heals instead. Also always writes new local state (with a
+   * reconstructed fallback profile when `profile` is currently null)
+   * instead of the previous no-op-when-null guard, which was why the
+   * photo appeared to change nothing when `profile` was null.
+   */
   async function updateTeacherPhoto(photoURL: string) {
-    if (!auth.currentUser) return;
-    await updateDoc(doc(db, "teachers", auth.currentUser.uid), { photoURL });
-    setProfile((prev) => (prev ? { ...prev, photoURL } : prev));
+    const currentUser = auth.currentUser;
+    if (!currentUser) return;
+    await setDoc(doc(db, "teachers", currentUser.uid), { photoURL }, { merge: true });
+    setProfile((prev) =>
+      prev
+        ? { ...prev, photoURL }
+        : {
+            uid: currentUser.uid,
+            email: currentUser.email || "",
+            displayName: currentUser.displayName || "Teacher",
+            role: "teacher",
+            photoURL,
+            createdAt: Date.now(),
+          }
+    );
   }
 
   async function signOut() {

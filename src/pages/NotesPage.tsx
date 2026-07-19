@@ -4,12 +4,19 @@ import { Plus, Trash2 } from "lucide-react";
 import { useAuth } from "../contexts/AuthContext";
 import { subscribeToClasses } from "../lib/services/classesService";
 import { subscribeToStudents } from "../lib/services/studentsService";
+import { subscribeToSessions } from "../lib/services/sessionsService";
 import {
   subscribeToStudentNotes,
   createNote,
   deleteNote,
 } from "../lib/services/notesService";
-import type { ClassRecord, StudentRecord, NoteRecord, NoteSentiment } from "../types";
+import type {
+  ClassRecord,
+  StudentRecord,
+  SessionRecord,
+  NoteRecord,
+  NoteSentiment,
+} from "../types";
 import Modal from "../components/common/Modal";
 import EmptyState from "../components/common/EmptyState";
 import Spinner from "../components/common/Spinner";
@@ -22,6 +29,7 @@ export default function NotesPage() {
   const [selectedClassId, setSelectedClassId] = useState("");
   const [students, setStudents] = useState<StudentRecord[]>([]);
   const [selectedStudentId, setSelectedStudentId] = useState("");
+  const [sessions, setSessions] = useState<SessionRecord[]>([]);
   const [notes, setNotes] = useState<NoteRecord[]>([]);
   const [loading, setLoading] = useState(true);
   const [modalOpen, setModalOpen] = useState(false);
@@ -46,6 +54,15 @@ export default function NotesPage() {
       if (data.length > 0) setSelectedStudentId(data[0].id);
       else setSelectedStudentId("");
     });
+    return unsubscribe;
+  }, [selectedClassId]);
+
+  useEffect(() => {
+    if (!selectedClassId) {
+      setSessions([]);
+      return;
+    }
+    const unsubscribe = subscribeToSessions(selectedClassId, setSessions, console.error);
     return unsubscribe;
   }, [selectedClassId]);
 
@@ -108,21 +125,31 @@ export default function NotesPage() {
         <EmptyState message={t("notes.noneYet")} icon="🗒️" />
       ) : (
         <div className="card divide-y divide-cream-400">
-          {notes.map((n) => (
-            <div
-              key={n.id}
-              className={`flex items-start justify-between gap-3 px-5 py-4 border-l-4 ${
-                n.sentiment === "positive" ? "border-l-green-400" : "border-l-red-400"
-              }`}
-            >
-              <div className="flex items-start gap-2">
-                <p className="text-sm text-navy">{n.content}</p>
+          {notes.map((n) => {
+            const noteStudent = students.find((s) => s.id === n.studentId);
+            const noteSession = n.sessionId ? sessions.find((se) => se.id === n.sessionId) : undefined;
+            return (
+              <div
+                key={n.id}
+                className={`flex items-start justify-between gap-3 px-5 py-4 border-l-4 ${
+                  n.sentiment === "positive" ? "border-l-green-400" : "border-l-red-400"
+                }`}
+              >
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs font-semibold text-navy/70">
+                    {noteStudent?.name || t("students.title")}
+                    {noteSession && (
+                      <span className="font-normal text-cream-600"> · {noteSession.title}</span>
+                    )}
+                  </p>
+                  <p className="text-sm text-navy mt-0.5">{n.content}</p>
+                </div>
+                <button onClick={() => deleteNote(n.id)} className="text-cream-600 hover:text-red-600 p-1 shrink-0">
+                  <Trash2 size={16} />
+                </button>
               </div>
-              <button onClick={() => deleteNote(n.id)} className="text-cream-600 hover:text-red-600 p-1">
-                <Trash2 size={16} />
-              </button>
-            </div>
-          ))}
+            );
+          })}
         </div>
       )}
 
