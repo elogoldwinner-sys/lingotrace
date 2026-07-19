@@ -1,6 +1,7 @@
 import { doc, getDoc } from "firebase/firestore";
 import { db } from "../firebase";
 import { createFirestoreService } from "../firestoreService";
+import { toMillis } from "../timestamps";
 import type { ProjectRecord } from "../../types";
 
 const service = createFirestoreService<ProjectRecord>("projects");
@@ -10,9 +11,17 @@ export function subscribeToProjects(
   onData: (projects: ProjectRecord[]) => void,
   onError?: (error: Error) => void
 ) {
+  // Deliberately no `orderBy("createdAt")` in the query itself: a doc whose
+  // `createdAt: serverTimestamp()` hasn't resolved yet is excluded entirely
+  // from a live snapshot that orders by that field, so a just-created
+  // project wouldn't appear until the server round-trip finished (which
+  // could take a moment, or never happen locally until the page is
+  // revisited and re-queries fresh). Sorting client-side after the fact
+  // means the doc shows up immediately — worst case it briefly sits at the
+  // wrong end of the list until its timestamp resolves a moment later.
   return service.subscribe(
-    [service.where("classId", "==", classId), service.orderBy("createdAt", "desc")],
-    onData,
+    [service.where("classId", "==", classId)],
+    (projects) => onData([...projects].sort((a, b) => toMillis(b.createdAt) - toMillis(a.createdAt))),
     onError
   );
 }

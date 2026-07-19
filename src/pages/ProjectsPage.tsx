@@ -110,13 +110,29 @@ export default function ProjectsPage() {
     if (!user || !selectedClassId) return;
     setSubmitting(true);
     try {
-      await createProject({
+      const newId = await createProject({
         classId: selectedClassId,
         teacherId: user.uid,
         title,
         description,
         deadline,
       });
+      // Show it immediately rather than waiting for the live listener to
+      // reconcile — the listener will confirm/replace this the moment its
+      // next snapshot arrives, with no visible change since the fields
+      // already match.
+      setProjects((prev) => [
+        {
+          id: newId,
+          classId: selectedClassId,
+          teacherId: user.uid,
+          title,
+          description,
+          deadline,
+          createdAt: Date.now(),
+        },
+        ...prev,
+      ]);
       setTitle("");
       setDescription("");
       setDeadline(todayISO());
@@ -127,8 +143,15 @@ export default function ProjectsPage() {
   }
 
   async function handleDeleteProject(id: string) {
-    await deleteProject(id);
+    const previous = projects;
+    setProjects((prev) => prev.filter((p) => p.id !== id));
     if (activeProject?.id === id) setActiveProject(null);
+    try {
+      await deleteProject(id);
+    } catch (err) {
+      setProjects(previous);
+      throw err;
+    }
   }
 
   async function handleCopyLink(project: ProjectRecord) {
