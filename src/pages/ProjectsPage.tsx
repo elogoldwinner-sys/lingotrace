@@ -52,7 +52,16 @@ export default function ProjectsPage() {
   const [grading, setGrading] = useState(false);
 
   const [copiedProjectId, setCopiedProjectId] = useState("");
-  const [linkError, setLinkError] = useState("");
+  const [pageError, setPageError] = useState("");
+
+  /** Turns a raw Firebase error into a message that actually points at the fix, instead of failing silently. */
+  function describeError(err: unknown): string {
+    const code = (err as { code?: string })?.code;
+    if (code === "permission-denied") {
+      return t("projects.permissionError");
+    }
+    return err instanceof Error ? err.message : String(err);
+  }
 
   useEffect(() => {
     if (!user) return;
@@ -81,7 +90,10 @@ export default function ProjectsPage() {
         setProjects(data);
         setLoading(false);
       },
-      () => setLoading(false)
+      (error) => {
+        setLoading(false);
+        setPageError(describeError(error));
+      }
     );
     return unsubscribe;
   }, [selectedClassId]);
@@ -109,6 +121,7 @@ export default function ProjectsPage() {
     e.preventDefault();
     if (!user || !selectedClassId) return;
     setSubmitting(true);
+    setPageError("");
     try {
       const newId = await createProject({
         classId: selectedClassId,
@@ -137,6 +150,8 @@ export default function ProjectsPage() {
       setDescription("");
       setDeadline(todayISO());
       setCreateModalOpen(false);
+    } catch (err) {
+      setPageError(describeError(err));
     } finally {
       setSubmitting(false);
     }
@@ -150,18 +165,18 @@ export default function ProjectsPage() {
       await deleteProject(id);
     } catch (err) {
       setProjects(previous);
-      throw err;
+      setPageError(describeError(err));
     }
   }
 
   async function handleCopyLink(project: ProjectRecord) {
-    setLinkError("");
+    setPageError("");
     try {
       await navigator.clipboard.writeText(buildSubmissionUrl(project.id));
       setCopiedProjectId(project.id);
       setTimeout(() => setCopiedProjectId(""), 2000);
     } catch {
-      setLinkError(t("classes.inviteError"));
+      setPageError(t("classes.inviteError"));
     }
   }
 
@@ -176,6 +191,7 @@ export default function ProjectsPage() {
     e.preventDefault();
     if (!user || !gradeStudent || !gradeSubmissionRecord || !activeProject) return;
     setGrading(true);
+    setPageError("");
     try {
       await gradeSubmission({
         submissionId: gradeSubmissionRecord.id,
@@ -186,6 +202,8 @@ export default function ProjectsPage() {
       });
       setGradeStudent(null);
       setGradeSubmissionRecord(null);
+    } catch (err) {
+      setPageError(describeError(err));
     } finally {
       setGrading(false);
     }
@@ -227,7 +245,7 @@ export default function ProjectsPage() {
               <span className="pill bg-red-100 text-red-700">{t("projects.deadlinePassedBadge")}</span>
             )}
           </div>
-          {linkError && <p className="text-xs text-red-600">{linkError}</p>}
+          {pageError && <p className="text-xs text-red-600">{pageError}</p>}
         </div>
 
         {students.length === 0 ? (
@@ -340,9 +358,9 @@ export default function ProjectsPage() {
         </button>
       </div>
 
-      {linkError && (
+      {pageError && (
         <div className="rounded-lg bg-red-50 border border-red-200 px-3 py-2 text-sm text-red-700">
-          {linkError}
+          {pageError}
         </div>
       )}
 

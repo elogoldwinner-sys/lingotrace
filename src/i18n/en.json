@@ -176,7 +176,8 @@
     "mark": "Mark",
     "saveMark": "Save mark",
     "submissionLinkLabel": "Project link",
-    "studentNote": "Student's note"
+    "studentNote": "Student's note",
+    "permissionError": "Couldn't save that — your Firestore rules may not allow it yet. Make sure the rules covering the projects and submissions collections have been published in the Firebase console."
   },
   "submit": {
     "signInTitle": "Sign in to submit your project",

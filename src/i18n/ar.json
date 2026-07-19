@@ -176,7 +176,8 @@
     "mark": "الدرجة",
     "saveMark": "حفظ الدرجة",
     "submissionLinkLabel": "رابط المشروع",
-    "studentNote": "ملاحظة الطالب"
+    "studentNote": "ملاحظة الطالب",
+    "permissionError": "تعذّر الحفظ — قد لا تسمح قواعد Firestore بذلك بعد. تأكد من نشر القواعد الخاصة بمجموعتي projects وsubmissions في وحدة تحكم Firebase."
   },
   "submit": {
     "signInTitle": "سجّل الدخول لتسليم مشروعك",
