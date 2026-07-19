@@ -12,7 +12,9 @@ import AttendancePage from "./pages/AttendancePage";
 import SessionsPage from "./pages/SessionsPage";
 import NotesPage from "./pages/NotesPage";
 import NotificationsPage from "./pages/NotificationsPage";
+import ProjectsPage from "./pages/ProjectsPage";
 import JoinPage from "./pages/JoinPage";
+import SubmitProjectPage from "./pages/SubmitProjectPage";
 import StudentPortalPage from "./pages/portal/StudentPortalPage";
 import ParentPortalPage from "./pages/portal/ParentPortalPage";
 
@@ -26,6 +28,7 @@ export default function App() {
           <Route path="/sign-in" element={<Navigate to="/login" replace />} />
           <Route path="/sign-up" element={<Navigate to="/login" replace />} />
           <Route path="/join/:token" element={<JoinPage />} />
+          <Route path="/submit/:projectId" element={<SubmitProjectPage />} />
 
           <Route
             path="/portal/student"
@@ -57,6 +60,7 @@ export default function App() {
             <Route path="/attendance" element={<AttendancePage />} />
             <Route path="/sessions" element={<SessionsPage />} />
             <Route path="/notes" element={<NotesPage />} />
+            <Route path="/projects" element={<ProjectsPage />} />
             <Route path="/notifications" element={<NotificationsPage />} />
           </Route>
 

@@ -7,6 +7,7 @@ import {
   CalendarCheck,
   NotebookPen,
   ClipboardList,
+  FolderCheck,
   Bell,
 } from "lucide-react";
 
@@ -17,6 +18,7 @@ const navItems = [
   { to: "/attendance", key: "attendance", icon: CalendarCheck },
   { to: "/sessions", key: "sessions", icon: ClipboardList },
   { to: "/notes", key: "notes", icon: NotebookPen },
+  { to: "/projects", key: "projects", icon: FolderCheck },
   { to: "/notifications", key: "notifications", icon: Bell },
 ];
 

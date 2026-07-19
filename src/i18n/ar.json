@@ -9,6 +9,7 @@
     "attendance": "الحضور",
     "sessions": "الجلسات",
     "notes": "الملاحظات",
+    "projects": "تسليم المشاريع",
     "notifications": "الإشعارات",
     "settings": "الإعدادات",
     "signOut": "تسجيل الخروج"
@@ -121,6 +122,7 @@
       "behavior": "السلوك",
       "attendance": "الحضور",
       "assignment": "التكليف",
+      "project": "المشروع",
       "manual": "يدوي",
       "other": "أخرى"
     }
@@ -154,5 +156,44 @@
     "recentPoints": "النقاط الأخيرة",
     "noPointsYet": "لم يتم تسجيل أي نقاط بعد.",
     "noAttendanceYet": "لم يتم تسجيل أي حضور بعد."
+  },
+  "projects": {
+    "title": "تسليم المشاريع",
+    "newProject": "مشروع جديد",
+    "projectTitle": "عنوان المشروع",
+    "description": "الوصف",
+    "deadline": "الموعد النهائي",
+    "deadlineLabel": "الموعد النهائي: {{date}}",
+    "deadlinePassedBadge": "انتهى الموعد النهائي",
+    "noProjects": "لا توجد مشاريع بعد. أنشئ مشروعًا لبدء استقبال التسليمات.",
+    "backToProjects": "العودة إلى المشاريع",
+    "viewSubmissions": "عرض التسليمات",
+    "copyLink": "نسخ رابط التسليم",
+    "submitted": "تم التسليم",
+    "notSubmitted": "لم يُسلَّم بعد",
+    "grade": "تقييم",
+    "regrade": "تحديث الدرجة",
+    "mark": "الدرجة",
+    "saveMark": "حفظ الدرجة",
+    "submissionLinkLabel": "رابط المشروع",
+    "studentNote": "ملاحظة الطالب"
+  },
+  "submit": {
+    "signInTitle": "سجّل الدخول لتسليم مشروعك",
+    "signInSub": "سجّل الدخول بحساب الطالب الخاص بك لتسليم \"{{className}}\".",
+    "wrongClassError": "رابط التسليم هذا ليس لصفك.",
+    "notStudentError": "تعذّر العثور على حساب طالب لبيانات الدخول هذه. اطلب من معلمك رابط دعوة الصف أولاً.",
+    "invalidTitle": "رابط المشروع غير صالح",
+    "invalidBody": "رابط التسليم هذا غير موجود. اطلب من معلمك الرابط الصحيح.",
+    "deadlinePassedBody": "انتهى الموعد النهائي لهذا المشروع ولم يعد بإمكانه استقبال التسليمات.",
+    "linkLabel": "رابط المشروع",
+    "linkPlaceholder": "https://...",
+    "noteLabel": "ملاحظة (اختياري)",
+    "notePlaceholder": "أي شيء تود ذكره عن مشروعك؟",
+    "submitButton": "تسليم المشروع",
+    "updateButton": "تحديث التسليم",
+    "submittedBody": "تم تسليم مشروعك. يمكنك تحديثه حتى يقوم معلمك بتقييمه.",
+    "alreadyGraded": "تم تقييم هذا التسليم ولم يعد قابلاً للتعديل.",
+    "yourMark": "درجتك: {{mark}}"
   }
 }

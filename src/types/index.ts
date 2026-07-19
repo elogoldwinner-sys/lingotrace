@@ -87,6 +87,36 @@ export interface SessionRecord {
   createdAt: number;
 }
 
+/** A project assignment the teacher creates for a class, with a submission deadline. */
+export interface ProjectRecord {
+  id: string;
+  classId: string;
+  teacherId: string;
+  title: string;
+  description?: string;
+  deadline: string; // YYYY-MM-DD, end of day in the deadline's own date
+  createdAt: number;
+}
+
+/**
+ * A single student's submission for a project. `id` is always
+ * `${projectId}_${studentId}` (see submissionsService), so a student
+ * submitting twice updates the same doc instead of creating duplicates.
+ * `awardedMark` is unset until the teacher grades it; once set, the
+ * submission is locked from further student edits.
+ */
+export interface SubmissionRecord {
+  id: string;
+  projectId: string;
+  classId: string;
+  studentId: string;
+  link: string;
+  note?: string;
+  submittedAt: number;
+  awardedMark?: number;
+  gradedAt?: number;
+}
+
 export type NoteSentiment = "positive" | "negative";
 
 export interface NoteRecord {
@@ -108,6 +138,7 @@ export type PointsReason =
   | "behavior"
   | "attendance"
   | "assignment"
+  | "project"
   | "manual"
   | "other";
 

@@ -9,6 +9,7 @@
     "attendance": "Attendance",
     "sessions": "Sessions",
     "notes": "Notes",
+    "projects": "Projects submission",
     "notifications": "Notifications",
     "settings": "Settings",
     "signOut": "Sign out"
@@ -121,6 +122,7 @@
       "behavior": "Behavior",
       "attendance": "Attendance",
       "assignment": "Assignment",
+      "project": "Project",
       "manual": "Manual",
       "other": "Other"
     }
@@ -154,5 +156,44 @@
     "recentPoints": "Recent points",
     "noPointsYet": "No points recorded yet.",
     "noAttendanceYet": "No attendance recorded yet."
+  },
+  "projects": {
+    "title": "Projects submission",
+    "newProject": "New project",
+    "projectTitle": "Project title",
+    "description": "Description",
+    "deadline": "Deadline",
+    "deadlineLabel": "Deadline: {{date}}",
+    "deadlinePassedBadge": "Deadline passed",
+    "noProjects": "No projects yet. Create one to start collecting submissions.",
+    "backToProjects": "Back to projects",
+    "viewSubmissions": "View submissions",
+    "copyLink": "Copy submission link",
+    "submitted": "Submitted",
+    "notSubmitted": "Not submitted",
+    "grade": "Grade",
+    "regrade": "Update mark",
+    "mark": "Mark",
+    "saveMark": "Save mark",
+    "submissionLinkLabel": "Project link",
+    "studentNote": "Student's note"
+  },
+  "submit": {
+    "signInTitle": "Sign in to submit your project",
+    "signInSub": "Sign in with your student account to submit \"{{className}}\".",
+    "wrongClassError": "This submission link isn't for your class.",
+    "notStudentError": "We couldn't find a student account for this login. Ask your teacher for your class's invite link first.",
+    "invalidTitle": "Project link not valid",
+    "invalidBody": "This submission link doesn't exist. Ask your teacher for the correct link.",
+    "deadlinePassedBody": "The deadline for this project has passed and it can no longer accept submissions.",
+    "linkLabel": "Project link",
+    "linkPlaceholder": "https://...",
+    "noteLabel": "Note (optional)",
+    "notePlaceholder": "Anything you'd like to mention about your project?",
+    "submitButton": "Submit project",
+    "updateButton": "Update submission",
+    "submittedBody": "Your project has been submitted. You can update it until your teacher grades it.",
+    "alreadyGraded": "This has been graded and can no longer be edited.",
+    "yourMark": "Your mark: {{mark}}"
   }
 }
