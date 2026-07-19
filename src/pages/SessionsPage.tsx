@@ -13,10 +13,7 @@ import {
   deleteSession,
   type WeekdaySessionCounts,
 } from "../lib/services/sessionsService";
-import {
-  subscribeToAttendanceBySession,
-  setAttendanceStatusWithPoints,
-} from "../lib/services/attendanceService";
+import { subscribeToAttendanceBySession } from "../lib/services/attendanceService";
 import type {
   ClassRecord,
   SessionRecord,
@@ -40,18 +37,6 @@ const POINTS_REASONS: PointsReason[] = [
   "manual",
   "other",
 ];
-
-const ATTENDANCE_STATUSES: AttendanceStatus[] = ["present", "absent", "late", "excused"];
-
-// Points auto-granted the instant a status is marked. Showing up (present/late)
-// earns the default point; absent/excused earn none. Re-marking a student to a
-// different status only awards/deducts the difference (see setSessionAttendanceStatus).
-const ATTENDANCE_POINTS: Record<AttendanceStatus, number> = {
-  present: 1,
-  late: 1,
-  absent: 0,
-  excused: 0,
-};
 
 const STATUS_STYLES: Record<AttendanceStatus, string> = {
   present: "bg-green-100 text-green-700 border-green-300",
@@ -155,11 +140,6 @@ export default function SessionsPage() {
     const unsubscribe = subscribeToAttendanceBySession(activeSessionId, setSessionAttendance);
     return unsubscribe;
   }, [activeSessionId]);
-
-  const activeSession = useMemo(
-    () => sessions.find((s) => s.id === activeSessionId) || null,
-    [sessions, activeSessionId]
-  );
 
   const sessionAttendanceByStudent = useMemo(() => {
     const map = new Map<string, AttendanceRecord>();
@@ -276,28 +256,6 @@ export default function SessionsPage() {
     });
   }
 
-  async function setSessionAttendanceStatus(studentId: string, status: AttendanceStatus) {
-    if (!activeSession || !user) return;
-    const existing = sessionAttendanceByStudent.get(studentId);
-    const newPoints = ATTENDANCE_POINTS[status];
-    const previousPoints = existing?.pointsAwarded || 0;
-
-    // One transaction writes the attendance status AND awards/adjusts points
-    // together, so both the pill and the score update from the same commit —
-    // no more waiting on a second round-trip for the score to catch up.
-    await setAttendanceStatusWithPoints({
-      attendanceId: existing?.id,
-      classId: activeSession.classId,
-      studentId,
-      date: activeSession.date,
-      sessionId: activeSession.id,
-      status,
-      newPoints,
-      previousPoints,
-      awardedBy: user.uid,
-    });
-  }
-
   return (
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
@@ -381,11 +339,13 @@ export default function SessionsPage() {
                   {pickNotice && (
                     <p className="text-xs text-red-600 -mt-2">{pickNotice}</p>
                   )}
+                  <p className="text-xs text-cream-600 -mt-2">{t("sessions.attendanceHint")}</p>
                   <p className="text-xs text-cream-600 -mt-2">{t("sessions.randomPickHint")}</p>
 
                   <div className="space-y-2">
                     {students.map((st) => {
                       const currentStatus = sessionAttendanceByStudent.get(st.id)?.status;
+                      const isBlocked = currentStatus === "absent" || currentStatus === "excused";
                       return (
                         <div
                           key={st.id}
@@ -393,7 +353,7 @@ export default function SessionsPage() {
                             highlightedId === st.id
                               ? "border-gold bg-gold-50 sm:scale-[1.01] shadow-sm"
                               : "border-cream-300 bg-white"
-                          }`}
+                          } ${isBlocked ? "opacity-50" : ""}`}
                         >
                           <div className="flex items-center gap-3 flex-1 min-w-0">
                             {st.photoURL ? (
@@ -416,41 +376,40 @@ export default function SessionsPage() {
                             <div className="flex items-center gap-1 shrink-0">
                               <button
                                 onClick={() => openNoteModal(st)}
+                                disabled={isBlocked}
                                 title={t("notes.add")}
-                                className="h-7 w-7 flex items-center justify-center rounded-full border border-cream-300 text-cream-700 hover:border-navy hover:text-navy transition"
+                                className="h-7 w-7 flex items-center justify-center rounded-full border border-cream-300 text-cream-700 hover:border-navy hover:text-navy transition disabled:pointer-events-none disabled:opacity-40"
                               >
                                 <NotebookPen size={14} />
                               </button>
                               <button
                                 onClick={() => openPointsModal(st, -1)}
+                                disabled={isBlocked}
                                 title={t("points.deduct")}
-                                className="h-7 w-7 flex items-center justify-center rounded-full border border-cream-300 text-cream-700 hover:border-red-400 hover:text-red-600 transition"
+                                className="h-7 w-7 flex items-center justify-center rounded-full border border-cream-300 text-cream-700 hover:border-red-400 hover:text-red-600 transition disabled:pointer-events-none disabled:opacity-40"
                               >
                                 <Minus size={14} />
                               </button>
                               <button
                                 onClick={() => openPointsModal(st, 1)}
+                                disabled={isBlocked}
                                 title={t("points.award")}
-                                className="h-7 w-7 flex items-center justify-center rounded-full border border-cream-300 text-cream-700 hover:border-gold hover:text-gold transition"
+                                className="h-7 w-7 flex items-center justify-center rounded-full border border-cream-300 text-cream-700 hover:border-gold hover:text-gold transition disabled:pointer-events-none disabled:opacity-40"
                               >
                                 <Plus size={14} />
                               </button>
                             </div>
                           </div>
-                          <div className="flex gap-1.5 shrink-0">
-                            {ATTENDANCE_STATUSES.map((status) => (
-                              <button
-                                key={status}
-                                onClick={() => setSessionAttendanceStatus(st.id, status)}
-                                className={`pill border text-xs ${
-                                  currentStatus === status
-                                    ? STATUS_STYLES[status]
-                                    : "bg-white text-cream-600 border-cream-400"
-                                }`}
-                              >
-                                {t(`attendance.${status}`)}
-                              </button>
-                            ))}
+                          <div className="shrink-0">
+                            {currentStatus ? (
+                              <span className={`pill border text-xs ${STATUS_STYLES[currentStatus]}`}>
+                                {t(`attendance.${currentStatus}`)}
+                              </span>
+                            ) : (
+                              <span className="pill border text-xs bg-white text-cream-500 border-cream-400">
+                                {t("attendance.notMarked")}
+                              </span>
+                            )}
                           </div>
                         </div>
                       );

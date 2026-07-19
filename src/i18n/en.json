@@ -69,7 +69,10 @@
     "sendReport": "Send report",
     "sent": "Sent!",
     "sendError": "Couldn't send the report. Please try again.",
-    "noParentEmail": "No parent email on file for this student."
+    "noParentEmail": "No parent email on file for this student.",
+    "recordTitle": "Record attendance",
+    "recordHint": "Mark each student's status below. Present/late students become available to work with in the matching session.",
+    "notMarked": "Not marked"
   },
   "sessions": {
     "title": "Sessions",
@@ -95,7 +98,8 @@
       "3": "Wed",
       "4": "Thu"
     },
-    "generate": "Generate sessions"
+    "generate": "Generate sessions",
+    "attendanceHint": "Attendance is recorded on the Attendance page. Absent/excused students are shown greyed out here and can't be given points or notes."
   },
   "notes": {
     "title": "Notes",
