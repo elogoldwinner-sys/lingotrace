@@ -76,7 +76,7 @@ export default function StudentPortalPage() {
     <div className="min-h-screen bg-cream">
       <header className="flex items-center justify-between border-b border-cream-400 bg-cream-100/90 px-6 py-4">
         <div className="flex items-center gap-2">
-          <span className="text-2xl">🍪</span>
+          <img src="/logo.png" alt="Lingo Bite" className="h-7 w-7 object-contain" />
           <span className="font-serif text-xl font-semibold text-navy">{t("app.name")}</span>
         </div>
         <div className="flex items-center gap-3">

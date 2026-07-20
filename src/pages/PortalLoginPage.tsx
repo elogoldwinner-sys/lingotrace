@@ -56,7 +56,7 @@ export default function PortalLoginPage() {
     <div className="min-h-screen bg-cream flex items-center justify-center px-4">
       <div className="card w-full max-w-md p-8 text-center">
         <div className="flex items-center justify-center gap-2 mb-6">
-          <span className="text-2xl">🍪</span>
+          <img src="/logo.png" alt="Lingo Bite" className="h-7 w-7 object-contain" />
           <span className="font-serif text-xl font-semibold text-navy">{t("app.name")}</span>
         </div>
         <h1 className="text-2xl font-semibold text-navy mb-1">{t("auth.portalWelcomeBack")}</h1>

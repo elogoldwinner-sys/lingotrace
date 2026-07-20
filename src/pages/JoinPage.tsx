@@ -136,7 +136,7 @@ export default function JoinPage() {
     return (
       <div className="min-h-screen bg-cream flex items-center justify-center px-4">
         <div className="card w-full max-w-md p-8 text-center">
-          <p className="text-2xl mb-2">🍪</p>
+          <img src="/logo.png" alt="Lingo Bite" className="h-10 w-10 mx-auto mb-2 object-contain" />
           <h1 className="text-xl font-semibold text-navy mb-2">{t("join.invalidTitle")}</h1>
           <p className="text-sm text-cream-600">{t("join.invalidBody")}</p>
         </div>
@@ -151,7 +151,7 @@ export default function JoinPage() {
     <div className="min-h-screen bg-cream flex items-center justify-center px-4 py-10">
       <div className="card w-full max-w-md p-8">
         <div className="flex items-center gap-2 mb-6">
-          <span className="text-2xl">🍪</span>
+          <img src="/logo.png" alt="Lingo Bite" className="h-7 w-7 object-contain" />
           <span className="font-serif text-xl font-semibold text-navy">{t("app.name")}</span>
         </div>
 
