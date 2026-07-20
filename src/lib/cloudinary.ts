@@ -7,12 +7,16 @@ export interface CloudinaryUploadResult {
 }
 
 /**
- * Uploads a file (image) to Cloudinary using the app's unsigned upload preset.
- * Used for student profile photos and teacher profile photos.
+ * Uploads a file to Cloudinary using the app's unsigned upload preset.
+ * Used for student/teacher profile photos (`resourceType: "image"`, the
+ * default) and announcement images/videos (`resourceType: "video"` for
+ * video files — Cloudinary requires the matching endpoint per resource
+ * type, an image-upload request rejects video files).
  */
 export async function uploadToCloudinary(
   file: File,
-  folder: string = "lingotrace"
+  folder: string = "lingotrace",
+  resourceType: "image" | "video" = "image"
 ): Promise<CloudinaryUploadResult> {
   if (!CLOUD_NAME || !UPLOAD_PRESET) {
     throw new Error(
@@ -26,7 +30,7 @@ export async function uploadToCloudinary(
   formData.append("folder", folder);
 
   const response = await fetch(
-    `https://api.cloudinary.com/v1_1/${CLOUD_NAME}/image/upload`,
+    `https://api.cloudinary.com/v1_1/${CLOUD_NAME}/${resourceType}/upload`,
     {
       method: "POST",
       body: formData,

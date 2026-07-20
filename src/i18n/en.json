@@ -212,5 +212,18 @@
     "whatsappNumber": "WhatsApp contact number",
     "whatsappPlaceholder": "e.g. +966501234567",
     "whatsappHint": "Shown to parents as a \"Contact via WhatsApp\" button. Include the country code."
+  },
+  "announcement": {
+    "title": "Announcement",
+    "post": "Post an announcement",
+    "edit": "Edit announcement",
+    "remove": "Remove announcement",
+    "textLabel": "Message",
+    "textPlaceholder": "Write an announcement for teachers, students, and parents…",
+    "addImage": "Add image",
+    "replaceImage": "Replace image",
+    "addVideo": "Add video",
+    "replaceVideo": "Replace video",
+    "errorEmpty": "Add some text, an image, or a video before posting."
   }
 }

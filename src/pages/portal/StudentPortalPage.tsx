@@ -8,9 +8,11 @@ import { subscribeToStudentAttendance } from "../../lib/services/attendanceServi
 import { updateStudent } from "../../lib/services/studentsService";
 import { uploadToCloudinary } from "../../lib/cloudinary";
 import { getBadgeDefinition } from "../../lib/services/badgesService";
-import type { PointsTransaction, AttendanceRecord, AttendanceStatus } from "../../types";
+import { subscribeToAnnouncement } from "../../lib/services/announcementsService";
+import type { PointsTransaction, AttendanceRecord, AttendanceStatus, Announcement } from "../../types";
 import Spinner from "../../components/common/Spinner";
 import Logo from "../../components/common/Logo";
+import AnnouncementCard from "../../components/common/AnnouncementCard";
 
 const STATUS_STYLES: Record<AttendanceStatus, string> = {
   present: "bg-green-100 text-green-700",
@@ -25,9 +27,15 @@ export default function StudentPortalPage() {
   const { portalStudent, signOut, refreshPortalRole } = useAuth();
   const [pointsHistory, setPointsHistory] = useState<PointsTransaction[]>([]);
   const [attendance, setAttendance] = useState<AttendanceRecord[]>([]);
+  const [announcement, setAnnouncement] = useState<Announcement | null>(null);
   const [loading, setLoading] = useState(true);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
+
+  useEffect(() => {
+    const unsubscribe = subscribeToAnnouncement(setAnnouncement);
+    return unsubscribe;
+  }, []);
 
   useEffect(() => {
     if (!portalStudent) return;
@@ -99,6 +107,8 @@ export default function StudentPortalPage() {
       </header>
 
       <main className="max-w-3xl mx-auto px-4 py-8 space-y-6">
+        {announcement && <AnnouncementCard announcement={announcement} />}
+
         <div className="card p-6">
           <div className="flex items-center gap-4">
             <input

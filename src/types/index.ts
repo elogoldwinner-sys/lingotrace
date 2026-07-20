@@ -181,4 +181,19 @@ export interface StudentBadge {
   awardedAt: number;
 }
 
+/**
+ * A single, school-wide announcement — one post at a time (posting a new one
+ * replaces the last), visible to every signed-in user (teacher, student, or
+ * parent) regardless of which class/teacher they're linked to. Stored as a
+ * singleton document at announcements/current. Only a signed-in teacher can
+ * create/edit/clear it (see firestore.rules).
+ */
+export interface Announcement {
+  text: string;
+  imageUrl?: string;
+  videoUrl?: string;
+  postedByName: string;
+  updatedAt: number;
+}
+
 

@@ -8,15 +8,18 @@ import { subscribeToStudentPointsHistory } from "../../lib/services/pointsServic
 import { subscribeToStudentAttendance } from "../../lib/services/attendanceService";
 import { subscribeToVisibleParentNotes } from "../../lib/services/notesService";
 import { getBadgeDefinition } from "../../lib/services/badgesService";
+import { subscribeToAnnouncement } from "../../lib/services/announcementsService";
 import { formatNoteDate } from "../../lib/timestamps";
 import { whatsappLink } from "../../lib/whatsapp";
 import Logo from "../../components/common/Logo";
+import AnnouncementCard from "../../components/common/AnnouncementCard";
 import type {
   PointsTransaction,
   AttendanceRecord,
   AttendanceStatus,
   NoteRecord,
   StudentRecord,
+  Announcement,
 } from "../../types";
 import Spinner from "../../components/common/Spinner";
 
@@ -197,8 +200,14 @@ export default function ParentPortalPage() {
   const navigate = useNavigate();
   const { portalParent, signOut } = useAuth();
   const [activeStudentId, setActiveStudentId] = useState("");
+  const [announcement, setAnnouncement] = useState<Announcement | null>(null);
 
   const studentIds = portalParent?.studentIds || [];
+
+  useEffect(() => {
+    const unsubscribe = subscribeToAnnouncement(setAnnouncement);
+    return unsubscribe;
+  }, []);
 
   useEffect(() => {
     if (studentIds.length > 0 && !studentIds.includes(activeStudentId)) {
@@ -250,6 +259,8 @@ export default function ParentPortalPage() {
       </header>
 
       <main className="max-w-3xl mx-auto px-4 py-8 space-y-6">
+        {announcement && <AnnouncementCard announcement={announcement} />}
+
         {studentIds.length > 1 && (
           <div className="flex flex-wrap gap-2">
             {studentIds.map((sid) => (

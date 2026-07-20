@@ -143,6 +143,16 @@ service cloud.firestore {
       allow update, delete: if ownsClass(resource.data.classId);
     }
 
+    // A single school-wide announcement (doc id is always "current"). Any
+    // signed-in user — teacher, student, or parent — can read it. Only a
+    // signed-in teacher (verified by having their own teachers/{uid}
+    // profile doc) can create, edit, or clear it.
+    match /announcements/{docId} {
+      allow read: if isSignedIn();
+      allow write: if isSignedIn() &&
+        exists(/databases/$(database)/documents/teachers/$(request.auth.uid));
+    }
+
     // Submissions. Doc id is deterministic (`${projectId}_${studentId}`) and
     // a student's submit/resubmit always upserts via setDoc(merge:true) —
     // Firestore evaluates that as "create" the first time and "update" on
