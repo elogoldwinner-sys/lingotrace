@@ -93,7 +93,7 @@ export default function SubmitProjectPage() {
   if (stage === "invalid") {
     return (
       <CenteredCard>
-        <img src="/logo.png" alt="Lingo Bite" className="h-10 w-10 mx-auto mb-2 object-contain" />
+        <img src={`${import.meta.env.BASE_URL}logo.png`} alt="Lingo Bite" className="h-10 w-10 mx-auto mb-2 object-contain" />
         <h1 className="text-xl font-semibold text-navy mb-2">{t("submit.invalidTitle")}</h1>
         <p className="text-sm text-cream-600">{t("submit.invalidBody")}</p>
       </CenteredCard>
