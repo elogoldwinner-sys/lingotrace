@@ -85,6 +85,7 @@ export default function ProjectsPage() {
       return;
     }
     setLoading(true);
+    setPageError("");
     const unsubscribe = subscribeToProjects(
       selectedClassId,
       (data) => {
@@ -111,6 +112,7 @@ export default function ProjectsPage() {
       setSubmissions([]);
       return;
     }
+    setPageError("");
     const unsubStudents = subscribeToStudents(activeProject.classId, setStudents, (error) => {
       console.error(error);
       setPageError(describeError(error, "load"));
@@ -231,7 +233,10 @@ export default function ProjectsPage() {
     return (
       <div className="space-y-6">
         <button
-          onClick={() => setActiveProject(null)}
+          onClick={() => {
+            setActiveProject(null);
+            setPageError("");
+          }}
           className="flex items-center gap-1.5 text-sm font-semibold text-navy/70 hover:text-navy"
         >
           <ArrowLeft size={16} />
