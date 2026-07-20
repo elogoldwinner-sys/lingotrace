@@ -1,6 +1,5 @@
 import { doc, getDoc, updateDoc, arrayUnion } from "firebase/firestore";
 import { db } from "../firebase";
-import { createNotification } from "./notificationsService";
 import type { BadgeDefinition } from "../../types";
 
 /**
@@ -69,16 +68,6 @@ export async function evaluateBadgesForStudent(studentId: string, currentPoints:
   await updateDoc(studentRef, {
     badgeIds: arrayUnion(...newlyEarned.map((b) => b.id)),
   });
-
-  for (const badge of newlyEarned) {
-    await createNotification({
-      recipientId: studentId,
-      type: "badge",
-      title: `New badge earned: ${badge.name}`,
-      body: badge.description,
-      linkTo: `/students/${studentId}`,
-    });
-  }
 
   return newlyEarned;
 }

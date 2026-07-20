@@ -1,4 +1,4 @@
-import { arrayUnion, doc, getDoc, getDocs, onSnapshot, query, setDoc, updateDoc, where, collection } from "firebase/firestore";
+import { arrayUnion, doc, getDoc, getDocs, onSnapshot, query, setDoc, updateDoc, where, collection, writeBatch } from "firebase/firestore";
 import { db } from "../firebase";
 import { createFirestoreService } from "../firestoreService";
 import type { StudentRecord } from "../../types";
@@ -127,6 +127,34 @@ export function subscribeToStudentCounts(
   );
 
   return () => unsubscribers.forEach((unsub) => unsub());
+}
+
+/**
+ * Denormalizes the teacher's WhatsApp number onto every one of their
+ * students' records (`teacherWhatsapp`), so the parent portal can show a
+ * "Contact via WhatsApp" button by reading the student doc it already has
+ * permission to read — no new Firestore rules needed for the parent side.
+ * Called whenever the teacher updates the number in their profile.
+ */
+export async function setTeacherWhatsappForClasses(classIds: string[], whatsappNumber: string) {
+  if (classIds.length === 0) return;
+  // Firestore "in" queries cap at 30 values; chunk defensively.
+  const chunks: string[][] = [];
+  for (let i = 0; i < classIds.length; i += 30) {
+    chunks.push(classIds.slice(i, i + 30));
+  }
+  for (const chunk of chunks) {
+    const snapshot = await getDocs(query(collection(db, "students"), where("classId", "in", chunk)));
+    if (snapshot.empty) continue;
+    // Batched writes cap at 500; split into sub-chunks of 400 to stay safe.
+    for (let i = 0; i < snapshot.docs.length; i += 400) {
+      const batch = writeBatch(db);
+      snapshot.docs.slice(i, i + 400).forEach((d) => {
+        batch.update(d.ref, { teacherWhatsapp: whatsappNumber });
+      });
+      await batch.commit();
+    }
+  }
 }
 
 /** Finds the roster entry linked to a given Firebase Auth uid, if any (student portal lookup, and duplicate-join guard). */

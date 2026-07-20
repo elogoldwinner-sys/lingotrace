@@ -13,10 +13,10 @@ import {
   signOut as firebaseSignOut,
   type User,
 } from "firebase/auth";
-import { doc, getDoc, setDoc, serverTimestamp } from "firebase/firestore";
+import { collection, doc, getDoc, getDocs, query, setDoc, serverTimestamp, where } from "firebase/firestore";
 import { auth, db } from "../lib/firebase";
 import type { ParentProfile, StudentRecord, UserProfile } from "../types";
-import { findStudentByAuthUid } from "../lib/services/studentsService";
+import { findStudentByAuthUid, setTeacherWhatsappForClasses } from "../lib/services/studentsService";
 import { getParentProfile } from "../lib/services/parentsService";
 
 export type PortalRole = "teacher" | "student" | "parent" | null;
@@ -48,6 +48,7 @@ interface AuthContextValue {
   /** Join/portal-login via a Google popup — does NOT create a teacher profile. Resolves with the signed-in user. */
   beginGoogleSignIn: () => Promise<User>;
   updateTeacherPhoto: (photoURL: string) => Promise<void>;
+  updateTeacherWhatsapp: (whatsappNumber: string) => Promise<void>;
   refreshPortalRole: () => Promise<void>;
   signOut: () => Promise<void>;
 }
@@ -246,6 +247,34 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     );
   }
 
+  /**
+   * Lets a teacher set/update their WhatsApp contact number. Saved on their
+   * own profile (the source of truth), and also denormalized onto every
+   * student they teach (`teacherWhatsapp`) so the parent portal can read it
+   * under the student-read permissions parents already have, without a new
+   * Firestore rule granting parents any access to the teacher's own profile.
+   */
+  async function updateTeacherWhatsapp(whatsappNumber: string) {
+    const currentUser = auth.currentUser;
+    if (!currentUser) return;
+    await setDoc(doc(db, "teachers", currentUser.uid), { whatsappNumber }, { merge: true });
+    setProfile((prev) =>
+      prev
+        ? { ...prev, whatsappNumber }
+        : {
+            uid: currentUser.uid,
+            email: currentUser.email || "",
+            displayName: currentUser.displayName || "Teacher",
+            role: "teacher",
+            whatsappNumber,
+            createdAt: Date.now(),
+          }
+    );
+    const classesSnap = await getDocs(query(collection(db, "classes"), where("teacherId", "==", currentUser.uid)));
+    const classIds = classesSnap.docs.map((d) => d.id);
+    await setTeacherWhatsappForClasses(classIds, whatsappNumber);
+  }
+
   async function signOut() {
     await firebaseSignOut(auth);
   }
@@ -262,6 +291,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         signInTeacherWithGoogle,
         beginGoogleSignIn,
         updateTeacherPhoto,
+        updateTeacherWhatsapp,
         refreshPortalRole,
         signOut,
       }}

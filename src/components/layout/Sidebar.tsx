@@ -1,5 +1,6 @@
 import { NavLink } from "react-router-dom";
 import { useTranslation } from "react-i18next";
+import Logo from "../common/Logo";
 import {
   LayoutDashboard,
   BookOpen,
@@ -8,7 +9,6 @@ import {
   NotebookPen,
   ClipboardList,
   FolderCheck,
-  Bell,
 } from "lucide-react";
 
 const navItems = [
@@ -19,7 +19,6 @@ const navItems = [
   { to: "/sessions", key: "sessions", icon: ClipboardList },
   { to: "/notes", key: "notes", icon: NotebookPen },
   { to: "/projects", key: "projects", icon: FolderCheck },
-  { to: "/notifications", key: "notifications", icon: Bell },
 ];
 
 export default function Sidebar() {
@@ -28,7 +27,7 @@ export default function Sidebar() {
   return (
     <aside className="hidden md:flex md:w-64 md:flex-col md:fixed md:inset-y-0 bg-navy text-cream-200">
       <div className="flex items-center gap-2 px-6 py-6">
-        <img src={`${import.meta.env.BASE_URL}logo.png`} alt="Lingo Bite" className="h-7 w-7 object-contain" />
+        <Logo size={28} />
         <span className="font-serif text-xl font-semibold tracking-wide">
           {t("app.name")}
         </span>

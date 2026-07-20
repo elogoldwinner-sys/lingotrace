@@ -1,16 +1,21 @@
 import { useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
-import { LogOut, Globe, Camera } from "lucide-react";
+import { LogOut, Globe, Camera, MessageCircle } from "lucide-react";
 import { useAuth } from "../../contexts/AuthContext";
 import { uploadToCloudinary } from "../../lib/cloudinary";
+import Modal from "../common/Modal";
 
 export default function Topbar() {
   const { t, i18n } = useTranslation();
-  const { profile, signOut, updateTeacherPhoto } = useAuth();
+  const { profile, signOut, updateTeacherPhoto, updateTeacherWhatsapp } = useAuth();
   const navigate = useNavigate();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [uploading, setUploading] = useState(false);
+
+  const [whatsappModalOpen, setWhatsappModalOpen] = useState(false);
+  const [whatsappInput, setWhatsappInput] = useState("");
+  const [savingWhatsapp, setSavingWhatsapp] = useState(false);
 
   async function handleSignOut() {
     await signOut();
@@ -34,6 +39,22 @@ export default function Topbar() {
     }
   }
 
+  function openWhatsappModal() {
+    setWhatsappInput(profile?.whatsappNumber || "");
+    setWhatsappModalOpen(true);
+  }
+
+  async function handleSaveWhatsapp(e: React.FormEvent) {
+    e.preventDefault();
+    setSavingWhatsapp(true);
+    try {
+      await updateTeacherWhatsapp(whatsappInput.trim());
+      setWhatsappModalOpen(false);
+    } finally {
+      setSavingWhatsapp(false);
+    }
+  }
+
   return (
     <header className="sticky top-0 z-10 flex items-center justify-between border-b border-cream-400 bg-cream-100/90 backdrop-blur px-6 py-4">
       <div>
@@ -51,6 +72,15 @@ export default function Topbar() {
         >
           <Globe size={14} />
           {i18n.language === "ar" ? "EN" : "AR"}
+        </button>
+
+        <button
+          onClick={openWhatsappModal}
+          className="flex items-center gap-1.5 rounded-lg border border-gold/40 px-3 py-1.5 text-xs font-semibold text-navy hover:bg-gold-50"
+          title={t("settings.whatsappNumber")}
+        >
+          <MessageCircle size={14} />
+          {t("settings.whatsapp")}
         </button>
 
         <input
@@ -91,6 +121,30 @@ export default function Topbar() {
           {t("nav.signOut")}
         </button>
       </div>
+
+      <Modal open={whatsappModalOpen} onClose={() => setWhatsappModalOpen(false)} title={t("settings.whatsappNumber")}>
+        <form onSubmit={handleSaveWhatsapp} className="space-y-4">
+          <div>
+            <label className="label-eyebrow block mb-1.5">{t("settings.whatsappNumber")}</label>
+            <input
+              type="tel"
+              value={whatsappInput}
+              onChange={(e) => setWhatsappInput(e.target.value)}
+              placeholder={t("settings.whatsappPlaceholder")}
+              className="input-field"
+            />
+            <p className="text-xs text-cream-600 mt-1.5">{t("settings.whatsappHint")}</p>
+          </div>
+          <div className="flex justify-end gap-2">
+            <button type="button" onClick={() => setWhatsappModalOpen(false)} className="btn-secondary">
+              {t("common.cancel")}
+            </button>
+            <button type="submit" disabled={savingWhatsapp} className="btn-primary">
+              {savingWhatsapp ? t("common.loading") : t("common.save")}
+            </button>
+          </div>
+        </form>
+      </Modal>
     </header>
   );
 }

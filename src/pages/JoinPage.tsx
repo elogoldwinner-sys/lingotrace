@@ -3,6 +3,7 @@ import { useParams, useNavigate, Link } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import type { User } from "firebase/auth";
 import { useAuth, isDismissedPopupError } from "../contexts/AuthContext";
+import Logo from "../components/common/Logo";
 import { getInvite } from "../lib/services/invitesService";
 import {
   subscribeToStudents,
@@ -11,7 +12,7 @@ import {
   updateStudent,
   findStudentByAuthUid,
 } from "../lib/services/studentsService";
-import { createParentProfile, getParentProfile } from "../lib/services/parentsService";
+import { addChildToParent } from "../lib/services/parentsService";
 import type { InviteRecord, StudentRecord } from "../types";
 import Spinner from "../components/common/Spinner";
 
@@ -52,22 +53,21 @@ export default function JoinPage() {
   async function finalizeJoin(firebaseUser: User, childStudentId?: string) {
     if (!invite) return;
 
-    // Guard against creating a duplicate record: if this Google account has
-    // already joined a class before (as a student or a parent), don't
-    // create a second one — just sign them into what they already have.
-    // This also makes re-clicking an old invite link a safe no-op.
-    const [existingParent, existingStudent] = await Promise.all([
-      getParentProfile(firebaseUser.uid),
-      findStudentByAuthUid(firebaseUser.uid),
-    ]);
-    if (existingParent || existingStudent) {
-      await refreshPortalRole();
-      setStage("done");
-      navigate(existingParent ? "/portal/parent" : "/portal/student", { replace: true });
-      return;
-    }
-
     if (invite.role === "student") {
+      // Guard against creating a duplicate student record: if this Google
+      // account already has a student record (from a prior join), don't
+      // create a second one — just sign them into what they already have.
+      // This also makes re-clicking an old invite link a safe no-op. A
+      // parent account on this Google account isn't a conflict here — a
+      // parent joining as their own separate student account is unusual
+      // but not something to block.
+      const existingStudent = await findStudentByAuthUid(firebaseUser.uid);
+      if (existingStudent) {
+        await refreshPortalRole();
+        setStage("done");
+        navigate("/portal/student", { replace: true });
+        return;
+      }
       const newStudentId = await createStudent({
         name: firebaseUser.displayName || "Student",
         classId: invite.classId,
@@ -82,11 +82,23 @@ export default function JoinPage() {
         setStage("form");
         return;
       }
-      await createParentProfile({
+      // If this Google account already has a *student* portal account,
+      // don't also turn it into a parent account.
+      const existingStudent = await findStudentByAuthUid(firebaseUser.uid);
+      if (existingStudent) {
+        await refreshPortalRole();
+        setStage("done");
+        navigate("/portal/student", { replace: true });
+        return;
+      }
+      // Adds this child to the parent's account — creates the account on
+      // first use, or adds another child to it if the parent has already
+      // joined a different child's invite link before (arrayUnion also
+      // makes re-clicking the same child's link a safe no-op).
+      await addChildToParent({
         uid: firebaseUser.uid,
         email: firebaseUser.email || "",
         displayName: firebaseUser.displayName || "Parent",
-        classId: invite.classId,
         studentId,
       });
       // The only place parent contact info gets captured now — needed for
@@ -136,7 +148,7 @@ export default function JoinPage() {
     return (
       <div className="min-h-screen bg-cream flex items-center justify-center px-4">
         <div className="card w-full max-w-md p-8 text-center">
-          <img src={`${import.meta.env.BASE_URL}logo.png`} alt="Lingo Bite" className="h-10 w-10 mx-auto mb-2 object-contain" />
+          <Logo size={32} className="mb-2" />
           <h1 className="text-xl font-semibold text-navy mb-2">{t("join.invalidTitle")}</h1>
           <p className="text-sm text-cream-600">{t("join.invalidBody")}</p>
         </div>
@@ -151,7 +163,7 @@ export default function JoinPage() {
     <div className="min-h-screen bg-cream flex items-center justify-center px-4 py-10">
       <div className="card w-full max-w-md p-8">
         <div className="flex items-center gap-2 mb-6">
-          <img src={`${import.meta.env.BASE_URL}logo.png`} alt="Lingo Bite" className="h-7 w-7 object-contain" />
+          <Logo size={28} />
           <span className="font-serif text-xl font-semibold text-navy">{t("app.name")}</span>
         </div>
 

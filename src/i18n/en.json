@@ -10,7 +10,6 @@
     "sessions": "Sessions",
     "notes": "Notes",
     "projects": "Projects submission",
-    "notifications": "Notifications",
     "settings": "Settings",
     "signOut": "Sign out"
   },
@@ -155,7 +154,8 @@
     "noBadgesYet": "No badges earned yet.",
     "recentPoints": "Recent points",
     "noPointsYet": "No points recorded yet.",
-    "noAttendanceYet": "No attendance recorded yet."
+    "noAttendanceYet": "No attendance recorded yet.",
+    "contactWhatsapp": "Contact via WhatsApp"
   },
   "projects": {
     "title": "Projects submission",
@@ -206,5 +206,11 @@
     "alreadyGraded": "This has been graded and can no longer be edited.",
     "yourMark": "Your mark: {{mark}}",
     "teacherFeedback": "Teacher's feedback"
+  },
+  "settings": {
+    "whatsapp": "WhatsApp",
+    "whatsappNumber": "WhatsApp contact number",
+    "whatsappPlaceholder": "e.g. +966501234567",
+    "whatsappHint": "Shown to parents as a \"Contact via WhatsApp\" button. Include the country code."
   }
 }

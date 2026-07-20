@@ -10,7 +10,6 @@
     "sessions": "الجلسات",
     "notes": "الملاحظات",
     "projects": "تسليم المشاريع",
-    "notifications": "الإشعارات",
     "settings": "الإعدادات",
     "signOut": "تسجيل الخروج"
   },
@@ -155,7 +154,8 @@
     "noBadgesYet": "لم يتم الحصول على أي شارات بعد.",
     "recentPoints": "النقاط الأخيرة",
     "noPointsYet": "لم يتم تسجيل أي نقاط بعد.",
-    "noAttendanceYet": "لم يتم تسجيل أي حضور بعد."
+    "noAttendanceYet": "لم يتم تسجيل أي حضور بعد.",
+    "contactWhatsapp": "تواصل عبر واتساب"
   },
   "projects": {
     "title": "تسليم المشاريع",
@@ -206,5 +206,11 @@
     "alreadyGraded": "تم تقييم هذا التسليم ولم يعد قابلاً للتعديل.",
     "yourMark": "درجتك: {{mark}}",
     "teacherFeedback": "ملاحظة المعلم"
+  },
+  "settings": {
+    "whatsapp": "واتساب",
+    "whatsappNumber": "رقم واتساب للتواصل",
+    "whatsappPlaceholder": "مثال: ‎+966501234567",
+    "whatsappHint": "يظهر لأولياء الأمور كزر \"تواصل عبر واتساب\". يرجى تضمين رمز الدولة."
   }
 }

@@ -17,3 +17,18 @@ export function toMillis(value: unknown): number {
   }
   return 0;
 }
+
+/**
+ * Formats a `createdAt`-style value as a short localized date (e.g. "Jul 20,
+ * 2026" in English, or the Arabic equivalent). Returns an empty string for a
+ * still-pending write (millis === 0) so the UI doesn't flash "Jan 1, 1970".
+ */
+export function formatNoteDate(value: unknown, locale: string): string {
+  const millis = toMillis(value);
+  if (!millis) return "";
+  return new Date(millis).toLocaleDateString(locale === "ar" ? "ar" : "en-US", {
+    year: "numeric",
+    month: "short",
+    day: "numeric",
+  });
+}

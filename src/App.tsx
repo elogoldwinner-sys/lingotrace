@@ -11,7 +11,6 @@ import StudentsPage from "./pages/StudentsPage";
 import AttendancePage from "./pages/AttendancePage";
 import SessionsPage from "./pages/SessionsPage";
 import NotesPage from "./pages/NotesPage";
-import NotificationsPage from "./pages/NotificationsPage";
 import ProjectsPage from "./pages/ProjectsPage";
 import JoinPage from "./pages/JoinPage";
 import SubmitProjectPage from "./pages/SubmitProjectPage";
@@ -61,7 +60,6 @@ export default function App() {
             <Route path="/sessions" element={<SessionsPage />} />
             <Route path="/notes" element={<NotesPage />} />
             <Route path="/projects" element={<ProjectsPage />} />
-            <Route path="/notifications" element={<NotificationsPage />} />
           </Route>
 
           <Route path="*" element={<Navigate to="/dashboard" replace />} />

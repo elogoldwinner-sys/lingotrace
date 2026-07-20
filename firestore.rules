@@ -19,11 +19,17 @@ service cloud.firestore {
         get(/databases/$(database)/documents/studentAccounts/$(request.auth.uid)).data.studentId == studentId;
     }
 
-    // True if the signed-in user is a parent account linked to the given studentId.
+    // True if the signed-in user is a parent account linked to the given
+    // studentId. Checks the current `studentIds` array (multi-child support)
+    // and falls back to the legacy single `studentId` field for parent
+    // accounts created before multi-child support existed.
     function isLinkedParent(studentId) {
       return isSignedIn() &&
         exists(/databases/$(database)/documents/parents/$(request.auth.uid)) &&
-        get(/databases/$(database)/documents/parents/$(request.auth.uid)).data.studentId == studentId;
+        (
+          studentId in get(/databases/$(database)/documents/parents/$(request.auth.uid)).data.get('studentIds', []) ||
+          get(/databases/$(database)/documents/parents/$(request.auth.uid)).data.get('studentId', '') == studentId
+        );
     }
 
     // Each teacher can read/write only their own profile document
@@ -31,11 +37,16 @@ service cloud.firestore {
       allow read, write: if isSignedIn() && request.auth.uid == uid;
     }
 
-    // A parent's portal account (doc id = their own auth uid)
+    // A parent's portal account (doc id = their own auth uid). `studentIds`
+    // is the only field ever allowed to change after creation, and only by
+    // growing (adding another child) — see addChildToParent.
     match /parents/{uid} {
       allow read: if isSignedIn() && request.auth.uid == uid;
       allow create: if isSignedIn() && request.auth.uid == uid && request.resource.data.uid == uid;
-      allow update, delete: if false;
+      allow update: if isSignedIn() && request.auth.uid == uid &&
+        request.resource.data.diff(resource.data).affectedKeys().hasOnly(["studentIds"]) &&
+        request.resource.data.studentIds.size() >= resource.data.get('studentIds', []).size();
+      allow delete: if false;
     }
 
     // Maps a student's auth uid -> their roster studentId (doc id = their own auth uid)
@@ -119,10 +130,34 @@ service cloud.firestore {
       allow create: if isSignedIn() && request.resource.data.awardedBy == request.auth.uid;
     }
 
-    // Notifications belong to the teacher they were sent to
-    match /notifications/{notificationId} {
-      allow read, update, delete: if isSignedIn() && resource.data.recipientId == request.auth.uid;
-      allow create: if isSignedIn() && request.resource.data.recipientId == request.auth.uid;
+    // Project assignments. `get` (single-doc read by id) is public because
+    // the /submit/:projectId page has to look up a project before the
+    // visiting student has necessarily signed in yet — same pattern as
+    // /invites/{token} above. The collection is never listable without
+    // owning the class, so a project can only be found by already knowing
+    // its exact id (the shared submission link).
+    match /projects/{projectId} {
+      allow get: if true;
+      allow list: if ownsClass(resource.data.classId);
+      allow create: if ownsClass(request.resource.data.classId);
+      allow update, delete: if ownsClass(resource.data.classId);
+    }
+
+    // Submissions. Doc id is deterministic (`${projectId}_${studentId}`) and
+    // a student's submit/resubmit always upserts via setDoc(merge:true) —
+    // Firestore evaluates that as "create" the first time and "update" on
+    // every resubmission, so the student needs both. A student may only ever
+    // touch their own submission's link/note/submittedAt; grading fields
+    // (awardedMark/teacherNote/gradedAt) can only be written by the
+    // class's teacher.
+    match /submissions/{submissionId} {
+      allow read: if ownsClass(resource.data.classId) ||
+        isLinkedStudent(resource.data.studentId) || isLinkedParent(resource.data.studentId);
+      allow create: if isLinkedStudent(request.resource.data.studentId);
+      allow update: if ownsClass(request.resource.data.classId) ||
+        (isLinkedStudent(resource.data.studentId) &&
+          request.resource.data.diff(resource.data).affectedKeys().hasOnly(["link", "note", "submittedAt"]));
+      allow delete: if ownsClass(resource.data.classId);
     }
   }
 }

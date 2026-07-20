@@ -21,9 +21,10 @@ import Modal from "../components/common/Modal";
 import EmptyState from "../components/common/EmptyState";
 import Spinner from "../components/common/Spinner";
 import ClassSelector from "../components/common/ClassSelector";
+import { formatNoteDate } from "../lib/timestamps";
 
 export default function NotesPage() {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const { user } = useAuth();
   const [classes, setClasses] = useState<ClassRecord[]>([]);
   const [selectedClassId, setSelectedClassId] = useState("");
@@ -132,7 +133,9 @@ export default function NotesPage() {
               <div
                 key={n.id}
                 className={`flex items-start justify-between gap-3 px-5 py-4 border-l-4 ${
-                  n.sentiment === "positive" ? "border-l-green-400" : "border-l-red-400"
+                  n.sentiment === "positive"
+                    ? "border-l-green-400 bg-green-50/60"
+                    : "border-l-red-400 bg-red-50/60"
                 }`}
               >
                 <div className="flex-1 min-w-0">
@@ -140,6 +143,12 @@ export default function NotesPage() {
                     {noteStudent?.name || t("students.title")}
                     {noteSession && (
                       <span className="font-normal text-cream-600"> · {noteSession.title}</span>
+                    )}
+                    {n.createdAt && (
+                      <span className="font-normal text-cream-600">
+                        {" "}
+                        · {formatNoteDate(n.createdAt, i18n.language)}
+                      </span>
                     )}
                   </p>
                   <p className="text-sm text-navy mt-0.5">{n.content}</p>

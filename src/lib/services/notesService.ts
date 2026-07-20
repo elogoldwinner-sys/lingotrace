@@ -1,4 +1,4 @@
-import { collection, getDocs, query, where } from "firebase/firestore";
+import { addDoc, collection, getDocs, query, Timestamp, where } from "firebase/firestore";
 import { db } from "../firebase";
 import { createFirestoreService } from "../firestoreService";
 import type { NoteRecord, NoteSentiment } from "../../types";
@@ -42,6 +42,20 @@ export function subscribeToVisibleParentNotes(
   );
 }
 
+/**
+ * Creates a note. Deliberately bypasses the shared `service.create()` helper
+ * (which stamps `createdAt: serverTimestamp()`) and uses `Timestamp.now()`
+ * instead. `serverTimestamp()` resolves to `null` locally until the write
+ * round-trips to the server, and the teacher's Notes list queries with
+ * `orderBy("createdAt", "desc")` — a query ordered on a field that's still
+ * null for a pending write doesn't get an optimistic local entry, so the
+ * note only showed up after the network round-trip finished (the "note
+ * doesn't instantly appear" bug). `Timestamp.now()` is a concrete value
+ * from the moment of creation, so the optimistic local write is included in
+ * the ordered snapshot immediately, and it's still the same Firestore
+ * `Timestamp` type as `serverTimestamp()` resolves to, so it sorts
+ * correctly alongside older notes.
+ */
 export async function createNote(data: {
   studentId: string;
   classId: string;
@@ -51,7 +65,11 @@ export async function createNote(data: {
   visibleToParent: boolean;
   sessionId?: string;
 }) {
-  return service.create(data as Omit<NoteRecord, "id" | "createdAt">);
+  const docRef = await addDoc(collection(db, "notes"), {
+    ...data,
+    createdAt: Timestamp.now(),
+  });
+  return docRef.id;
 }
 
 export async function deleteNote(id: string) {

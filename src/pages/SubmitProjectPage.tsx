@@ -7,6 +7,7 @@ import { getProjectOnce, isDeadlinePassed } from "../lib/services/projectsServic
 import { subscribeToSubmission, submitProject } from "../lib/services/submissionsService";
 import type { ProjectRecord, SubmissionRecord } from "../types";
 import Spinner from "../components/common/Spinner";
+import Logo from "../components/common/Logo";
 
 type Stage = "loading" | "invalid";
 
@@ -93,7 +94,7 @@ export default function SubmitProjectPage() {
   if (stage === "invalid") {
     return (
       <CenteredCard>
-        <img src={`${import.meta.env.BASE_URL}logo.png`} alt="Lingo Bite" className="h-10 w-10 mx-auto mb-2 object-contain" />
+        <Logo size={32} className="mb-2" />
         <h1 className="text-xl font-semibold text-navy mb-2">{t("submit.invalidTitle")}</h1>
         <p className="text-sm text-cream-600">{t("submit.invalidBody")}</p>
       </CenteredCard>

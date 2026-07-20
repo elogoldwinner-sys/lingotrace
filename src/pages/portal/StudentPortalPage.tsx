@@ -10,6 +10,7 @@ import { uploadToCloudinary } from "../../lib/cloudinary";
 import { getBadgeDefinition } from "../../lib/services/badgesService";
 import type { PointsTransaction, AttendanceRecord, AttendanceStatus } from "../../types";
 import Spinner from "../../components/common/Spinner";
+import Logo from "../../components/common/Logo";
 
 const STATUS_STYLES: Record<AttendanceStatus, string> = {
   present: "bg-green-100 text-green-700",
@@ -76,7 +77,7 @@ export default function StudentPortalPage() {
     <div className="min-h-screen bg-cream">
       <header className="flex items-center justify-between border-b border-cream-400 bg-cream-100/90 px-6 py-4">
         <div className="flex items-center gap-2">
-          <img src={`${import.meta.env.BASE_URL}logo.png`} alt="Lingo Bite" className="h-7 w-7 object-contain" />
+          <Logo size={28} />
           <span className="font-serif text-xl font-semibold text-navy">{t("app.name")}</span>
         </div>
         <div className="flex items-center gap-3">

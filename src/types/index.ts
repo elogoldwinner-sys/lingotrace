@@ -6,17 +6,23 @@ export interface UserProfile {
   displayName: string;
   role: UserRole;
   photoURL?: string;
+  /** Teacher's WhatsApp contact number (with country code), shown to parents in the parent portal. */
+  whatsappNumber?: string;
   createdAt: number;
 }
 
-/** A parent's portal account — links a Firebase Auth uid to one child in one class. */
+/**
+ * A parent's portal account — links a Firebase Auth uid to one or more
+ * children. `studentIds` supports a parent with multiple children across
+ * one or more classes; joining another child's invite link with the same
+ * Google account adds to this list instead of replacing it.
+ */
 export interface ParentProfile {
   uid: string;
   email: string;
   displayName: string;
   role: "parent";
-  classId: string;
-  studentId: string;
+  studentIds: string[];
   createdAt: number;
 }
 
@@ -56,6 +62,8 @@ export interface StudentRecord {
   photoURL?: string;
   points: number;
   badgeIds: string[];
+  /** Denormalized copy of the teacher's WhatsApp number, kept in sync whenever the teacher updates it, so the parent portal can show a "Contact via WhatsApp" button without extra permissions. */
+  teacherWhatsapp?: string;
   /** Firebase Auth uid of the student's own portal account, once claimed via an invite link. */
   authUid?: string;
   createdAt: number;
@@ -173,13 +181,4 @@ export interface StudentBadge {
   awardedAt: number;
 }
 
-export interface NotificationRecord {
-  id: string;
-  recipientId: string;
-  type: "badge" | "points" | "note" | "attendance" | "system";
-  title: string;
-  body: string;
-  read: boolean;
-  createdAt: number;
-  linkTo?: string;
-}
+
