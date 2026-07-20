@@ -15,13 +15,25 @@ function submissionDocId(projectId: string, studentId: string) {
   return `${projectId}_${studentId}`;
 }
 
+/**
+ * Live listener for all submissions to one project, for the teacher's
+ * roster view. `classId` must be passed and filtered on explicitly (not
+ * just `projectId`) — Firestore rejects a list query outright if its
+ * security rule references a field the query doesn't itself constrain,
+ * since it can't prove in advance that every possible result would satisfy
+ * it. The read rule checks `ownsClass(resource.data.classId)`, so the query
+ * has to filter on `classId` too, even though every submission for a given
+ * project always has the same classId in practice — Firestore's rule
+ * engine has no way to know that from the query shape alone.
+ */
 export function subscribeToSubmissionsForProject(
   projectId: string,
+  classId: string,
   onData: (submissions: SubmissionRecord[]) => void,
   onError?: (error: Error) => void
 ) {
   return service.subscribe(
-    [service.where("projectId", "==", projectId)],
+    [service.where("projectId", "==", projectId), service.where("classId", "==", classId)],
     onData,
     onError
   );

@@ -119,6 +119,7 @@ export default function ProjectsPage() {
     });
     const unsubSubmissions = subscribeToSubmissionsForProject(
       activeProject.id,
+      activeProject.classId,
       setSubmissions,
       (error) => {
         console.error(error);
