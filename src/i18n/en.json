@@ -181,7 +181,12 @@
     "feedbackNote": "Feedback note",
     "feedbackNotePlaceholder": "Anything you'd like to tell the student about their project?",
     "feedbackNoteHint": "Visible to the student and their parent once you save the mark.",
-    "permissionError": "Couldn't save that — your Firestore rules may not allow it yet. Make sure the rules covering the projects and submissions collections have been published in the Firebase console."
+    "actions": {
+      "load": "load that",
+      "save": "save that",
+      "delete": "delete that"
+    },
+    "permissionError": "Couldn't {{action}} — your Firestore rules may not allow it yet. Make sure the rules covering the projects and submissions collections have been published in the Firebase console."
   },
   "submit": {
     "signInTitle": "Sign in to submit your project",

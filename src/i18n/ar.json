@@ -181,7 +181,12 @@
     "feedbackNote": "ملاحظة التقييم",
     "feedbackNotePlaceholder": "أي شيء تود إخبار الطالب به عن مشروعه؟",
     "feedbackNoteHint": "تظهر للطالب ولولي أمره بمجرد حفظ الدرجة.",
-    "permissionError": "تعذّر الحفظ — قد لا تسمح قواعد Firestore بذلك بعد. تأكد من نشر القواعد الخاصة بمجموعتي projects وsubmissions في وحدة تحكم Firebase."
+    "actions": {
+      "load": "تحميل ذلك",
+      "save": "حفظ ذلك",
+      "delete": "حذف ذلك"
+    },
+    "permissionError": "تعذّر {{action}} — قد لا تسمح قواعد Firestore بذلك بعد. تأكد من نشر القواعد الخاصة بمجموعتي projects وsubmissions في وحدة تحكم Firebase."
   },
   "submit": {
     "signInTitle": "سجّل الدخول لتسليم مشروعك",

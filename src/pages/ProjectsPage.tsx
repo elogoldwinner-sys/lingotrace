@@ -55,11 +55,11 @@ export default function ProjectsPage() {
   const [copiedProjectId, setCopiedProjectId] = useState("");
   const [pageError, setPageError] = useState("");
 
-  /** Turns a raw Firebase error into a message that actually points at the fix, instead of failing silently. */
-  function describeError(err: unknown): string {
+  /** Turns a raw Firebase error into a message that actually points at the fix, instead of failing silently. Reflects what was actually being attempted, since "load" and "save" failures point at different rule blocks. */
+  function describeError(err: unknown, action: "load" | "save" | "delete" = "save"): string {
     const code = (err as { code?: string })?.code;
     if (code === "permission-denied") {
-      return t("projects.permissionError");
+      return t("projects.permissionError", { action: t(`projects.actions.${action}`) });
     }
     return err instanceof Error ? err.message : String(err);
   }
@@ -93,7 +93,8 @@ export default function ProjectsPage() {
       },
       (error) => {
         setLoading(false);
-        setPageError(describeError(error));
+        console.error(error);
+        setPageError(describeError(error, "load"));
       }
     );
     return unsubscribe;
@@ -110,13 +111,17 @@ export default function ProjectsPage() {
       setSubmissions([]);
       return;
     }
-    const unsubStudents = subscribeToStudents(activeProject.classId, setStudents, (error) =>
-      setPageError(describeError(error))
-    );
+    const unsubStudents = subscribeToStudents(activeProject.classId, setStudents, (error) => {
+      console.error(error);
+      setPageError(describeError(error, "load"));
+    });
     const unsubSubmissions = subscribeToSubmissionsForProject(
       activeProject.id,
       setSubmissions,
-      (error) => setPageError(describeError(error))
+      (error) => {
+        console.error(error);
+        setPageError(describeError(error, "load"));
+      }
     );
     return () => {
       unsubStudents();
@@ -158,7 +163,8 @@ export default function ProjectsPage() {
       setDeadline(todayISO());
       setCreateModalOpen(false);
     } catch (err) {
-      setPageError(describeError(err));
+      console.error(err);
+      setPageError(describeError(err, "save"));
     } finally {
       setSubmitting(false);
     }
@@ -171,8 +177,9 @@ export default function ProjectsPage() {
     try {
       await deleteProject(id);
     } catch (err) {
+      console.error(err);
       setProjects(previous);
-      setPageError(describeError(err));
+      setPageError(describeError(err, "delete"));
     }
   }
 
@@ -212,7 +219,8 @@ export default function ProjectsPage() {
       setGradeStudent(null);
       setGradeSubmissionRecord(null);
     } catch (err) {
-      setPageError(describeError(err));
+      console.error(err);
+      setPageError(describeError(err, "save"));
     } finally {
       setGrading(false);
     }
