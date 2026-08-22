@@ -275,6 +275,12 @@ export default function StudentsPage() {
       setBulkDone(true);
       setBulkRows([]);
       setBulkFileName("");
+      // Briefly show the "Students added!" confirmation, then close on its own
+      // so the teacher isn't required to click Cancel after a successful import.
+      setTimeout(() => {
+        setBulkModalOpen(false);
+        setBulkDone(false);
+      }, 1100);
     } finally {
       setBulkSubmitting(false);
     }
@@ -787,21 +793,23 @@ export default function StudentsPage() {
 
           {bulkDone && <p className="text-sm text-green-700">{t("students.bulkImportDone")}</p>}
 
-          <div className="flex justify-end gap-2">
-            <button type="button" onClick={closeBulkModal} className="btn-secondary">
-              {t("common.cancel")}
-            </button>
-            <button
-              type="button"
-              onClick={handleBulkImport}
-              disabled={bulkSubmitting || bulkRows.filter((r) => r.name && !r.error).length === 0}
-              className="btn-primary"
-            >
-              {bulkSubmitting ? t("common.loading") : t("students.importCount", {
-                count: bulkRows.filter((r) => r.name && !r.error).length,
-              })}
-            </button>
-          </div>
+          {!bulkDone && (
+            <div className="flex justify-end gap-2">
+              <button type="button" onClick={closeBulkModal} className="btn-secondary">
+                {t("common.cancel")}
+              </button>
+              <button
+                type="button"
+                onClick={handleBulkImport}
+                disabled={bulkSubmitting || bulkRows.filter((r) => r.name && !r.error).length === 0}
+                className="btn-primary"
+              >
+                {bulkSubmitting ? t("common.loading") : t("students.importCount", {
+                  count: bulkRows.filter((r) => r.name && !r.error).length,
+                })}
+              </button>
+            </div>
+          )}
         </div>
       </Modal>
     </div>
