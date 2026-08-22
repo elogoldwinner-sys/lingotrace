@@ -41,6 +41,54 @@ export async function deleteStudent(id: string) {
   return service.remove(id);
 }
 
+/** Deletes many students at once (multi-select delete from the roster). */
+export async function deleteManyStudents(ids: string[]) {
+  await Promise.all(ids.map((id) => service.remove(id)));
+}
+
+/**
+ * Creates a single student manually (teacher-entered, no invite/Google
+ * account involved). Used by the "Add student" form.
+ */
+export async function createStudentManual(data: {
+  classId: string;
+  name: string;
+  parentName?: string;
+  parentEmail?: string;
+}) {
+  return service.create({
+    name: data.name,
+    classId: data.classId,
+    parentName: data.parentName || undefined,
+    parentEmail: data.parentEmail || undefined,
+    points: 0,
+    badgeIds: [],
+  } as Omit<StudentRecord, "id" | "createdAt">);
+}
+
+/**
+ * Creates many students at once from a parsed bulk-upload file, using the
+ * batched createMany helper so large rosters don't need one write per row.
+ */
+export async function createStudentsBulk(
+  classId: string,
+  rows: { name: string; parentName?: string; parentEmail?: string }[]
+) {
+  return service.createMany(
+    rows.map(
+      (row) =>
+        ({
+          name: row.name,
+          classId,
+          parentName: row.parentName || undefined,
+          parentEmail: row.parentEmail || undefined,
+          points: 0,
+          badgeIds: [],
+        }) as Omit<StudentRecord, "id" | "createdAt">
+    )
+  );
+}
+
 /** Atomically awards a badge to a student, avoiding duplicate entries. */
 export async function awardBadgeToStudent(studentId: string, badgeId: string) {
   await updateDoc(doc(db, "students", studentId), {

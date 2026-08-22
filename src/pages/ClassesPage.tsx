@@ -66,14 +66,13 @@ export default function ClassesPage() {
     await deleteClass(id);
   }
 
-  async function handleCopyInvite(classItem: ClassRecord, role: "student" | "parent") {
+  async function handleCopyInvite(classItem: ClassRecord) {
     if (!user) return;
     setInviteError("");
     try {
-      const invite = await getOrCreateInvite(classItem.id, classItem.name, role, user.uid);
+      const invite = await getOrCreateInvite(classItem.id, classItem.name, "parent", user.uid);
       await navigator.clipboard.writeText(buildInviteUrl(invite.id));
-      const key = `${classItem.id}-${role}`;
-      setCopiedKey(key);
+      setCopiedKey(classItem.id);
       setTimeout(() => setCopiedKey(""), 2000);
     } catch {
       setInviteError(t("classes.inviteError"));
@@ -128,18 +127,11 @@ export default function ClassesPage() {
               </span>
               <div className="flex gap-2 pt-1 border-t border-cream-400/70 mt-1">
                 <button
-                  onClick={() => handleCopyInvite(c, "student")}
+                  onClick={() => handleCopyInvite(c)}
                   className="btn-secondary flex-1 text-xs py-2"
                 >
-                  {copiedKey === `${c.id}-student` ? <Check size={14} /> : <Link2 size={14} />}
-                  {copiedKey === `${c.id}-student` ? t("classes.copied") : t("classes.studentInvite")}
-                </button>
-                <button
-                  onClick={() => handleCopyInvite(c, "parent")}
-                  className="btn-secondary flex-1 text-xs py-2"
-                >
-                  {copiedKey === `${c.id}-parent` ? <Check size={14} /> : <Link2 size={14} />}
-                  {copiedKey === `${c.id}-parent` ? t("classes.copied") : t("classes.parentInvite")}
+                  {copiedKey === c.id ? <Check size={14} /> : <Link2 size={14} />}
+                  {copiedKey === c.id ? t("classes.copied") : t("classes.parentInvite")}
                 </button>
               </div>
             </div>

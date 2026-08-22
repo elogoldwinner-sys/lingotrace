@@ -68,7 +68,12 @@ service cloud.firestore {
       // buttons (Firestore rejected the query with permission-denied before
       // any invite could ever be created or copied).
       allow list: if isSignedIn() && ownsClass(resource.data.classId);
-      allow create: if ownsClass(request.resource.data.classId);
+      // Class sharing is exclusive to parents — students are added to the
+      // roster manually by the teacher — so only parent-role invites can be
+      // newly created. Older student-role invite docs (from before this
+      // change) are untouched and still resolve via `get` above.
+      allow create: if ownsClass(request.resource.data.classId) &&
+        request.resource.data.role == "parent";
       allow update, delete: if false;
     }
 

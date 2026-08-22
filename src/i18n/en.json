@@ -44,8 +44,7 @@
     "description": "Description",
     "students": "students",
     "noClasses": "No classes yet. Create your first class to get started.",
-    "studentInvite": "Student invite link",
-    "parentInvite": "Parent invite link",
+    "parentInvite": "Share with parents",
     "copied": "Copied!",
     "inviteError": "Couldn't create the invite link. Please try again."
   },
@@ -56,7 +55,26 @@
     "points": "Points",
     "badges": "Badges",
     "noStudents": "No students yet.",
-    "joinViaInviteHint": "Students join themselves using your class's invite link (Classes page)."
+    "name": "Student name",
+    "addStudent": "Add student",
+    "bulkImport": "Bulk import",
+    "selectStudents": "Select",
+    "selectAll": "Select all",
+    "selectedCount": "{{count}} selected",
+    "deleteSelected": "Delete selected",
+    "resetClass": "Reset class",
+    "resetStudent": "Reset student",
+    "resetDone": "Reset!",
+    "confirmDeleteOne": "Remove this student from the class? This can't be undone.",
+    "confirmDeleteMany": "Remove {{count}} student(s) from the class? This can't be undone.",
+    "confirmResetStudent": "Reset {{name}}'s points, badges, attendance and notes back to zero? This can't be undone.",
+    "confirmResetClass": "Reset every student in \"{{className}}\" — points, badges, attendance and notes — back to zero? This can't be undone.",
+    "bulkImportHint": "Download the template, fill in one row per student, then upload it here. Only \"name\" is required.",
+    "downloadTemplate": "Download template",
+    "chooseFile": "Choose CSV file",
+    "bulkErrorMissingName": "Missing name",
+    "bulkImportDone": "Students added!",
+    "importCount": "Add {{count}} student(s)"
   },
   "attendance": {
     "title": "Attendance",
@@ -133,7 +151,8 @@
     "edit": "Edit",
     "loading": "Loading…",
     "search": "Search",
-    "language": "Language"
+    "language": "Language",
+    "backToHome": "Back to home"
   },
   "join": {
     "studentTitle": "Join as a student",
@@ -225,5 +244,13 @@
     "addVideo": "Add video",
     "replaceVideo": "Replace video",
     "errorEmpty": "Add some text, an image, or a video before posting."
+  },
+  "home": {
+    "welcome": "Welcome to {{appName}}",
+    "subtitle": "Choose how you'd like to sign in",
+    "teacherPortal": "Teacher Portal",
+    "teacherPortalDesc": "Manage your classes, students, and sessions",
+    "parentPortal": "Parent Portal",
+    "parentPortalDesc": "Follow your child's progress and attendance"
   }
 }

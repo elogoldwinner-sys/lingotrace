@@ -44,8 +44,7 @@
     "description": "الوصف",
     "students": "طلاب",
     "noClasses": "لا توجد صفوف بعد. أنشئ صفك الأول للبدء.",
-    "studentInvite": "رابط دعوة الطالب",
-    "parentInvite": "رابط دعوة ولي الأمر",
+    "parentInvite": "مشاركة مع أولياء الأمور",
     "copied": "تم النسخ!",
     "inviteError": "تعذّر إنشاء رابط الدعوة. يرجى المحاولة مرة أخرى."
   },
@@ -56,7 +55,26 @@
     "points": "النقاط",
     "badges": "الشارات",
     "noStudents": "لا يوجد طلاب بعد.",
-    "joinViaInviteHint": "ينضم الطلاب بأنفسهم عبر رابط دعوة الصف (صفحة الصفوف)."
+    "name": "اسم الطالب",
+    "addStudent": "إضافة طالب",
+    "bulkImport": "استيراد جماعي",
+    "selectStudents": "تحديد",
+    "selectAll": "تحديد الكل",
+    "selectedCount": "تم تحديد {{count}}",
+    "deleteSelected": "حذف المحدد",
+    "resetClass": "إعادة تعيين الصف",
+    "resetStudent": "إعادة تعيين الطالب",
+    "resetDone": "تمت إعادة التعيين!",
+    "confirmDeleteOne": "هل تريد إزالة هذا الطالب من الصف؟ لا يمكن التراجع عن هذا الإجراء.",
+    "confirmDeleteMany": "هل تريد إزالة {{count}} طالب من الصف؟ لا يمكن التراجع عن هذا الإجراء.",
+    "confirmResetStudent": "هل تريد إعادة تعيين نقاط {{name}} وشاراته وحضوره وملاحظاته إلى الصفر؟ لا يمكن التراجع عن هذا الإجراء.",
+    "confirmResetClass": "هل تريد إعادة تعيين كل طالب في \"{{className}}\" — النقاط والشارات والحضور والملاحظات — إلى الصفر؟ لا يمكن التراجع عن هذا الإجراء.",
+    "bulkImportHint": "نزّل القالب، واملأ صفًا واحدًا لكل طالب، ثم ارفعه هنا. حقل \"الاسم\" مطلوب فقط.",
+    "downloadTemplate": "تنزيل القالب",
+    "chooseFile": "اختر ملف CSV",
+    "bulkErrorMissingName": "الاسم مفقود",
+    "bulkImportDone": "تمت إضافة الطلاب!",
+    "importCount": "إضافة {{count}} طالب"
   },
   "attendance": {
     "title": "الحضور",
@@ -133,7 +151,8 @@
     "edit": "تعديل",
     "loading": "جارٍ التحميل…",
     "search": "بحث",
-    "language": "اللغة"
+    "language": "اللغة",
+    "backToHome": "العودة إلى الصفحة الرئيسية"
   },
   "join": {
     "studentTitle": "الانضمام كطالب",
@@ -225,5 +244,13 @@
     "addVideo": "إضافة فيديو",
     "replaceVideo": "استبدال الفيديو",
     "errorEmpty": "أضف نصًا أو صورة أو فيديو قبل النشر."
+  },
+  "home": {
+    "welcome": "مرحبًا بك في {{appName}}",
+    "subtitle": "اختر طريقة تسجيل الدخول",
+    "teacherPortal": "بوابة المعلم",
+    "teacherPortalDesc": "إدارة الصفوف والطلاب والجلسات",
+    "parentPortal": "بوابة ولي الأمر",
+    "parentPortalDesc": "تابع تقدّم طفلك وحضوره"
   }
 }

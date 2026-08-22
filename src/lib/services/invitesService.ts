@@ -24,11 +24,16 @@ export async function getInvite(token: string): Promise<InviteRecord | null> {
  * generated, otherwise creates one. This means clicking "copy invite link"
  * repeatedly always returns the same shareable URL instead of minting a new
  * token (and orphaning the old one) every time.
+ *
+ * Class sharing is exclusive to parents — students are added to the roster
+ * manually by the teacher instead of self-joining — so `role` only ever
+ * accepts "parent" here. (`InviteRecord.role` still allows "student" as a
+ * type so any invite links generated before this change keep resolving.)
  */
 export async function getOrCreateInvite(
   classId: string,
   className: string,
-  role: "student" | "parent",
+  role: "parent",
   createdBy: string
 ): Promise<InviteRecord> {
   const existing = await getDocs(

@@ -3,6 +3,7 @@ import { AuthProvider } from "./contexts/AuthContext";
 import ProtectedRoute from "./components/auth/ProtectedRoute";
 import PortalRoute from "./components/auth/PortalRoute";
 import AppLayout from "./components/layout/AppLayout";
+import HomePage from "./pages/HomePage";
 import LoginPage from "./pages/LoginPage";
 import PortalLoginPage from "./pages/PortalLoginPage";
 import DashboardPage from "./pages/DashboardPage";
@@ -22,6 +23,7 @@ export default function App() {
     <AuthProvider>
       <BrowserRouter basename={import.meta.env.BASE_URL}>
         <Routes>
+          <Route path="/" element={<HomePage />} />
           <Route path="/login" element={<LoginPage />} />
           <Route path="/portal-login" element={<PortalLoginPage />} />
           <Route path="/sign-in" element={<Navigate to="/login" replace />} />
@@ -62,7 +64,7 @@ export default function App() {
             <Route path="/projects" element={<ProjectsPage />} />
           </Route>
 
-          <Route path="*" element={<Navigate to="/dashboard" replace />} />
+          <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </BrowserRouter>
     </AuthProvider>
