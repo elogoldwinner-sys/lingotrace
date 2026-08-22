@@ -182,28 +182,30 @@ export default function Topbar() {
 
       <Modal open={scheduleModalOpen} onClose={() => setScheduleModalOpen(false)} title={t("ranking.scheduleLabel")}>
         <form onSubmit={handleSaveSchedule} className="space-y-4">
-          <div>
-            <label className="label-eyebrow block mb-1.5">{t("ranking.day")}</label>
-            <select
-              value={scheduleDay}
-              onChange={(e) => setScheduleDay(Number(e.target.value))}
-              className="input-field"
-            >
-              {WEEKDAY_KEYS.map((key, idx) => (
-                <option key={key} value={idx}>
-                  {t(`ranking.weekdays.${key}`)}
-                </option>
-              ))}
-            </select>
-          </div>
-          <div>
-            <label className="label-eyebrow block mb-1.5">{t("ranking.time")}</label>
-            <input
-              type="time"
-              value={scheduleTime}
-              onChange={(e) => setScheduleTime(e.target.value)}
-              className="input-field"
-            />
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="label-eyebrow block mb-1.5">{t("ranking.day")}</label>
+              <select
+                value={scheduleDay}
+                onChange={(e) => setScheduleDay(Number(e.target.value))}
+                className="input-field"
+              >
+                {WEEKDAY_KEYS.map((key, idx) => (
+                  <option key={key} value={idx}>
+                    {t(`ranking.weekdays.${key}`)}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="label-eyebrow block mb-1.5">{t("ranking.time")}</label>
+              <input
+                type="time"
+                value={scheduleTime}
+                onChange={(e) => setScheduleTime(e.target.value)}
+                className="input-field"
+              />
+            </div>
           </div>
           <p className="text-xs text-cream-600">{t("ranking.scheduleHint")}</p>
           <div className="flex justify-end gap-2">
