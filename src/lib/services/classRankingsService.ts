@@ -12,30 +12,56 @@ import { db } from "../firebase";
 import { toMillis } from "../timestamps";
 import type { ClassRanking, RankingEntry } from "../../types";
 
-/** Day-of-week + time-of-day the weekly class-champions board reveals/updates, teacher-configurable. */
+/**
+ * The weekly class-champions reveal moment, teacher-configurable as one
+ * exact date+time rather than an abstract "day of week" — periods repeat
+ * every 7 days from this anchor, forward and backward, so picking any one
+ * precise reveal moment fully determines every week's boundary.
+ */
 export interface RankingSchedule {
-  /** 0 (Sunday) – 6 (Saturday). */
-  day: number;
-  /** 24h "HH:MM". */
-  time: string;
+  /** ms since epoch of one exact reveal moment; every other reveal is exactly N×7 days from this. */
+  anchor: number;
 }
 
-export const DEFAULT_RANKING_SCHEDULE: RankingSchedule = { day: 4, time: "00:00" }; // Thursday, midnight
+const WEEK_MS = 7 * 24 * 60 * 60 * 1000;
 
-function parseTime(time: string): { hours: number; minutes: number } {
+// Jan 4, 2024 was a Thursday — an arbitrary but stable anchor that
+// reproduces the feature's original default ("reveals Thursday at
+// midnight") for any teacher who hasn't set their own schedule yet. Any
+// Thursday-midnight timestamp works equally well here since periods repeat
+// every exact 7 days.
+export const DEFAULT_RANKING_SCHEDULE: RankingSchedule = {
+  anchor: new Date(2024, 0, 4, 0, 0, 0, 0).getTime(),
+};
+
+/**
+ * Converts an old day-of-week + "HH:MM" schedule (from before this became
+ * an exact-date picker) into an equivalent anchor timestamp, so teachers
+ * who already configured a schedule under the previous version don't lose
+ * it. Only used as a one-time fallback when reading a profile that has the
+ * legacy fields but no `rankingAnchor` yet.
+ */
+export function legacyDayTimeToAnchor(day: number, time: string): number {
   const [h, m] = time.split(":").map((n) => parseInt(n, 10));
-  return {
-    hours: Number.isFinite(h) ? Math.min(Math.max(h, 0), 23) : 0,
-    minutes: Number.isFinite(m) ? Math.min(Math.max(m, 0), 59) : 0,
-  };
+  const hours = Number.isFinite(h) ? Math.min(Math.max(h, 0), 23) : 0;
+  const minutes = Number.isFinite(m) ? Math.min(Math.max(m, 0), 59) : 0;
+
+  const now = new Date();
+  const daysSince = (now.getDay() - day + 7) % 7;
+  const moment = new Date(now.getFullYear(), now.getMonth(), now.getDate() - daysSince);
+  moment.setHours(hours, minutes, 0, 0);
+  if (moment.getTime() > now.getTime()) {
+    moment.setDate(moment.getDate() - 7);
+  }
+  return moment.getTime();
 }
 
 /**
  * The ranking period is always exactly 7 days, ending at the most recent
- * occurrence of the configured reveal day+time (defaulting to Thursday
- * midnight so existing classes keep working unchanged). `weekId` is that
- * moment's date — a simple string comparison tells the caller "is this
- * still current, or stale and due for recompute" — and it naturally
+ * occurrence of the configured anchor (defaulting to Thursday midnight so
+ * classes work unchanged until a teacher picks their own). `weekId` is
+ * that moment's date — a simple string comparison tells the caller "is
+ * this still current, or stale and due for recompute" — and it naturally
  * changes the moment the next reveal moment arrives.
  */
 export function getCurrentRankingWeek(
@@ -45,22 +71,12 @@ export function getCurrentRankingWeek(
   periodStart: number;
   periodEnd: number;
 } {
-  const now = new Date();
-  const { hours, minutes } = parseTime(schedule.time);
+  const now = Date.now();
+  const weeksSinceAnchor = Math.floor((now - schedule.anchor) / WEEK_MS);
+  const periodEnd = schedule.anchor + weeksSinceAnchor * WEEK_MS;
+  const periodStart = periodEnd - WEEK_MS;
 
-  const daysSince = (now.getDay() - schedule.day + 7) % 7;
-  const revealMoment = new Date(now.getFullYear(), now.getMonth(), now.getDate() - daysSince);
-  revealMoment.setHours(hours, minutes, 0, 0);
-
-  // If today IS the reveal day but the configured time hasn't happened yet,
-  // the most recent reveal was actually a week earlier.
-  if (revealMoment.getTime() > now.getTime()) {
-    revealMoment.setDate(revealMoment.getDate() - 7);
-  }
-
-  const periodEnd = revealMoment.getTime();
-  const periodStart = periodEnd - 7 * 24 * 60 * 60 * 1000;
-
+  const revealMoment = new Date(periodEnd);
   const weekId = `${revealMoment.getFullYear()}-${String(revealMoment.getMonth() + 1).padStart(
     2,
     "0"

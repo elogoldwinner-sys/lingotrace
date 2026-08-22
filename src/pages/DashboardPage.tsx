@@ -9,7 +9,7 @@ import {
   saveAnnouncement,
   clearAnnouncement,
 } from "../lib/services/announcementsService";
-import { computeAndSaveWeeklyRankingsForClasses } from "../lib/services/classRankingsService";
+import { computeAndSaveWeeklyRankingsForClasses, legacyDayTimeToAnchor } from "../lib/services/classRankingsService";
 import { triggerWeeklyChampionsCelebration } from "../lib/confetti";
 import { uploadToCloudinary } from "../lib/cloudinary";
 import type { ClassRecord, Announcement, ClassRanking } from "../types";
@@ -267,9 +267,10 @@ export default function DashboardPage() {
   useEffect(() => {
     const classIds = classes.map((c) => c.id);
     if (classIds.length === 0) return;
-    const schedule =
-      profile?.rankingDay !== undefined && profile?.rankingTime
-        ? { day: profile.rankingDay, time: profile.rankingTime }
+    const schedule = profile?.rankingAnchor
+      ? { anchor: profile.rankingAnchor }
+      : profile?.rankingDay !== undefined && profile?.rankingTime
+        ? { anchor: legacyDayTimeToAnchor(profile.rankingDay, profile.rankingTime) }
         : undefined;
     computeAndSaveWeeklyRankingsForClasses(classIds, schedule, true).then((results) => {
       setRankings((prev) => {
@@ -286,7 +287,7 @@ export default function DashboardPage() {
       }
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [classes.map((c) => c.id).join(","), profile?.rankingDay, profile?.rankingTime]);
+  }, [classes.map((c) => c.id).join(","), profile?.rankingAnchor, profile?.rankingDay, profile?.rankingTime]);
 
   const totalStudents = classes.reduce(
     (sum, c) => sum + (studentCounts[c.id] || 0),

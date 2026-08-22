@@ -257,18 +257,8 @@
     "title": "This Week's Champions",
     "schedule": "Champions schedule",
     "scheduleLabel": "Weekly champions schedule",
-    "day": "Day",
-    "time": "Time",
-    "scheduleHint": "Choose when the weekly top-3 board reveals and updates for your classes. It updates the next time you open the dashboard on or after this day/time each week.",
-    "weekdays": {
-      "sun": "Sunday",
-      "mon": "Monday",
-      "tue": "Tuesday",
-      "wed": "Wednesday",
-      "thu": "Thursday",
-      "fri": "Friday",
-      "sat": "Saturday"
-    },
-    "noneYet": "No weekly champions yet — award some points this week to get the board started."
+    "scheduleHint": "Pick the exact date and time the weekly top-3 board first reveals. It repeats every 7 days from that moment, and updates the next time you open the dashboard on or after each reveal.",
+    "noneYet": "No weekly champions yet — award some points this week to get the board started.",
+    "dateTime": "Reveal date & time"
   }
 }

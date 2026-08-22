@@ -4,10 +4,15 @@ import { useNavigate } from "react-router-dom";
 import { LogOut, Globe, Camera, MessageCircle, Trophy } from "lucide-react";
 import { useAuth } from "../../contexts/AuthContext";
 import { uploadToCloudinary } from "../../lib/cloudinary";
-import { DEFAULT_RANKING_SCHEDULE } from "../../lib/services/classRankingsService";
+import { DEFAULT_RANKING_SCHEDULE, legacyDayTimeToAnchor } from "../../lib/services/classRankingsService";
 import Modal from "../common/Modal";
 
-const WEEKDAY_KEYS = ["sun", "mon", "tue", "wed", "thu", "fri", "sat"];
+/** "YYYY-MM-DDTHH:mm" in local time, the format <input type="datetime-local"> needs. */
+function msToLocalDatetimeValue(ms: number): string {
+  const d = new Date(ms);
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
 
 export default function Topbar() {
   const { t, i18n } = useTranslation();
@@ -21,8 +26,7 @@ export default function Topbar() {
   const [savingWhatsapp, setSavingWhatsapp] = useState(false);
 
   const [scheduleModalOpen, setScheduleModalOpen] = useState(false);
-  const [scheduleDay, setScheduleDay] = useState(DEFAULT_RANKING_SCHEDULE.day);
-  const [scheduleTime, setScheduleTime] = useState(DEFAULT_RANKING_SCHEDULE.time);
+  const [scheduleValue, setScheduleValue] = useState(msToLocalDatetimeValue(DEFAULT_RANKING_SCHEDULE.anchor));
   const [savingSchedule, setSavingSchedule] = useState(false);
 
   async function handleSignOut() {
@@ -64,16 +68,21 @@ export default function Topbar() {
   }
 
   function openScheduleModal() {
-    setScheduleDay(profile?.rankingDay ?? DEFAULT_RANKING_SCHEDULE.day);
-    setScheduleTime(profile?.rankingTime ?? DEFAULT_RANKING_SCHEDULE.time);
+    const currentAnchor =
+      profile?.rankingAnchor ??
+      (profile?.rankingDay !== undefined && profile?.rankingTime
+        ? legacyDayTimeToAnchor(profile.rankingDay, profile.rankingTime)
+        : DEFAULT_RANKING_SCHEDULE.anchor);
+    setScheduleValue(msToLocalDatetimeValue(currentAnchor));
     setScheduleModalOpen(true);
   }
 
   async function handleSaveSchedule(e: React.FormEvent) {
     e.preventDefault();
+    if (!scheduleValue) return;
     setSavingSchedule(true);
     try {
-      await updateTeacherRankingSchedule(scheduleDay, scheduleTime);
+      await updateTeacherRankingSchedule(new Date(scheduleValue).getTime());
       setScheduleModalOpen(false);
     } finally {
       setSavingSchedule(false);
@@ -182,30 +191,15 @@ export default function Topbar() {
 
       <Modal open={scheduleModalOpen} onClose={() => setScheduleModalOpen(false)} title={t("ranking.scheduleLabel")}>
         <form onSubmit={handleSaveSchedule} className="space-y-4">
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label className="label-eyebrow block mb-1.5">{t("ranking.day")}</label>
-              <select
-                value={scheduleDay}
-                onChange={(e) => setScheduleDay(Number(e.target.value))}
-                className="input-field"
-              >
-                {WEEKDAY_KEYS.map((key, idx) => (
-                  <option key={key} value={idx}>
-                    {t(`ranking.weekdays.${key}`)}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div>
-              <label className="label-eyebrow block mb-1.5">{t("ranking.time")}</label>
-              <input
-                type="time"
-                value={scheduleTime}
-                onChange={(e) => setScheduleTime(e.target.value)}
-                className="input-field"
-              />
-            </div>
+          <div>
+            <label className="label-eyebrow block mb-1.5">{t("ranking.dateTime")}</label>
+            <input
+              type="datetime-local"
+              required
+              value={scheduleValue}
+              onChange={(e) => setScheduleValue(e.target.value)}
+              className="input-field"
+            />
           </div>
           <p className="text-xs text-cream-600">{t("ranking.scheduleHint")}</p>
           <div className="flex justify-end gap-2">

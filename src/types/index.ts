@@ -9,11 +9,14 @@ export interface UserProfile {
   /** Teacher's WhatsApp contact number (with country code), shown to parents in the parent portal. */
   whatsappNumber?: string;
   /**
-   * When the weekly class-champions board reveals/updates, teacher-configurable.
-   * `rankingDay`: 0 (Sunday) – 6 (Saturday). `rankingTime`: 24h "HH:MM".
+   * The exact moment the weekly class-champions board reveals/updates,
+   * teacher-configurable — periods repeat every 7 days from this anchor.
    * Defaults to Thursday at 00:00 when unset (see classRankingsService).
    */
+  rankingAnchor?: number;
+  /** @deprecated superseded by `rankingAnchor` — kept only so a teacher's schedule set under the old day/time picker still converts over. */
   rankingDay?: number;
+  /** @deprecated superseded by `rankingAnchor`. */
   rankingTime?: string;
   createdAt: number;
 }
