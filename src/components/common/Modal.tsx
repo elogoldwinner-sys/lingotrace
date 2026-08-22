@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import { createPortal } from "react-dom";
 import { X } from "lucide-react";
 
 interface ModalProps {
@@ -12,7 +13,13 @@ interface ModalProps {
 export default function Modal({ open, onClose, title, children, widthClassName }: ModalProps) {
   if (!open) return null;
 
-  return (
+  // Rendered via a portal straight into <body> rather than in place, so it
+  // always centers on the real viewport — some ancestors (e.g. the sticky
+  // header's backdrop-blur) use CSS filter/backdrop-filter, which creates a
+  // new containing block for `position: fixed` descendants and would
+  // otherwise trap the modal inside that ancestor's small box instead of
+  // the page.
+  return createPortal(
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-navy/40 backdrop-blur-sm px-4">
       <div
         className={`card w-full ${widthClassName || "max-w-lg"} p-6 max-h-[85vh] overflow-y-auto overscroll-contain`}
@@ -28,6 +35,7 @@ export default function Modal({ open, onClose, title, children, widthClassName }
         </div>
         {children}
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }
