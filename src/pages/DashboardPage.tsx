@@ -9,7 +9,8 @@ import {
   saveAnnouncement,
   clearAnnouncement,
 } from "../lib/services/announcementsService";
-import { computeAndSaveWeeklyRankingsForClasses } from "../lib/services/classRankingsService";import { triggerWeeklyChampionsCelebration } from "../lib/confetti";
+import { computeAndSaveWeeklyRankingsForClasses } from "../lib/services/classRankingsService";
+import { triggerWeeklyChampionsCelebration } from "../lib/confetti";
 import { uploadToCloudinary } from "../lib/cloudinary";
 import type { ClassRecord, Announcement, ClassRanking } from "../types";
 import AnnouncementCard from "../components/common/AnnouncementCard";
@@ -235,6 +236,7 @@ export default function DashboardPage() {
   const [announcement, setAnnouncement] = useState<Announcement | null>(null);
   const [editorOpen, setEditorOpen] = useState(false);
   const [rankings, setRankings] = useState<Record<string, ClassRanking>>({});
+  const [rankingsChecked, setRankingsChecked] = useState(false);
   const celebratedRef = useRef(false);
 
   useEffect(() => {
@@ -274,6 +276,7 @@ export default function DashboardPage() {
         });
         return next;
       });
+      setRankingsChecked(true);
       if (!celebratedRef.current && results.some((r) => r.gold)) {
         celebratedRef.current = true;
         triggerWeeklyChampionsCelebration();
@@ -331,14 +334,18 @@ export default function DashboardPage() {
         />
       </div>
 
-      {classes.some((c) => rankings[c.id]?.gold) && (
-        <div className="space-y-4">
-          {classes.map((c) =>
-            rankings[c.id]?.gold ? (
-              <WeeklyChampions key={c.id} ranking={rankings[c.id]} classLabel={c.name} />
-            ) : null
-          )}
-        </div>
+      {rankingsChecked && classes.length > 0 && (
+        classes.some((c) => rankings[c.id]?.gold) ? (
+          <div className="space-y-4">
+            {classes.map((c) =>
+              rankings[c.id]?.gold ? (
+                <WeeklyChampions key={c.id} ranking={rankings[c.id]} classLabel={c.name} />
+              ) : null
+            )}
+          </div>
+        ) : (
+          <p className="text-sm text-cream-600">{t("ranking.noneYet")}</p>
+        )
       )}
 
       <div className="card p-6">

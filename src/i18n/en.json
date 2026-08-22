@@ -268,6 +268,7 @@
       "thu": "Thursday",
       "fri": "Friday",
       "sat": "Saturday"
-    }
+    },
+    "noneYet": "No weekly champions yet — award some points this week to get the board started."
   }
 }
