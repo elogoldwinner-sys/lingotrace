@@ -252,5 +252,8 @@
     "teacherPortalDesc": "إدارة الصفوف والطلاب والجلسات",
     "parentPortal": "بوابة ولي الأمر",
     "parentPortalDesc": "تابع تقدّم طفلك وحضوره"
+  },
+  "ranking": {
+    "title": "أبطال هذا الأسبوع"
   }
 }

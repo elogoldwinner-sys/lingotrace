@@ -3,16 +3,19 @@ import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
 import { LogOut, Globe, MessageCircle } from "lucide-react";
 import { useAuth } from "../../contexts/AuthContext";
-import { subscribeToStudent } from "../../lib/services/studentsService";
+import { subscribeToStudent, getStudentOnce } from "../../lib/services/studentsService";
 import { subscribeToStudentPointsHistory } from "../../lib/services/pointsService";
 import { subscribeToStudentAttendance } from "../../lib/services/attendanceService";
 import { subscribeToVisibleParentNotes } from "../../lib/services/notesService";
 import { getBadgeDefinition } from "../../lib/services/badgesService";
 import { subscribeToAnnouncement } from "../../lib/services/announcementsService";
+import { subscribeToClassRanking, getClassRankingOnce } from "../../lib/services/classRankingsService";
+import { triggerWeeklyChampionsCelebration } from "../../lib/confetti";
 import { formatNoteDate } from "../../lib/timestamps";
 import { whatsappLink } from "../../lib/whatsapp";
 import Logo from "../../components/common/Logo";
 import AnnouncementCard from "../../components/common/AnnouncementCard";
+import WeeklyChampions from "../../components/common/WeeklyChampions";
 import type {
   PointsTransaction,
   AttendanceRecord,
@@ -20,6 +23,7 @@ import type {
   NoteRecord,
   StudentRecord,
   Announcement,
+  ClassRanking,
 } from "../../types";
 import Spinner from "../../components/common/Spinner";
 
@@ -42,6 +46,7 @@ function ChildPanel({ studentId }: { studentId: string }) {
   const [pointsHistory, setPointsHistory] = useState<PointsTransaction[]>([]);
   const [attendance, setAttendance] = useState<AttendanceRecord[]>([]);
   const [notes, setNotes] = useState<NoteRecord[]>([]);
+  const [ranking, setRanking] = useState<ClassRanking | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -61,6 +66,12 @@ function ChildPanel({ studentId }: { studentId: string }) {
     };
   }, [studentId]);
 
+  useEffect(() => {
+    if (!child?.classId) return;
+    const unsub = subscribeToClassRanking(child.classId, setRanking);
+    return unsub;
+  }, [child?.classId]);
+
   if (loading || !child) {
     return (
       <div className="py-16 flex items-center justify-center">
@@ -73,6 +84,8 @@ function ChildPanel({ studentId }: { studentId: string }) {
 
   return (
     <div className="space-y-6">
+      {ranking?.gold && <WeeklyChampions ranking={ranking} />}
+
       <div className="card p-6">
         <p className="label-eyebrow mb-1">{t("portal.parentWelcome")}</p>
         <h1 className="text-2xl font-semibold text-navy">{child.name}</h1>
@@ -215,6 +228,27 @@ export default function ParentPortalPage() {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [portalParent]);
+
+  // Celebrate once per portal visit (i.e. every login) if any of this
+  // parent's children belong to a class that currently has a weekly board.
+  useEffect(() => {
+    if (studentIds.length === 0) return;
+    let cancelled = false;
+    (async () => {
+      const children = await Promise.all(studentIds.map((sid) => getStudentOnce(sid)));
+      const classIds = Array.from(
+        new Set(children.filter((c): c is StudentRecord => !!c).map((c) => c.classId))
+      );
+      const rankings = await Promise.all(classIds.map((cid) => getClassRankingOnce(cid)));
+      if (!cancelled && rankings.some((r) => r?.gold)) {
+        triggerWeeklyChampionsCelebration();
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [studentIds.join(",")]);
 
   async function handleSignOut() {
     await signOut();

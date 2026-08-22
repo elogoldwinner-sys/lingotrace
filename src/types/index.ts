@@ -196,4 +196,33 @@ export interface Announcement {
   updatedAt: number;
 }
 
+/** One student's placement in a weekly class ranking. */
+export interface RankingEntry {
+  studentId: string;
+  name: string;
+  /** Points earned within the ranking period only (not the student's all-time total). */
+  points: number;
+}
+
+/**
+ * The current top 3 for a class, for one weekly period. Doc id = classId
+ * (one "current" ranking per class, overwritten each week — not a history
+ * log). `weekId` is the YYYY-MM-DD of the Thursday that period ends on, so
+ * the portal/dashboard can tell "is this still this week's board, or stale
+ * and due for recompute" at a glance. Computed client-side by the teacher
+ * (see classRankingsService) since this app has no backend to run a
+ * schedule — recomputed lazily the next time the teacher's dashboard loads
+ * after a Thursday passes.
+ */
+export interface ClassRanking {
+  classId: string;
+  weekId: string; // YYYY-MM-DD of the period's ending Thursday
+  periodStart: number;
+  periodEnd: number;
+  gold: RankingEntry | null;
+  silver: RankingEntry | null;
+  bronze: RankingEntry | null;
+  computedAt: number;
+}
+
 

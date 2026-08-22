@@ -252,5 +252,8 @@
     "teacherPortalDesc": "Manage your classes, students, and sessions",
     "parentPortal": "Parent Portal",
     "parentPortalDesc": "Follow your child's progress and attendance"
+  },
+  "ranking": {
+    "title": "This Week's Champions"
   }
 }

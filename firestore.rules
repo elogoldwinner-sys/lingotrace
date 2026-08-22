@@ -158,6 +158,18 @@ service cloud.firestore {
         exists(/databases/$(database)/documents/teachers/$(request.auth.uid));
     }
 
+    // A class's current weekly top-3 (doc id = classId, overwritten each
+    // week). Readable by anyone, matching the existing posture of
+    // /students/{studentId} above — that roster is already listable
+    // without auth (needed for the join page), so this doesn't expose
+    // anything a visitor couldn't already see by knowing the classId. Only
+    // written by that class's own teacher: only a teacher's client has read
+    // access to every student's points needed to compute it.
+    match /classRankings/{classId} {
+      allow read: if true;
+      allow write: if ownsClass(classId);
+    }
+
     // Submissions. Doc id is deterministic (`${projectId}_${studentId}`) and
     // a student's submit/resubmit always upserts via setDoc(merge:true) —
     // Firestore evaluates that as "create" the first time and "update" on

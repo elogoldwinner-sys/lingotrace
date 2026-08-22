@@ -9,10 +9,13 @@ import { updateStudent } from "../../lib/services/studentsService";
 import { uploadToCloudinary } from "../../lib/cloudinary";
 import { getBadgeDefinition } from "../../lib/services/badgesService";
 import { subscribeToAnnouncement } from "../../lib/services/announcementsService";
-import type { PointsTransaction, AttendanceRecord, AttendanceStatus, Announcement } from "../../types";
+import { subscribeToClassRanking, getClassRankingOnce } from "../../lib/services/classRankingsService";
+import { triggerWeeklyChampionsCelebration } from "../../lib/confetti";
+import type { PointsTransaction, AttendanceRecord, AttendanceStatus, Announcement, ClassRanking } from "../../types";
 import Spinner from "../../components/common/Spinner";
 import Logo from "../../components/common/Logo";
 import AnnouncementCard from "../../components/common/AnnouncementCard";
+import WeeklyChampions from "../../components/common/WeeklyChampions";
 
 const STATUS_STYLES: Record<AttendanceStatus, string> = {
   present: "bg-green-100 text-green-700",
@@ -28,6 +31,7 @@ export default function StudentPortalPage() {
   const [pointsHistory, setPointsHistory] = useState<PointsTransaction[]>([]);
   const [attendance, setAttendance] = useState<AttendanceRecord[]>([]);
   const [announcement, setAnnouncement] = useState<Announcement | null>(null);
+  const [ranking, setRanking] = useState<ClassRanking | null>(null);
   const [loading, setLoading] = useState(true);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
@@ -49,6 +53,25 @@ export default function StudentPortalPage() {
       unsubAttendance();
     };
   }, [portalStudent]);
+
+  useEffect(() => {
+    if (!portalStudent?.classId) return;
+    const unsub = subscribeToClassRanking(portalStudent.classId, setRanking);
+    return unsub;
+  }, [portalStudent?.classId]);
+
+  // Celebrate once per portal visit (every login) if this student's class
+  // currently has a weekly board.
+  useEffect(() => {
+    if (!portalStudent?.classId) return;
+    let cancelled = false;
+    getClassRankingOnce(portalStudent.classId).then((r) => {
+      if (!cancelled && r?.gold) triggerWeeklyChampionsCelebration();
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [portalStudent?.classId]);
 
   async function handleSignOut() {
     await signOut();
@@ -108,6 +131,8 @@ export default function StudentPortalPage() {
 
       <main className="max-w-3xl mx-auto px-4 py-8 space-y-6">
         {announcement && <AnnouncementCard announcement={announcement} />}
+
+        {ranking?.gold && <WeeklyChampions ranking={ranking} />}
 
         <div className="card p-6">
           <div className="flex items-center gap-4">
