@@ -257,10 +257,13 @@ export default function DashboardPage() {
     return unsubscribe;
   }, []);
 
-  // Weekly champions: recompute (only if stale/missing) for every class the
-  // teacher owns, then celebrate once per dashboard visit if any class has
-  // a board to show. Only the teacher's client has read access to every
-  // student's points in a class, so this is the one place this can run.
+  // Weekly champions: recompute for every class the teacher owns each time
+  // the dashboard loads (not just once per calendar week — a teacher who
+  // awards points mid-week expects the board to reflect that immediately,
+  // not wait for the next scheduled reveal), then celebrate once per
+  // dashboard visit if any class has a board to show. Only the teacher's
+  // client has read access to every student's points in a class, so this
+  // is the one place this can run.
   useEffect(() => {
     const classIds = classes.map((c) => c.id);
     if (classIds.length === 0) return;
@@ -268,7 +271,7 @@ export default function DashboardPage() {
       profile?.rankingDay !== undefined && profile?.rankingTime
         ? { day: profile.rankingDay, time: profile.rankingTime }
         : undefined;
-    computeAndSaveWeeklyRankingsForClasses(classIds, schedule).then((results) => {
+    computeAndSaveWeeklyRankingsForClasses(classIds, schedule, true).then((results) => {
       setRankings((prev) => {
         const next = { ...prev };
         results.forEach((r) => {

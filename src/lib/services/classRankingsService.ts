@@ -100,13 +100,16 @@ export async function getClassRankingOnce(classId: string): Promise<ClassRanking
  */
 export async function computeAndSaveWeeklyRankingIfNeeded(
   classId: string,
-  schedule: RankingSchedule = DEFAULT_RANKING_SCHEDULE
+  schedule: RankingSchedule = DEFAULT_RANKING_SCHEDULE,
+  force = false
 ): Promise<ClassRanking | null> {
   const { weekId, periodStart, periodEnd } = getCurrentRankingWeek(schedule);
 
-  const existing = await getDoc(rankingRef(classId));
-  if (existing.exists() && (existing.data() as ClassRanking).weekId === weekId) {
-    return existing.data() as ClassRanking;
+  if (!force) {
+    const existing = await getDoc(rankingRef(classId));
+    if (existing.exists() && (existing.data() as ClassRanking).weekId === weekId) {
+      return existing.data() as ClassRanking;
+    }
   }
 
   const [studentsSnap, txnSnap] = await Promise.all([
@@ -152,10 +155,11 @@ export async function computeAndSaveWeeklyRankingIfNeeded(
 /** Runs computeAndSaveWeeklyRankingIfNeeded for several classes at once (a teacher's whole class list on dashboard load). */
 export async function computeAndSaveWeeklyRankingsForClasses(
   classIds: string[],
-  schedule: RankingSchedule = DEFAULT_RANKING_SCHEDULE
+  schedule: RankingSchedule = DEFAULT_RANKING_SCHEDULE,
+  force = false
 ): Promise<ClassRanking[]> {
   const results = await Promise.all(
-    classIds.map((id) => computeAndSaveWeeklyRankingIfNeeded(id, schedule))
+    classIds.map((id) => computeAndSaveWeeklyRankingIfNeeded(id, schedule, force))
   );
   return results.filter((r): r is ClassRanking => r !== null);
 }
