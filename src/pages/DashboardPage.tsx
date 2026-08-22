@@ -9,8 +9,7 @@ import {
   saveAnnouncement,
   clearAnnouncement,
 } from "../lib/services/announcementsService";
-import { computeAndSaveWeeklyRankingsForClasses } from "../lib/services/classRankingsService";
-import { triggerWeeklyChampionsCelebration } from "../lib/confetti";
+import { computeAndSaveWeeklyRankingsForClasses } from "../lib/services/classRankingsService";import { triggerWeeklyChampionsCelebration } from "../lib/confetti";
 import { uploadToCloudinary } from "../lib/cloudinary";
 import type { ClassRecord, Announcement, ClassRanking } from "../types";
 import AnnouncementCard from "../components/common/AnnouncementCard";
@@ -230,7 +229,7 @@ function AnnouncementEditor({
 
 export default function DashboardPage() {
   const { t } = useTranslation();
-  const { user } = useAuth();
+  const { user, profile } = useAuth();
   const [classes, setClasses] = useState<ClassRecord[]>([]);
   const [studentCounts, setStudentCounts] = useState<Record<string, number>>({});
   const [announcement, setAnnouncement] = useState<Announcement | null>(null);
@@ -263,7 +262,11 @@ export default function DashboardPage() {
   useEffect(() => {
     const classIds = classes.map((c) => c.id);
     if (classIds.length === 0) return;
-    computeAndSaveWeeklyRankingsForClasses(classIds).then((results) => {
+    const schedule =
+      profile?.rankingDay !== undefined && profile?.rankingTime
+        ? { day: profile.rankingDay, time: profile.rankingTime }
+        : undefined;
+    computeAndSaveWeeklyRankingsForClasses(classIds, schedule).then((results) => {
       setRankings((prev) => {
         const next = { ...prev };
         results.forEach((r) => {
@@ -277,7 +280,7 @@ export default function DashboardPage() {
       }
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [classes.map((c) => c.id).join(",")]);
+  }, [classes.map((c) => c.id).join(","), profile?.rankingDay, profile?.rankingTime]);
 
   const totalStudents = classes.reduce(
     (sum, c) => sum + (studentCounts[c.id] || 0),

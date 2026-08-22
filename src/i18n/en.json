@@ -254,6 +254,20 @@
     "parentPortalDesc": "Follow your child's progress and attendance"
   },
   "ranking": {
-    "title": "This Week's Champions"
+    "title": "This Week's Champions",
+    "schedule": "Champions schedule",
+    "scheduleLabel": "Weekly champions schedule",
+    "day": "Day",
+    "time": "Time",
+    "scheduleHint": "Choose when the weekly top-3 board reveals and updates for your classes. It updates the next time you open the dashboard on or after this day/time each week.",
+    "weekdays": {
+      "sun": "Sunday",
+      "mon": "Monday",
+      "tue": "Tuesday",
+      "wed": "Wednesday",
+      "thu": "Thursday",
+      "fri": "Friday",
+      "sat": "Saturday"
+    }
   }
 }

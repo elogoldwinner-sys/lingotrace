@@ -49,6 +49,7 @@ interface AuthContextValue {
   beginGoogleSignIn: () => Promise<User>;
   updateTeacherPhoto: (photoURL: string) => Promise<void>;
   updateTeacherWhatsapp: (whatsappNumber: string) => Promise<void>;
+  updateTeacherRankingSchedule: (day: number, time: string) => Promise<void>;
   refreshPortalRole: () => Promise<void>;
   signOut: () => Promise<void>;
 }
@@ -275,6 +276,32 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     await setTeacherWhatsappForClasses(classIds, whatsappNumber);
   }
 
+  /**
+   * Lets a teacher choose when the weekly class-champions board reveals and
+   * updates (default is Thursday at midnight — see DEFAULT_RANKING_SCHEDULE).
+   * Purely a teacher-side setting: only the teacher's own client ever reads
+   * it (to know which period to compute), so no denormalization onto
+   * students/parents is needed the way whatsappNumber requires.
+   */
+  async function updateTeacherRankingSchedule(day: number, time: string) {
+    const currentUser = auth.currentUser;
+    if (!currentUser) return;
+    await setDoc(doc(db, "teachers", currentUser.uid), { rankingDay: day, rankingTime: time }, { merge: true });
+    setProfile((prev) =>
+      prev
+        ? { ...prev, rankingDay: day, rankingTime: time }
+        : {
+            uid: currentUser.uid,
+            email: currentUser.email || "",
+            displayName: currentUser.displayName || "Teacher",
+            role: "teacher",
+            rankingDay: day,
+            rankingTime: time,
+            createdAt: Date.now(),
+          }
+    );
+  }
+
   async function signOut() {
     await firebaseSignOut(auth);
   }
@@ -292,6 +319,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         beginGoogleSignIn,
         updateTeacherPhoto,
         updateTeacherWhatsapp,
+        updateTeacherRankingSchedule,
         refreshPortalRole,
         signOut,
       }}

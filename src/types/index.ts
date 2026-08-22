@@ -8,6 +8,13 @@ export interface UserProfile {
   photoURL?: string;
   /** Teacher's WhatsApp contact number (with country code), shown to parents in the parent portal. */
   whatsappNumber?: string;
+  /**
+   * When the weekly class-champions board reveals/updates, teacher-configurable.
+   * `rankingDay`: 0 (Sunday) – 6 (Saturday). `rankingTime`: 24h "HH:MM".
+   * Defaults to Thursday at 00:00 when unset (see classRankingsService).
+   */
+  rankingDay?: number;
+  rankingTime?: string;
   createdAt: number;
 }
 

@@ -1,14 +1,17 @@
 import { useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
-import { LogOut, Globe, Camera, MessageCircle } from "lucide-react";
+import { LogOut, Globe, Camera, MessageCircle, Trophy } from "lucide-react";
 import { useAuth } from "../../contexts/AuthContext";
 import { uploadToCloudinary } from "../../lib/cloudinary";
+import { DEFAULT_RANKING_SCHEDULE } from "../../lib/services/classRankingsService";
 import Modal from "../common/Modal";
+
+const WEEKDAY_KEYS = ["sun", "mon", "tue", "wed", "thu", "fri", "sat"];
 
 export default function Topbar() {
   const { t, i18n } = useTranslation();
-  const { profile, signOut, updateTeacherPhoto, updateTeacherWhatsapp } = useAuth();
+  const { profile, signOut, updateTeacherPhoto, updateTeacherWhatsapp, updateTeacherRankingSchedule } = useAuth();
   const navigate = useNavigate();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [uploading, setUploading] = useState(false);
@@ -16,6 +19,11 @@ export default function Topbar() {
   const [whatsappModalOpen, setWhatsappModalOpen] = useState(false);
   const [whatsappInput, setWhatsappInput] = useState("");
   const [savingWhatsapp, setSavingWhatsapp] = useState(false);
+
+  const [scheduleModalOpen, setScheduleModalOpen] = useState(false);
+  const [scheduleDay, setScheduleDay] = useState(DEFAULT_RANKING_SCHEDULE.day);
+  const [scheduleTime, setScheduleTime] = useState(DEFAULT_RANKING_SCHEDULE.time);
+  const [savingSchedule, setSavingSchedule] = useState(false);
 
   async function handleSignOut() {
     await signOut();
@@ -55,6 +63,23 @@ export default function Topbar() {
     }
   }
 
+  function openScheduleModal() {
+    setScheduleDay(profile?.rankingDay ?? DEFAULT_RANKING_SCHEDULE.day);
+    setScheduleTime(profile?.rankingTime ?? DEFAULT_RANKING_SCHEDULE.time);
+    setScheduleModalOpen(true);
+  }
+
+  async function handleSaveSchedule(e: React.FormEvent) {
+    e.preventDefault();
+    setSavingSchedule(true);
+    try {
+      await updateTeacherRankingSchedule(scheduleDay, scheduleTime);
+      setScheduleModalOpen(false);
+    } finally {
+      setSavingSchedule(false);
+    }
+  }
+
   return (
     <header className="sticky top-0 z-10 flex items-center justify-between border-b border-cream-400 bg-cream-100/90 backdrop-blur px-6 py-4">
       <div>
@@ -81,6 +106,15 @@ export default function Topbar() {
         >
           <MessageCircle size={14} />
           {t("settings.whatsapp")}
+        </button>
+
+        <button
+          onClick={openScheduleModal}
+          className="flex items-center gap-1.5 rounded-lg border border-gold/40 px-3 py-1.5 text-xs font-semibold text-navy hover:bg-gold-50"
+          title={t("ranking.scheduleLabel")}
+        >
+          <Trophy size={14} />
+          {t("ranking.schedule")}
         </button>
 
         <input
@@ -141,6 +175,43 @@ export default function Topbar() {
             </button>
             <button type="submit" disabled={savingWhatsapp} className="btn-primary">
               {savingWhatsapp ? t("common.loading") : t("common.save")}
+            </button>
+          </div>
+        </form>
+      </Modal>
+
+      <Modal open={scheduleModalOpen} onClose={() => setScheduleModalOpen(false)} title={t("ranking.scheduleLabel")}>
+        <form onSubmit={handleSaveSchedule} className="space-y-4">
+          <div>
+            <label className="label-eyebrow block mb-1.5">{t("ranking.day")}</label>
+            <select
+              value={scheduleDay}
+              onChange={(e) => setScheduleDay(Number(e.target.value))}
+              className="input-field"
+            >
+              {WEEKDAY_KEYS.map((key, idx) => (
+                <option key={key} value={idx}>
+                  {t(`ranking.weekdays.${key}`)}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <label className="label-eyebrow block mb-1.5">{t("ranking.time")}</label>
+            <input
+              type="time"
+              value={scheduleTime}
+              onChange={(e) => setScheduleTime(e.target.value)}
+              className="input-field"
+            />
+          </div>
+          <p className="text-xs text-cream-600">{t("ranking.scheduleHint")}</p>
+          <div className="flex justify-end gap-2">
+            <button type="button" onClick={() => setScheduleModalOpen(false)} className="btn-secondary">
+              {t("common.cancel")}
+            </button>
+            <button type="submit" disabled={savingSchedule} className="btn-primary">
+              {savingSchedule ? t("common.loading") : t("common.save")}
             </button>
           </div>
         </form>
