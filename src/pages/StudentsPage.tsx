@@ -22,15 +22,17 @@ import {
   deleteManyStudents,
   createStudentManual,
   createStudentsBulk,
+  updateStudent,
 } from "../lib/services/studentsService";
 import { awardPoints, subscribeToStudentPointsHistory } from "../lib/services/pointsService";
 import { subscribeToStudentAttendance } from "../lib/services/attendanceService";
-import { subscribeToStudentNotes } from "../lib/services/notesService";
+import { subscribeToStudentNotes, deleteNote } from "../lib/services/notesService";
 import { subscribeToSessions } from "../lib/services/sessionsService";
 import { sendPeriodReportToParent } from "../lib/services/reportService";
 import { getBadgeDefinition } from "../lib/services/badgesService";
 import { resetStudentData, resetClassData } from "../lib/services/resetService";
 import { parseCsv, buildCsv, downloadTextFile } from "../lib/csv";
+import { uploadToCloudinary } from "../lib/cloudinary";
 import type {
   ClassRecord,
   StudentRecord,
@@ -125,6 +127,10 @@ export default function StudentsPage() {
   const [resettingStudent, setResettingStudent] = useState(false);
   const [resetDone, setResetDone] = useState(false);
 
+  // Student photo (edited by teacher from the detail panel)
+  const [uploadingPhoto, setUploadingPhoto] = useState(false);
+  const detailPhotoInputRef = useRef<HTMLInputElement>(null);
+
   useEffect(() => {
     if (!user) return;
     const unsubscribe = subscribeToClasses(user.uid, (data) => {
@@ -167,7 +173,27 @@ export default function StudentsPage() {
       unsubNotes();
       unsubSessions();
     };
-  }, [detailStudent]);
+    // Only re-subscribe when the *identity* of the detail student changes,
+    // not every time one of its fields (points, badgeIds, photoURL...)
+    // changes underneath it — see the sync effect below.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [detailStudent?.id]);
+
+  // `detailStudent` starts as a snapshot of the row that was clicked, so
+  // without this it never picks up later changes to that same student —
+  // points/badges/photo awarded or reset elsewhere would update the live
+  // `students` list but the open detail panel would keep showing stale
+  // values (this is what made "Reset student" look like it didn't do
+  // anything: the data really was cleared in Firestore, the modal just
+  // never re-rendered with the new numbers). Keep it in sync with the
+  // roster subscription instead.
+  useEffect(() => {
+    if (!detailStudent) return;
+    const updated = students.find((s) => s.id === detailStudent.id);
+    if (updated && updated !== detailStudent) {
+      setDetailStudent(updated);
+    }
+  }, [students, detailStudent]);
 
   async function handleDelete(id: string) {
     if (!window.confirm(t("students.confirmDeleteOne"))) return;
@@ -315,6 +341,19 @@ export default function StudentsPage() {
       await resetClassData(students.map((s) => s.id));
     } finally {
       setResettingClass(false);
+    }
+  }
+
+  async function handleDetailPhotoSelected(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (!file || !detailStudent) return;
+    setUploadingPhoto(true);
+    try {
+      const result = await uploadToCloudinary(file, "lingotrace/students");
+      await updateStudent(detailStudent.id, { photoURL: result.secure_url });
+    } finally {
+      setUploadingPhoto(false);
     }
   }
 
@@ -575,6 +614,43 @@ export default function StudentsPage() {
           <div className="space-y-5">
             <div className="flex items-center justify-between gap-3 flex-wrap">
               <div className="flex items-center gap-3 flex-wrap">
+                <input
+                  ref={detailPhotoInputRef}
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={handleDetailPhotoSelected}
+                />
+                <button
+                  type="button"
+                  onClick={() => detailPhotoInputRef.current?.click()}
+                  disabled={uploadingPhoto}
+                  title={t("auth.changePhoto")}
+                  className="relative h-12 w-12 shrink-0 rounded-full group disabled:opacity-60"
+                >
+                  {detailStudent.photoURL ? (
+                    <img
+                      src={detailStudent.photoURL}
+                      alt={detailStudent.name}
+                      className="h-12 w-12 rounded-full object-cover border border-gold/40"
+                    />
+                  ) : (
+                    <div className="h-12 w-12 rounded-full bg-navy text-cream-100 flex items-center justify-center font-semibold">
+                      {detailStudent.name[0]?.toUpperCase()}
+                    </div>
+                  )}
+                  <div
+                    className={`absolute inset-0 flex items-center justify-center rounded-full bg-navy/60 transition-opacity ${
+                      uploadingPhoto ? "opacity-100" : "opacity-0 group-hover:opacity-100"
+                    }`}
+                  >
+                    {uploadingPhoto ? (
+                      <div className="h-4 w-4 animate-spin rounded-full border-2 border-cream-200 border-t-transparent" />
+                    ) : (
+                      <Upload size={14} className="text-cream-100" />
+                    )}
+                  </div>
+                </button>
                 <span className="pill bg-navy text-cream-200 text-base">
                   {detailStudent.points} {t("students.points")}
                 </span>
@@ -652,16 +728,26 @@ export default function StudentsPage() {
                     return (
                       <div
                         key={n.id}
-                        className={`rounded-lg border px-3 py-2 text-sm ${
+                        className={`rounded-lg border px-3 py-2 text-sm flex items-start justify-between gap-2 ${
                           n.sentiment === "positive"
                             ? "border-green-300 bg-green-50 text-green-800"
                             : "border-red-300 bg-red-50 text-red-800"
                         }`}
                       >
-                        {noteSession && (
-                          <p className="text-xs font-semibold opacity-70 mb-0.5">{noteSession.title}</p>
-                        )}
-                        {n.content}
+                        <div className="min-w-0">
+                          {noteSession && (
+                            <p className="text-xs font-semibold opacity-70 mb-0.5">{noteSession.title}</p>
+                          )}
+                          {n.content}
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => deleteNote(n.id)}
+                          title={t("common.delete")}
+                          className="shrink-0 opacity-60 hover:opacity-100 hover:text-red-700 p-0.5"
+                        >
+                          <Trash2 size={14} />
+                        </button>
                       </div>
                     );
                   })}
