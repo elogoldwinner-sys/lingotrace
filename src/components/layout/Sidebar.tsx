@@ -1,6 +1,7 @@
 import { NavLink } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import Logo from "../common/Logo";
+import { useTheme } from "../../contexts/ThemeContext";
 import {
   LayoutDashboard,
   BookOpen,
@@ -23,11 +24,17 @@ const navItems = [
 
 export default function Sidebar() {
   const { t } = useTranslation();
+  const { theme } = useTheme();
+  const isKid = theme === "kid";
 
   return (
-    <aside className="hidden md:flex md:w-64 md:flex-col md:fixed md:inset-y-0 bg-navy text-cream-200">
+    <aside
+      className={`hidden md:flex md:w-64 md:flex-col md:fixed md:inset-y-0 bg-navy text-cream-200 transition-colors duration-300 ${
+        isKid ? "rounded-r-[28px] shadow-[6px_0_24px_rgba(59,34,135,0.25)]" : ""
+      }`}
+    >
       <div className="flex items-center gap-2 px-6 py-6">
-        <Logo size={28} />
+        <Logo size={28} className={isKid ? "drop-shadow-[0_2px_4px_rgba(0,0,0,0.25)]" : ""} />
         <span className="font-serif text-xl font-semibold tracking-wide">
           {t("app.name")}
         </span>
@@ -39,11 +46,17 @@ export default function Sidebar() {
             key={to}
             to={to}
             className={({ isActive }) =>
-              `flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors ${
-                isActive
-                  ? "bg-gold/15 text-gold"
-                  : "text-cream-200/80 hover:bg-white/5 hover:text-cream-100"
-              }`
+              isKid
+                ? `flex items-center gap-3 rounded-2xl px-3 py-2.5 text-sm font-bold transition-all ease-bouncy duration-150 ${
+                    isActive
+                      ? "bg-gold text-navy shadow-[0_3px_0_rgb(var(--color-gold-800))] scale-[1.03]"
+                      : "text-cream-200/80 hover:bg-white/10 hover:text-cream-100 hover:translate-x-0.5"
+                  }`
+                : `flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors ${
+                    isActive
+                      ? "bg-gold/15 text-gold"
+                      : "text-cream-200/80 hover:bg-white/5 hover:text-cream-100"
+                  }`
             }
           >
             <Icon size={18} />

@@ -1,8 +1,110 @@
-@import url("https://fonts.googleapis.com/css2?family=Playfair+Display:wght@500;600;700&family=Inter:wght@400;500;600;700&display=swap");
+@import url("https://fonts.googleapis.com/css2?family=Playfair+Display:wght@500;600;700&family=Inter:wght@400;500;600;700&family=Baloo+2:wght@500;600;700;800&family=Nunito:wght@400;500;600;700;800&display=swap");
 
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+/*
+ * Theme tokens
+ * ------------
+ * Every color, radius, shadow, and font the app uses is piped through a CSS
+ * custom property here rather than hardcoded in tailwind.config.js. That
+ * lets `<html data-theme="kid">` re-skin the *entire* app — teacher
+ * dashboard and student/parent portal alike — at runtime, since every page
+ * already builds its UI from the same `navy` / `gold` / `cream` tokens.
+ * See src/contexts/ThemeContext.tsx for the toggle that sets the attribute.
+ */
+:root {
+  /* --- classic theme (default) --- */
+  --color-navy: 13 27 42;
+  --color-navy-50: 238 242 245;
+  --color-navy-100: 211 220 227;
+  --color-navy-200: 168 188 202;
+  --color-navy-300: 124 155 176;
+  --color-navy-400: 79 121 150;
+  --color-navy-500: 44 89 120;
+  --color-navy-600: 28 61 84;
+  --color-navy-700: 21 46 64;
+  --color-navy-800: 13 27 42;
+  --color-navy-900: 8 15 25;
+
+  --color-gold: 201 153 63;
+  --color-gold-50: 253 248 239;
+  --color-gold-100: 249 237 212;
+  --color-gold-200: 240 217 165;
+  --color-gold-300: 230 196 118;
+  --color-gold-400: 220 174 77;
+  --color-gold-500: 201 153 63;
+  --color-gold-600: 169 122 46;
+  --color-gold-700: 135 95 38;
+  --color-gold-800: 109 76 34;
+  --color-gold-900: 91 64 31;
+
+  --color-cream: 250 246 239;
+  --color-cream-50: 255 253 251;
+  --color-cream-100: 255 253 249;
+  --color-cream-200: 255 249 236;
+  --color-cream-300: 250 246 239;
+  --color-cream-400: 238 226 207;
+  --color-cream-500: 168 159 143;
+  --color-cream-600: 122 114 102;
+  --color-cream-700: 92 86 76;
+  --color-cream-800: 62 58 51;
+  --color-cream-900: 38 35 31;
+
+  --font-serif: "Playfair Display";
+  --font-sans: "Inter";
+  --shadow-card: 0 4px 24px rgba(13, 27, 42, 0.08);
+  --radius-lg: 0.5rem;
+  --radius-xl: 0.75rem;
+  --radius-xl2: 16px;
+}
+
+[data-theme="kid"] {
+  /* --- kid theme: bright, rounded, playful --- */
+  --color-navy: 59 34 135; /* deep, readable purple standing in for "navy" */
+  --color-navy-50: 245 242 255;
+  --color-navy-100: 235 227 255;
+  --color-navy-200: 211 194 255;
+  --color-navy-300: 179 148 255;
+  --color-navy-400: 147 102 255;
+  --color-navy-500: 124 63 242;
+  --color-navy-600: 100 37 217;
+  --color-navy-700: 79 29 176;
+  --color-navy-800: 59 34 135;
+  --color-navy-900: 36 19 84;
+
+  --color-gold: 255 152 0; /* sunny orange standing in for "gold" */
+  --color-gold-50: 255 247 232;
+  --color-gold-100: 255 236 194;
+  --color-gold-200: 255 217 138;
+  --color-gold-300: 255 194 77;
+  --color-gold-400: 255 173 38;
+  --color-gold-500: 255 152 0;
+  --color-gold-600: 230 126 0;
+  --color-gold-700: 191 102 0;
+  --color-gold-800: 153 82 0;
+  --color-gold-900: 122 66 0;
+
+  --color-cream: 241 236 255; /* soft lavender standing in for "cream" */
+  --color-cream-50: 255 255 255;
+  --color-cream-100: 253 251 255;
+  --color-cream-200: 245 241 255;
+  --color-cream-300: 241 236 255;
+  --color-cream-400: 227 217 255;
+  --color-cream-500: 156 143 194;
+  --color-cream-600: 110 99 144;
+  --color-cream-700: 74 66 102;
+  --color-cream-800: 50 44 71;
+  --color-cream-900: 30 26 44;
+
+  --font-serif: "Baloo 2";
+  --font-sans: "Nunito";
+  --shadow-card: 0 10px 28px rgba(124, 63, 242, 0.16), 0 2px 6px rgba(255, 152, 0, 0.12);
+  --radius-lg: 1rem;
+  --radius-xl: 1.5rem;
+  --radius-xl2: 28px;
+}
 
 @layer base {
   html {
@@ -10,35 +112,75 @@
   }
 
   body {
-    @apply bg-cream text-navy;
+    @apply bg-cream text-navy transition-colors duration-300;
+    font-family: var(--font-sans), Arial, Helvetica, sans-serif;
   }
 
   h1, h2, h3, h4 {
-    font-family: "Playfair Display", Georgia, serif;
+    font-family: var(--font-serif), Georgia, serif;
+  }
+
+  [data-theme="kid"] h1,
+  [data-theme="kid"] h2,
+  [data-theme="kid"] h3,
+  [data-theme="kid"] h4 {
+    font-weight: 700;
+  }
+
+  /* Soft floating-blob backdrop behind the whole app in kid mode, echoing
+     the playful cloud/star scenery in the reference designs. Fixed +
+     pointer-events-none so it never interferes with scrolling or clicks. */
+  [data-theme="kid"] body {
+    background-image:
+      radial-gradient(circle at 8% 12%, rgb(var(--color-gold-200) / 0.5) 0, transparent 22%),
+      radial-gradient(circle at 92% 8%, rgb(var(--color-navy-200) / 0.45) 0, transparent 24%),
+      radial-gradient(circle at 85% 92%, rgb(var(--color-gold-100) / 0.6) 0, transparent 26%);
+    background-attachment: fixed;
   }
 }
 
 @layer components {
   .card {
-    @apply bg-white rounded-xl2 shadow-card;
+    @apply bg-white rounded-xl2 shadow-card transition-shadow duration-300;
+  }
+
+  [data-theme="kid"] .card {
+    @apply border-2 border-navy-100;
   }
 
   .btn-primary {
     @apply inline-flex items-center justify-center gap-2 rounded-lg bg-navy px-4 py-2.5
-      text-sm font-semibold text-cream-200 transition-colors hover:bg-navy-600
+      text-sm font-semibold text-cream-200 transition-all hover:bg-navy-600
       focus:outline-none focus:ring-2 focus:ring-gold focus:ring-offset-2 disabled:opacity-50;
   }
 
   .btn-secondary {
     @apply inline-flex items-center justify-center gap-2 rounded-lg border border-gold/40
-      bg-white px-4 py-2.5 text-sm font-semibold text-navy transition-colors
+      bg-white px-4 py-2.5 text-sm font-semibold text-navy transition-all
       hover:bg-gold-50 focus:outline-none focus:ring-2 focus:ring-gold focus:ring-offset-2;
   }
 
   .btn-gold {
     @apply inline-flex items-center justify-center gap-2 rounded-lg bg-gold px-4 py-2.5
-      text-sm font-semibold text-navy transition-colors hover:bg-gold-600
+      text-sm font-semibold text-navy transition-all hover:bg-gold-600
       focus:outline-none focus:ring-2 focus:ring-navy focus:ring-offset-2;
+  }
+
+  /* Kid mode: buttons get a chunky drop shadow that "presses in" on click,
+     a familiar tactile pattern from children's game UI. */
+  [data-theme="kid"] .btn-primary,
+  [data-theme="kid"] .btn-secondary,
+  [data-theme="kid"] .btn-gold {
+    @apply font-bold shadow-[0_4px_0_rgb(var(--color-navy-900))] hover:-translate-y-0.5
+      active:translate-y-0.5 active:shadow-none ease-bouncy duration-150;
+  }
+
+  [data-theme="kid"] .btn-gold {
+    @apply shadow-[0_4px_0_rgb(var(--color-gold-800))];
+  }
+
+  [data-theme="kid"] .btn-secondary {
+    @apply border-2 shadow-[0_4px_0_rgb(var(--color-gold-200))];
   }
 
   .input-field {
@@ -46,11 +188,23 @@
       placeholder:text-cream-600 focus:outline-none focus:ring-2 focus:ring-gold/60;
   }
 
+  [data-theme="kid"] .input-field {
+    @apply border-2 rounded-xl;
+  }
+
   .label-eyebrow {
     @apply text-xs font-bold uppercase tracking-wide text-gold;
   }
 
+  [data-theme="kid"] .label-eyebrow {
+    @apply tracking-wider;
+  }
+
   .pill {
     @apply inline-flex items-center rounded-full px-2.5 py-1 text-xs font-semibold;
+  }
+
+  [data-theme="kid"] .pill {
+    @apply font-bold;
   }
 }

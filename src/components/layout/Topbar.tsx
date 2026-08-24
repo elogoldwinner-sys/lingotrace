@@ -6,6 +6,7 @@ import { useAuth } from "../../contexts/AuthContext";
 import { uploadToCloudinary } from "../../lib/cloudinary";
 import { DEFAULT_RANKING_SCHEDULE, legacyDayTimeToAnchor } from "../../lib/services/classRankingsService";
 import Modal from "../common/Modal";
+import ThemeToggle from "../common/ThemeToggle";
 
 /** "YYYY-MM-DDTHH:mm" in local time, the format <input type="datetime-local"> needs. */
 function msToLocalDatetimeValue(ms: number): string {
@@ -99,6 +100,8 @@ export default function Topbar() {
         )}
       </div>
       <div className="flex items-center gap-3">
+        <ThemeToggle />
+
         <button
           onClick={toggleLanguage}
           className="flex items-center gap-1.5 rounded-lg border border-gold/40 px-3 py-1.5 text-xs font-semibold text-navy hover:bg-gold-50"

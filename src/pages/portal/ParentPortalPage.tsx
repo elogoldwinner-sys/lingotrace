@@ -14,6 +14,7 @@ import { triggerWeeklyChampionsCelebration } from "../../lib/confetti";
 import { formatNoteDate } from "../../lib/timestamps";
 import { whatsappLink } from "../../lib/whatsapp";
 import Logo from "../../components/common/Logo";
+import ThemeToggle from "../../components/common/ThemeToggle";
 import AnnouncementCard from "../../components/common/AnnouncementCard";
 import WeeklyChampions from "../../components/common/WeeklyChampions";
 import type {
@@ -275,6 +276,7 @@ export default function ParentPortalPage() {
           <span className="font-serif text-xl font-semibold text-navy">{t("app.name")}</span>
         </div>
         <div className="flex items-center gap-3">
+          <ThemeToggle />
           <button
             onClick={toggleLanguage}
             className="flex items-center gap-1.5 rounded-lg border border-gold/40 px-3 py-1.5 text-xs font-semibold text-navy hover:bg-gold-50"

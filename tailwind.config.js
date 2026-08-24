@@ -1,4 +1,26 @@
 /** @type {import('tailwindcss').Config} */
+
+// Every shade is piped through a CSS custom property so the whole app can be
+// re-skinned at runtime (see index.css `:root` vs `[data-theme="kid"]`)
+// just by flipping the `data-theme` attribute on <html> — no component
+// changes needed. Tailwind's `<alpha-value>` placeholder still works because
+// each var holds a "r g b" triplet, not a hex string.
+function themeColor(name) {
+  return {
+    DEFAULT: `rgb(var(--color-${name}) / <alpha-value>)`,
+    50: `rgb(var(--color-${name}-50) / <alpha-value>)`,
+    100: `rgb(var(--color-${name}-100) / <alpha-value>)`,
+    200: `rgb(var(--color-${name}-200) / <alpha-value>)`,
+    300: `rgb(var(--color-${name}-300) / <alpha-value>)`,
+    400: `rgb(var(--color-${name}-400) / <alpha-value>)`,
+    500: `rgb(var(--color-${name}-500) / <alpha-value>)`,
+    600: `rgb(var(--color-${name}-600) / <alpha-value>)`,
+    700: `rgb(var(--color-${name}-700) / <alpha-value>)`,
+    800: `rgb(var(--color-${name}-800) / <alpha-value>)`,
+    900: `rgb(var(--color-${name}-900) / <alpha-value>)`,
+  };
+}
+
 export default {
   darkMode: "class",
   content: [
@@ -8,51 +30,24 @@ export default {
   theme: {
     extend: {
       colors: {
-        navy: {
-          DEFAULT: "#0d1b2a",
-          50: "#eef2f5",
-          100: "#d3dce3",
-          200: "#a8bcca",
-          300: "#7c9bb0",
-          400: "#4f7996",
-          500: "#2c5978",
-          600: "#1c3d54",
-          700: "#152e40",
-          800: "#0d1b2a",
-          900: "#080f19",
-        },
-        gold: {
-          DEFAULT: "#c9993f",
-          50: "#fdf8ef",
-          100: "#f9edd4",
-          200: "#f0d9a5",
-          300: "#e6c476",
-          400: "#dcae4d",
-          500: "#c9993f",
-          600: "#a97a2e",
-          700: "#875f26",
-          800: "#6d4c22",
-          900: "#5b401f",
-        },
-        cream: {
-          DEFAULT: "#faf6ef",
-          100: "#fffdf9",
-          200: "#fff9ec",
-          300: "#faf6ef",
-          400: "#eee2cf",
-          500: "#a89f8f",
-          600: "#7a7266",
-        },
+        navy: themeColor("navy"),
+        gold: themeColor("gold"),
+        cream: themeColor("cream"),
       },
       fontFamily: {
-        serif: ["Playfair Display", "Georgia", "serif"],
-        sans: ["Inter", "Arial", "Helvetica", "sans-serif"],
+        serif: ["var(--font-serif)", "Georgia", "serif"],
+        sans: ["var(--font-sans)", "Arial", "Helvetica", "sans-serif"],
       },
       boxShadow: {
-        card: "0 4px 24px rgba(13,27,42,0.08)",
+        card: "var(--shadow-card)",
       },
       borderRadius: {
-        xl2: "16px",
+        lg: "var(--radius-lg)",
+        xl: "var(--radius-xl)",
+        xl2: "var(--radius-xl2)",
+      },
+      transitionTimingFunction: {
+        bouncy: "cubic-bezier(0.34, 1.56, 0.64, 1)",
       },
     },
   },

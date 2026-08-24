@@ -2,12 +2,16 @@ import { useTranslation } from "react-i18next";
 import { Link } from "react-router-dom";
 import { GraduationCap, Heart } from "lucide-react";
 import Logo from "../components/common/Logo";
+import ThemeToggle from "../components/common/ThemeToggle";
 
 export default function HomePage() {
   const { t } = useTranslation();
 
   return (
-    <div className="min-h-screen bg-cream flex items-center justify-center px-4 py-12">
+    <div className="min-h-screen bg-cream flex items-center justify-center px-4 py-12 relative">
+      <div className="absolute top-4 right-4">
+        <ThemeToggle />
+      </div>
       <div className="w-full max-w-2xl text-center">
         <div className="flex items-center justify-center gap-2 mb-3">
           <Logo size={40} />

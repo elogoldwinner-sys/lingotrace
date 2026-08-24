@@ -16,6 +16,7 @@ import Spinner from "../../components/common/Spinner";
 import Logo from "../../components/common/Logo";
 import AnnouncementCard from "../../components/common/AnnouncementCard";
 import WeeklyChampions from "../../components/common/WeeklyChampions";
+import ThemeToggle from "../../components/common/ThemeToggle";
 
 const STATUS_STYLES: Record<AttendanceStatus, string> = {
   present: "bg-green-100 text-green-700",
@@ -112,6 +113,7 @@ export default function StudentPortalPage() {
           <span className="font-serif text-xl font-semibold text-navy">{t("app.name")}</span>
         </div>
         <div className="flex items-center gap-3">
+          <ThemeToggle />
           <button
             onClick={toggleLanguage}
             className="flex items-center gap-1.5 rounded-lg border border-gold/40 px-3 py-1.5 text-xs font-semibold text-navy hover:bg-gold-50"
