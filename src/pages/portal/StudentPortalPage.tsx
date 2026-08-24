@@ -17,6 +17,8 @@ import Logo from "../../components/common/Logo";
 import AnnouncementCard from "../../components/common/AnnouncementCard";
 import WeeklyChampions from "../../components/common/WeeklyChampions";
 import ThemeToggle from "../../components/common/ThemeToggle";
+import { CloudLayer, StudyMascot } from "../../components/common/decorations";
+import { useTheme } from "../../contexts/ThemeContext";
 
 const STATUS_STYLES: Record<AttendanceStatus, string> = {
   present: "bg-green-100 text-green-700",
@@ -29,6 +31,8 @@ export default function StudentPortalPage() {
   const { t, i18n } = useTranslation();
   const navigate = useNavigate();
   const { portalStudent, signOut, refreshPortalRole } = useAuth();
+  const { theme } = useTheme();
+  const isKid = theme === "kid";
   const [pointsHistory, setPointsHistory] = useState<PointsTransaction[]>([]);
   const [attendance, setAttendance] = useState<AttendanceRecord[]>([]);
   const [announcement, setAnnouncement] = useState<Announcement | null>(null);
@@ -106,8 +110,9 @@ export default function StudentPortalPage() {
   }
 
   return (
-    <div className="min-h-screen bg-cream">
-      <header className="flex items-center justify-between border-b border-cream-400 bg-cream-100/90 px-6 py-4">
+    <div className="min-h-screen bg-cream relative overflow-hidden">
+      {isKid && <CloudLayer className="absolute top-0 left-0 w-full h-64" />}
+      <header className="flex items-center justify-between border-b border-cream-400 bg-cream-100/90 px-6 py-4 relative z-10">
         <div className="flex items-center gap-2">
           <Logo size={28} />
           <span className="font-serif text-xl font-semibold text-navy">{t("app.name")}</span>
@@ -131,7 +136,12 @@ export default function StudentPortalPage() {
         </div>
       </header>
 
-      <main className="max-w-3xl mx-auto px-4 py-8 space-y-6">
+      <main className="max-w-3xl mx-auto px-4 py-8 space-y-6 relative z-10">
+        {isKid && (
+          <div className="flex justify-center -mt-2 mb-2">
+            <StudyMascot size={80} />
+          </div>
+        )}
         {announcement && <AnnouncementCard announcement={announcement} />}
 
         {ranking?.gold && <WeeklyChampions ranking={ranking} />}

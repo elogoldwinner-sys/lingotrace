@@ -3,16 +3,26 @@ import { Link } from "react-router-dom";
 import { GraduationCap, Heart } from "lucide-react";
 import Logo from "../components/common/Logo";
 import ThemeToggle from "../components/common/ThemeToggle";
+import { CloudLayer, StudyMascot } from "../components/common/decorations";
+import { useTheme } from "../contexts/ThemeContext";
 
 export default function HomePage() {
   const { t } = useTranslation();
+  const { theme } = useTheme();
+  const isKid = theme === "kid";
 
   return (
-    <div className="min-h-screen bg-cream flex items-center justify-center px-4 py-12 relative">
-      <div className="absolute top-4 right-4">
+    <div className="min-h-screen bg-cream flex items-center justify-center px-4 py-12 relative overflow-hidden">
+      {isKid && <CloudLayer className="absolute inset-0 w-full h-full" />}
+      <div className="absolute top-4 right-4 z-10">
         <ThemeToggle />
       </div>
-      <div className="w-full max-w-2xl text-center">
+      <div className="w-full max-w-2xl text-center relative z-10">
+        {isKid && (
+          <div className="flex justify-center mb-2">
+            <StudyMascot size={88} />
+          </div>
+        )}
         <div className="flex items-center justify-center gap-2 mb-3">
           <Logo size={40} />
           <span className="font-serif text-2xl font-semibold text-navy">{t("app.name")}</span>

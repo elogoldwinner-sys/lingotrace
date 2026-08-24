@@ -2,6 +2,7 @@ import { NavLink } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import Logo from "../common/Logo";
 import { useTheme } from "../../contexts/ThemeContext";
+import { StudyMascot } from "../common/decorations";
 import {
   LayoutDashboard,
   BookOpen,
@@ -64,6 +65,11 @@ export default function Sidebar() {
           </NavLink>
         ))}
       </nav>
+      {isKid && (
+        <div className="flex justify-center pb-4 opacity-90">
+          <StudyMascot size={64} />
+        </div>
+      )}
     </aside>
   );
 }
