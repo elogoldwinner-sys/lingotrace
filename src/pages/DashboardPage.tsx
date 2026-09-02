@@ -12,9 +12,8 @@ import {
 import { computeAndSaveWeeklyRankingsForClasses, legacyDayTimeToAnchor } from "../lib/services/classRankingsService";
 import { triggerWeeklyChampionsCelebration } from "../lib/confetti";
 import { uploadToCloudinary } from "../lib/cloudinary";
-import type { ClassRecord, Announcement, ClassRanking } from "../types";
+import type { ClassRecord, Announcement } from "../types";
 import AnnouncementCard from "../components/common/AnnouncementCard";
-import WeeklyChampions from "../components/common/WeeklyChampions";
 import Modal from "../components/common/Modal";
 
 function StatCard({
@@ -235,8 +234,6 @@ export default function DashboardPage() {
   const [studentCounts, setStudentCounts] = useState<Record<string, number>>({});
   const [announcement, setAnnouncement] = useState<Announcement | null>(null);
   const [editorOpen, setEditorOpen] = useState(false);
-  const [rankings, setRankings] = useState<Record<string, ClassRanking>>({});
-  const [rankingsChecked, setRankingsChecked] = useState(false);
   const celebratedRef = useRef(false);
 
   useEffect(() => {
@@ -261,9 +258,11 @@ export default function DashboardPage() {
   // the dashboard loads (not just once per calendar week — a teacher who
   // awards points mid-week expects the board to reflect that immediately,
   // not wait for the next scheduled reveal), then celebrate once per
-  // dashboard visit if any class has a board to show. Only the teacher's
-  // client has read access to every student's points in a class, so this
-  // is the one place this can run.
+  // dashboard visit if any class has a board to show. The board itself is
+  // displayed in the class header on the Students tab, not here — this
+  // just keeps it warm and fires the confetti. Only the teacher's client
+  // has read access to every student's points in a class, so this is the
+  // one place this can run.
   useEffect(() => {
     const classIds = classes.map((c) => c.id);
     if (classIds.length === 0) return;
@@ -273,15 +272,7 @@ export default function DashboardPage() {
         ? { anchor: legacyDayTimeToAnchor(profile.rankingDay, profile.rankingTime) }
         : undefined;
     computeAndSaveWeeklyRankingsForClasses(classIds, schedule, true).then((results) => {
-      setRankings((prev) => {
-        const next = { ...prev };
-        results.forEach((r) => {
-          next[r.classId] = r;
-        });
-        return next;
-      });
-      setRankingsChecked(true);
-      if (!celebratedRef.current && results.some((r) => r.gold)) {
+      if (!celebratedRef.current && results.some((r) => r.positions.length > 0)) {
         celebratedRef.current = true;
         triggerWeeklyChampionsCelebration();
       }
@@ -337,20 +328,6 @@ export default function DashboardPage() {
           value="—"
         />
       </div>
-
-      {rankingsChecked && classes.length > 0 && (
-        classes.some((c) => rankings[c.id]?.gold) ? (
-          <div className="space-y-4">
-            {classes.map((c) =>
-              rankings[c.id]?.gold ? (
-                <WeeklyChampions key={c.id} ranking={rankings[c.id]} classLabel={c.name} />
-              ) : null
-            )}
-          </div>
-        ) : (
-          <p className="text-sm text-cream-600">{t("ranking.noneYet")}</p>
-        )
-      )}
 
       <div className="card p-6">
         <h2 className="text-lg font-semibold text-navy mb-4">

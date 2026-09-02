@@ -9,7 +9,7 @@ import { subscribeToStudentAttendance } from "../../lib/services/attendanceServi
 import { subscribeToVisibleParentNotes } from "../../lib/services/notesService";
 import { getBadgeDefinition } from "../../lib/services/badgesService";
 import { subscribeToAnnouncement } from "../../lib/services/announcementsService";
-import { subscribeToClassRanking, getClassRankingOnce } from "../../lib/services/classRankingsService";
+import { getClassRankingOnce, subscribeToAllClassRankings } from "../../lib/services/classRankingsService";
 import { triggerWeeklyChampionsCelebration } from "../../lib/confetti";
 import { formatNoteDate } from "../../lib/timestamps";
 import { whatsappLink } from "../../lib/whatsapp";
@@ -47,7 +47,6 @@ function ChildPanel({ studentId }: { studentId: string }) {
   const [pointsHistory, setPointsHistory] = useState<PointsTransaction[]>([]);
   const [attendance, setAttendance] = useState<AttendanceRecord[]>([]);
   const [notes, setNotes] = useState<NoteRecord[]>([]);
-  const [ranking, setRanking] = useState<ClassRanking | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -67,12 +66,6 @@ function ChildPanel({ studentId }: { studentId: string }) {
     };
   }, [studentId]);
 
-  useEffect(() => {
-    if (!child?.classId) return;
-    const unsub = subscribeToClassRanking(child.classId, setRanking);
-    return unsub;
-  }, [child?.classId]);
-
   if (loading || !child) {
     return (
       <div className="py-16 flex items-center justify-center">
@@ -85,8 +78,6 @@ function ChildPanel({ studentId }: { studentId: string }) {
 
   return (
     <div className="space-y-6">
-      {ranking?.gold && <WeeklyChampions ranking={ranking} />}
-
       <div className="card p-6">
         <p className="label-eyebrow mb-1">{t("portal.parentWelcome")}</p>
         <h1 className="text-2xl font-semibold text-navy">{child.name}</h1>
@@ -215,11 +206,21 @@ export default function ParentPortalPage() {
   const { portalParent, signOut } = useAuth();
   const [activeStudentId, setActiveStudentId] = useState("");
   const [announcement, setAnnouncement] = useState<Announcement | null>(null);
+  const [schoolRankings, setSchoolRankings] = useState<ClassRanking[]>([]);
 
   const studentIds = portalParent?.studentIds || [];
 
   useEffect(() => {
     const unsubscribe = subscribeToAnnouncement(setAnnouncement);
+    return unsubscribe;
+  }, []);
+
+  // School-wide students-of-the-week: every class's current board, not
+  // just the classes this parent's own children belong to — every signed-in
+  // parent at the school sees the same set of boards, the same way the
+  // single school-wide announcement above works.
+  useEffect(() => {
+    const unsubscribe = subscribeToAllClassRankings(setSchoolRankings);
     return unsubscribe;
   }, []);
 
@@ -241,7 +242,7 @@ export default function ParentPortalPage() {
         new Set(children.filter((c): c is StudentRecord => !!c).map((c) => c.classId))
       );
       const rankings = await Promise.all(classIds.map((cid) => getClassRankingOnce(cid)));
-      if (!cancelled && rankings.some((r) => r?.gold)) {
+      if (!cancelled && rankings.some((r) => r && r.positions.length > 0)) {
         triggerWeeklyChampionsCelebration();
       }
     })();
@@ -296,6 +297,17 @@ export default function ParentPortalPage() {
 
       <main className="max-w-3xl mx-auto px-4 py-8 space-y-6">
         {announcement && <AnnouncementCard announcement={announcement} />}
+
+        {schoolRankings.filter((r) => r.positions.length > 0).length > 0 && (
+          <div className="space-y-4">
+            {schoolRankings
+              .filter((r) => r.positions.length > 0)
+              .sort((a, b) => a.className.localeCompare(b.className))
+              .map((r) => (
+                <WeeklyChampions key={r.classId} ranking={r} classLabel={r.className} />
+              ))}
+          </div>
+        )}
 
         {studentIds.length > 1 && (
           <div className="flex flex-wrap gap-2">

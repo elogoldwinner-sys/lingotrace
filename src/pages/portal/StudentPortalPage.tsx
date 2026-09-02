@@ -71,7 +71,7 @@ export default function StudentPortalPage() {
     if (!portalStudent?.classId) return;
     let cancelled = false;
     getClassRankingOnce(portalStudent.classId).then((r) => {
-      if (!cancelled && r?.gold) triggerWeeklyChampionsCelebration();
+      if (!cancelled && r && r.positions.length > 0) triggerWeeklyChampionsCelebration();
     });
     return () => {
       cancelled = true;
@@ -144,7 +144,7 @@ export default function StudentPortalPage() {
         )}
         {announcement && <AnnouncementCard announcement={announcement} />}
 
-        {ranking?.gold && <WeeklyChampions ranking={ranking} />}
+        <WeeklyChampions ranking={ranking} />
 
         <div className="card p-6">
           <div className="flex items-center gap-4">

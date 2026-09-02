@@ -31,6 +31,11 @@ import { subscribeToSessions } from "../lib/services/sessionsService";
 import { sendPeriodReportToParent } from "../lib/services/reportService";
 import { getBadgeDefinition } from "../lib/services/badgesService";
 import { resetStudentData, resetClassData } from "../lib/services/resetService";
+import {
+  computeAndSaveWeeklyRankingIfNeeded,
+  legacyDayTimeToAnchor,
+  subscribeToClassRanking,
+} from "../lib/services/classRankingsService";
 import { parseCsv, buildCsv, downloadTextFile } from "../lib/csv";
 import { uploadToCloudinary } from "../lib/cloudinary";
 import type {
@@ -42,11 +47,13 @@ import type {
   AttendanceStatus,
   NoteRecord,
   SessionRecord,
+  ClassRanking,
 } from "../types";
 import Modal from "../components/common/Modal";
 import EmptyState from "../components/common/EmptyState";
 import Spinner from "../components/common/Spinner";
 import ClassSelector from "../components/common/ClassSelector";
+import WeeklyChampions from "../components/common/WeeklyChampions";
 
 interface BulkRow {
   name: string;
@@ -77,7 +84,7 @@ function daysAgoISO(days: number) {
 
 export default function StudentsPage() {
   const { t } = useTranslation();
-  const { user } = useAuth();
+  const { user, profile } = useAuth();
   const [searchParams] = useSearchParams();
   const preselectedClassId = searchParams.get("classId") || "";
 
@@ -85,6 +92,7 @@ export default function StudentsPage() {
   const [selectedClassId, setSelectedClassId] = useState(preselectedClassId);
   const [students, setStudents] = useState<StudentRecord[]>([]);
   const [loading, setLoading] = useState(true);
+  const [ranking, setRanking] = useState<ClassRanking | null>(null);
 
   const [pointsModalStudent, setPointsModalStudent] = useState<StudentRecord | null>(null);
   const [pointsAmount, setPointsAmount] = useState(1);
@@ -158,6 +166,35 @@ export default function StudentsPage() {
       },
       () => setLoading(false)
     );
+    return unsubscribe;
+  }, [selectedClassId]);
+
+  // Weekly class-champions board for whichever class tab is selected, shown
+  // in the class header below. Recomputed (cheaply — a no-op read if this
+  // week's board already exists) whenever the selected class or the
+  // teacher's reveal schedule changes, so it's up to date even for a
+  // teacher who opens Students directly without visiting the Dashboard
+  // first.
+  useEffect(() => {
+    if (!selectedClassId) {
+      setRanking(null);
+      return;
+    }
+    const schedule = profile?.rankingAnchor
+      ? { anchor: profile.rankingAnchor }
+      : profile?.rankingDay !== undefined && profile?.rankingTime
+        ? { anchor: legacyDayTimeToAnchor(profile.rankingDay, profile.rankingTime) }
+        : undefined;
+    computeAndSaveWeeklyRankingIfNeeded(selectedClassId, schedule).catch(() => {});
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedClassId, profile?.rankingAnchor, profile?.rankingDay, profile?.rankingTime]);
+
+  useEffect(() => {
+    if (!selectedClassId) {
+      setRanking(null);
+      return;
+    }
+    const unsubscribe = subscribeToClassRanking(selectedClassId, setRanking);
     return unsubscribe;
   }, [selectedClassId]);
 
@@ -428,6 +465,11 @@ export default function StudentsPage() {
       </div>
 
       <ClassSelector classes={classes} selectedClassId={selectedClassId} onSelect={setSelectedClassId} />
+
+      <WeeklyChampions
+        ranking={ranking}
+        classLabel={classes.find((c) => c.id === selectedClassId)?.name}
+      />
 
       {students.length > 0 && (
         <div className="flex flex-wrap items-center justify-between gap-3 border-b border-cream-400/70 pb-3">

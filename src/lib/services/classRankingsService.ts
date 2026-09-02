@@ -10,7 +10,7 @@ import {
 } from "firebase/firestore";
 import { db } from "../firebase";
 import { toMillis } from "../timestamps";
-import type { ClassRanking, RankingEntry } from "../../types";
+import type { ClassRanking, RankingEntry, RankingPosition } from "../../types";
 
 /**
  * The weekly class-champions reveal moment, teacher-configurable as one
@@ -106,6 +106,42 @@ export async function getClassRankingOnce(classId: string): Promise<ClassRanking
 }
 
 /**
+ * Live-subscribes to every class's current ranking at once — used for the
+ * parent portal's school-wide "students of the week" view, which shows
+ * every class's board (not only the classes this parent's own children
+ * belong to). `classRankings` is readable by anyone signed in (see
+ * firestore.rules), matching the same school-wide posture as the single
+ * announcements/current doc.
+ */
+export function subscribeToAllClassRankings(onData: (rankings: ClassRanking[]) => void) {
+  return onSnapshot(collection(db, "classRankings"), (snapshot) => {
+    onData(snapshot.docs.map((d) => d.data() as ClassRanking));
+  });
+}
+
+/**
+ * Groups a points-descending list of students into up to 3 podium spots,
+ * merging students with equal points into the same spot instead of
+ * letting a tie push someone out of the top 3 entirely — e.g. two
+ * students tied for 2nd both get shown at 2nd place, and nobody appears
+ * at 3rd that week.
+ */
+function groupIntoPositions(ranked: RankingEntry[]): RankingPosition[] {
+  const positions: RankingPosition[] = [];
+  let i = 0;
+  while (i < ranked.length && positions.length < 3) {
+    const points = ranked[i].points;
+    const entries: RankingEntry[] = [];
+    while (i < ranked.length && ranked[i].points === points) {
+      entries.push(ranked[i]);
+      i++;
+    }
+    positions.push({ rank: (positions.length + 1) as 1 | 2 | 3, points, entries });
+  }
+  return positions;
+}
+
+/**
  * Computes this week's top 3 point-earners for a class and saves it,
  * but only if the stored ranking is missing or for a past week — a repeat
  * call for a week that's already computed is a cheap no-op read. Only a
@@ -128,10 +164,12 @@ export async function computeAndSaveWeeklyRankingIfNeeded(
     }
   }
 
-  const [studentsSnap, txnSnap] = await Promise.all([
+  const [classSnap, studentsSnap, txnSnap] = await Promise.all([
+    getDoc(doc(db, "classes", classId)),
     getDocs(query(collection(db, "students"), where("classId", "==", classId))),
     getDocs(query(collection(db, "pointsTransactions"), where("classId", "==", classId))),
   ]);
+  const className = (classSnap.data()?.name as string) || "";
 
   const earnedByStudent = new Map<string, number>();
   txnSnap.docs.forEach((d) => {
@@ -150,17 +188,15 @@ export async function computeAndSaveWeeklyRankingIfNeeded(
       points: earnedByStudent.get(d.id) || 0,
     }))
     .filter((entry) => entry.points > 0)
-    .sort((a, b) => b.points - a.points || a.name.localeCompare(b.name))
-    .slice(0, 3);
+    .sort((a, b) => b.points - a.points || a.name.localeCompare(b.name));
 
   const ranking: ClassRanking = {
     classId,
+    className,
     weekId,
     periodStart,
     periodEnd,
-    gold: ranked[0] || null,
-    silver: ranked[1] || null,
-    bronze: ranked[2] || null,
+    positions: groupIntoPositions(ranked),
     computedAt: Date.now(),
   };
 

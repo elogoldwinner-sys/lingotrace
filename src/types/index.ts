@@ -215,24 +215,41 @@ export interface RankingEntry {
 }
 
 /**
- * The current top 3 for a class, for one weekly period. Doc id = classId
- * (one "current" ranking per class, overwritten each week — not a history
- * log). `weekId` is the YYYY-MM-DD of the Thursday that period ends on, so
- * the portal/dashboard can tell "is this still this week's board, or stale
- * and due for recompute" at a glance. Computed client-side by the teacher
- * (see classRankingsService) since this app has no backend to run a
- * schedule — recomputed lazily the next time the teacher's dashboard loads
- * after a Thursday passes.
+ * One podium spot (1st, 2nd, or 3rd place) in a class's weekly board.
+ * `entries` holds more than one student whenever they're tied on points —
+ * a tie always shares the same spot rather than spilling into the next
+ * one, so a class can show e.g. two students at 2nd place and nobody at
+ * 3rd for that week.
+ */
+export interface RankingPosition {
+  rank: 1 | 2 | 3;
+  /** Points earned within the ranking period only (not the student's all-time total) — shared by every tied entry at this spot. */
+  points: number;
+  entries: RankingEntry[];
+}
+
+/**
+ * The current top-3 board for a class, for one weekly period. Doc id =
+ * classId (one "current" ranking per class, overwritten each week — not a
+ * history log). `weekId` is the YYYY-MM-DD of the reveal moment the period
+ * ends on, so the portal/dashboard can tell "is this still this week's
+ * board, or stale and due for recompute" at a glance. Computed client-side
+ * by the teacher (see classRankingsService) since this app has no backend
+ * to run a schedule — recomputed lazily the next time the teacher opens
+ * the dashboard or students tab on or after a reveal moment.
+ *
+ * `className` is denormalized at compute time (only the owning teacher's
+ * client can read the `classes` collection) so the parent portal's
+ * school-wide view can label each class's board without needing extra
+ * read access.
  */
 export interface ClassRanking {
   classId: string;
-  weekId: string; // YYYY-MM-DD of the period's ending Thursday
+  className: string;
+  weekId: string; // YYYY-MM-DD of the period's ending reveal moment
   periodStart: number;
   periodEnd: number;
-  gold: RankingEntry | null;
-  silver: RankingEntry | null;
-  bronze: RankingEntry | null;
+  /** Up to 3 podium spots, highest points first. Empty when nobody earned points this period. */
+  positions: RankingPosition[];
   computedAt: number;
 }
-
-
