@@ -272,7 +272,7 @@ export default function DashboardPage() {
         ? { anchor: legacyDayTimeToAnchor(profile.rankingDay, profile.rankingTime) }
         : undefined;
     computeAndSaveWeeklyRankingsForClasses(classIds, schedule, true).then((results) => {
-      if (!celebratedRef.current && results.some((r) => r.positions.length > 0)) {
+      if (!celebratedRef.current && results.some((r) => (r.positions || []).length > 0)) {
         celebratedRef.current = true;
         triggerWeeklyChampionsCelebration();
       }

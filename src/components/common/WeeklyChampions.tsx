@@ -102,7 +102,7 @@ function ClassicSpot({ position }: { position: RankingPosition }) {
 
 function ClassicPodium({ ranking, classLabel }: { ranking: ClassRanking; classLabel?: string }) {
   const { t } = useTranslation();
-  const byRank = (rank: 1 | 2 | 3) => ranking.positions.find((p) => p.rank === rank);
+  const byRank = (rank: 1 | 2 | 3) => ranking.positions?.find((p) => p.rank === rank);
   return (
     <div className="card relative overflow-hidden p-6">
       <div className="absolute inset-x-0 top-0 h-1.5 bg-gradient-to-r from-[#B08D57] via-[#D4AF37] to-[#B0B7C6]" />
@@ -152,7 +152,7 @@ function KidSpot({ position }: { position: RankingPosition }) {
 
 function KidPodium({ ranking, classLabel }: { ranking: ClassRanking; classLabel?: string }) {
   const { t } = useTranslation();
-  const byRank = (rank: 1 | 2 | 3) => ranking.positions.find((p) => p.rank === rank);
+  const byRank = (rank: 1 | 2 | 3) => ranking.positions?.find((p) => p.rank === rank);
   return (
     <div className="card relative overflow-hidden p-6 border-2 border-navy-100">
       <span className="absolute top-3 left-4 text-lg opacity-70 rotate-[-12deg]" aria-hidden="true">
@@ -195,7 +195,7 @@ export default function WeeklyChampions({
 }) {
   const { theme } = useTheme();
 
-  if (!ranking || ranking.positions.length === 0) return null;
+  if (!ranking || !ranking.positions || ranking.positions.length === 0) return null;
 
   return theme === "kid" ? (
     <KidPodium ranking={ranking} classLabel={classLabel} />

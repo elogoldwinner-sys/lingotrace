@@ -71,7 +71,7 @@ export default function StudentPortalPage() {
     if (!portalStudent?.classId) return;
     let cancelled = false;
     getClassRankingOnce(portalStudent.classId).then((r) => {
-      if (!cancelled && r && r.positions.length > 0) triggerWeeklyChampionsCelebration();
+      if (!cancelled && r && (r.positions || []).length > 0) triggerWeeklyChampionsCelebration();
     });
     return () => {
       cancelled = true;

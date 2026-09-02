@@ -242,7 +242,7 @@ export default function ParentPortalPage() {
         new Set(children.filter((c): c is StudentRecord => !!c).map((c) => c.classId))
       );
       const rankings = await Promise.all(classIds.map((cid) => getClassRankingOnce(cid)));
-      if (!cancelled && rankings.some((r) => r && r.positions.length > 0)) {
+      if (!cancelled && rankings.some((r) => r && (r.positions || []).length > 0)) {
         triggerWeeklyChampionsCelebration();
       }
     })();
@@ -298,11 +298,11 @@ export default function ParentPortalPage() {
       <main className="max-w-3xl mx-auto px-4 py-8 space-y-6">
         {announcement && <AnnouncementCard announcement={announcement} />}
 
-        {schoolRankings.filter((r) => r.positions.length > 0).length > 0 && (
+        {schoolRankings.filter((r) => (r.positions || []).length > 0).length > 0 && (
           <div className="space-y-4">
             {schoolRankings
-              .filter((r) => r.positions.length > 0)
-              .sort((a, b) => a.className.localeCompare(b.className))
+              .filter((r) => (r.positions || []).length > 0)
+              .sort((a, b) => (a.className || "").localeCompare(b.className || ""))
               .map((r) => (
                 <WeeklyChampions key={r.classId} ranking={r} classLabel={r.className} />
               ))}
