@@ -9,7 +9,6 @@ import {
   where,
 } from "firebase/firestore";
 import { db } from "../firebase";
-import { toMillis } from "../timestamps";
 import type { ClassRanking, RankingEntry, RankingPosition } from "../../types";
 
 /**
@@ -142,13 +141,18 @@ function groupIntoPositions(ranked: RankingEntry[]): RankingPosition[] {
 }
 
 /**
- * Computes this week's top 3 point-earners for a class and saves it,
- * but only if the stored ranking is missing or for a past week — a repeat
- * call for a week that's already computed is a cheap no-op read. Only a
- * class's teacher has read access to every student's points, so this can
- * only ever run from the teacher's own client (see firestore.rules) — it's
- * triggered from the teacher dashboard on load, not on a real schedule,
- * since this app has no backend to run one.
+ * Computes this week's top-3 by current total points for a class and
+ * saves it, but only if the stored ranking is missing or for a past week
+ * — a repeat call for a week that's already computed is a cheap no-op
+ * read. Ranked by each student's current `points` total (the same number
+ * shown on their card), not by points earned in some rolling window —
+ * "renews every week" means the board is re-snapshotted fresh at each
+ * scheduled reveal moment and then held steady until the next one, not
+ * that only that week's activity counts. Only a class's teacher has read
+ * access to every student's record, so this can only ever run from the
+ * teacher's own client (see firestore.rules) — it's triggered from the
+ * teacher dashboard/students tab on load, not on a real schedule, since
+ * this app has no backend to run one.
  */
 export async function computeAndSaveWeeklyRankingIfNeeded(
   classId: string,
@@ -164,28 +168,17 @@ export async function computeAndSaveWeeklyRankingIfNeeded(
     }
   }
 
-  const [classSnap, studentsSnap, txnSnap] = await Promise.all([
+  const [classSnap, studentsSnap] = await Promise.all([
     getDoc(doc(db, "classes", classId)),
     getDocs(query(collection(db, "students"), where("classId", "==", classId))),
-    getDocs(query(collection(db, "pointsTransactions"), where("classId", "==", classId))),
   ]);
   const className = (classSnap.data()?.name as string) || "";
-
-  const earnedByStudent = new Map<string, number>();
-  txnSnap.docs.forEach((d) => {
-    const txn = d.data();
-    const created = toMillis(txn.createdAt);
-    if (created >= periodStart && created <= periodEnd) {
-      const studentId = txn.studentId as string;
-      earnedByStudent.set(studentId, (earnedByStudent.get(studentId) || 0) + (txn.amount as number));
-    }
-  });
 
   const ranked: RankingEntry[] = studentsSnap.docs
     .map((d) => ({
       studentId: d.id,
       name: (d.data().name as string) || "",
-      points: earnedByStudent.get(d.id) || 0,
+      points: (d.data().points as number) || 0,
     }))
     .filter((entry) => entry.points > 0)
     .sort((a, b) => b.points - a.points || a.name.localeCompare(b.name));
@@ -198,6 +191,7 @@ export async function computeAndSaveWeeklyRankingIfNeeded(
     periodEnd,
     positions: groupIntoPositions(ranked),
     computedAt: Date.now(),
+
   };
 
   await setDoc(rankingRef(classId), ranking);
