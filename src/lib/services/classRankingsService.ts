@@ -179,6 +179,7 @@ export async function computeAndSaveWeeklyRankingIfNeeded(
       studentId: d.id,
       name: (d.data().name as string) || "",
       points: (d.data().points as number) || 0,
+      photoURL: (d.data().photoURL as string) || "",
     }))
     .filter((entry) => entry.points > 0)
     .sort((a, b) => b.points - a.points || a.name.localeCompare(b.name));

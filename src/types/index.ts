@@ -210,8 +210,10 @@ export interface Announcement {
 export interface RankingEntry {
   studentId: string;
   name: string;
-  /** Points earned within the ranking period only (not the student's all-time total). */
+  /** The student's current points total (same number shown on their card) at the time this board was computed. */
   points: number;
+  /** Denormalized from the student record so the champions list can show the same avatar as the Students tab without an extra read. */
+  photoURL?: string;
 }
 
 /**
