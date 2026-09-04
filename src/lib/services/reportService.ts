@@ -14,12 +14,29 @@ export interface SendPeriodReportInput {
 }
 
 /**
+ * Tags a rejection with which of the report's several reads it came from.
+ * All four reads throw the exact same generic "Missing or insufficient
+ * permissions." message on denial, which is otherwise indistinguishable in
+ * the UI — this turns that into e.g. "[points] Missing or insufficient
+ * permissions.", pointing straight at the collection/rule to fix instead
+ * of requiring a guess-and-check pass over every read this function does.
+ */
+async function labeled<T>(label: string, promise: Promise<T>): Promise<T> {
+  try {
+    return await promise;
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
+    throw new Error(`[${label}] ${message}`);
+  }
+}
+
+/**
  * Builds and sends a one-click "how has my child done this period" email to
  * the student's parent, covering points earned, attendance breakdown, notes
  * (positive/negative), and badges — all scoped to the given date range.
  */
 export async function sendPeriodReportToParent(input: SendPeriodReportInput) {
-  const student = await getStudentOnce(input.studentId);
+  const student = await labeled("student", getStudentOnce(input.studentId));
   if (!student) throw new Error("Student not found.");
   if (!student.parentEmail) {
     throw new Error("This student has no parent email on file yet.");
@@ -29,9 +46,12 @@ export async function sendPeriodReportToParent(input: SendPeriodReportInput) {
   const endMs = new Date(`${input.endDate}T23:59:59`).getTime();
 
   const [points, attendance, notes] = await Promise.all([
-    getPointsForStudentInRange(input.studentId, startMs, endMs),
-    getAttendanceForStudentInRange(input.studentId, input.startDate, input.endDate),
-    getNotesForStudentInRange(input.studentId, startMs, endMs),
+    labeled("points", getPointsForStudentInRange(input.studentId, startMs, endMs)),
+    labeled(
+      "attendance",
+      getAttendanceForStudentInRange(input.studentId, input.startDate, input.endDate)
+    ),
+    labeled("notes", getNotesForStudentInRange(input.studentId, startMs, endMs)),
   ]);
 
   const pointsEarned = points.reduce((sum, txn) => sum + txn.amount, 0);
