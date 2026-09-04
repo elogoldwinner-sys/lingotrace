@@ -9,7 +9,7 @@ import { subscribeToStudentAttendance } from "../../lib/services/attendanceServi
 import { subscribeToVisibleParentNotes } from "../../lib/services/notesService";
 import { getBadgeDefinition } from "../../lib/services/badgesService";
 import { subscribeToAnnouncement } from "../../lib/services/announcementsService";
-import { getClassRankingOnce, subscribeToAllClassRankings } from "../../lib/services/classRankingsService";
+import { getClassRankingOnce, subscribeToClassRanking } from "../../lib/services/classRankingsService";
 import { triggerWeeklyChampionsCelebration } from "../../lib/confetti";
 import { formatNoteDate } from "../../lib/timestamps";
 import { whatsappLink } from "../../lib/whatsapp";
@@ -206,7 +206,8 @@ export default function ParentPortalPage() {
   const { portalParent, signOut } = useAuth();
   const [activeStudentId, setActiveStudentId] = useState("");
   const [announcement, setAnnouncement] = useState<Announcement | null>(null);
-  const [schoolRankings, setSchoolRankings] = useState<ClassRanking[]>([]);
+  const [ownClassIds, setOwnClassIds] = useState<string[]>([]);
+  const [ownRankings, setOwnRankings] = useState<Record<string, ClassRanking>>({});
 
   const studentIds = portalParent?.studentIds || [];
 
@@ -215,32 +216,22 @@ export default function ParentPortalPage() {
     return unsubscribe;
   }, []);
 
-  // School-wide students-of-the-week: every class's current board, not
-  // just the classes this parent's own children belong to — every signed-in
-  // parent at the school sees the same set of boards, the same way the
-  // single school-wide announcement above works.
+  // Only the classes this parent's own children actually belong to — not
+  // every class in the school. Also triggers the celebration confetti once
+  // per portal visit if any of those classes currently has a board.
   useEffect(() => {
-    const unsubscribe = subscribeToAllClassRankings(setSchoolRankings);
-    return unsubscribe;
-  }, []);
-
-  useEffect(() => {
-    if (studentIds.length > 0 && !studentIds.includes(activeStudentId)) {
-      setActiveStudentId(studentIds[0]);
+    if (studentIds.length === 0) {
+      setOwnClassIds([]);
+      return;
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [portalParent]);
-
-  // Celebrate once per portal visit (i.e. every login) if any of this
-  // parent's children belong to a class that currently has a weekly board.
-  useEffect(() => {
-    if (studentIds.length === 0) return;
     let cancelled = false;
     (async () => {
       const children = await Promise.all(studentIds.map((sid) => getStudentOnce(sid)));
       const classIds = Array.from(
         new Set(children.filter((c): c is StudentRecord => !!c).map((c) => c.classId))
       );
+      if (cancelled) return;
+      setOwnClassIds(classIds);
       const rankings = await Promise.all(classIds.map((cid) => getClassRankingOnce(cid)));
       if (!cancelled && rankings.some((r) => r && (r.positions || []).length > 0)) {
         triggerWeeklyChampionsCelebration();
@@ -251,6 +242,33 @@ export default function ParentPortalPage() {
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [studentIds.join(",")]);
+
+  // Live-subscribe to each of those classes' boards so a teacher awarding
+  // points or revealing a new week updates the portal without a refresh.
+  useEffect(() => {
+    if (ownClassIds.length === 0) {
+      setOwnRankings({});
+      return;
+    }
+    const unsubscribes = ownClassIds.map((classId) =>
+      subscribeToClassRanking(classId, (ranking) => {
+        setOwnRankings((prev) => {
+          const next = { ...prev };
+          if (ranking) next[classId] = ranking;
+          else delete next[classId];
+          return next;
+        });
+      })
+    );
+    return () => unsubscribes.forEach((unsub) => unsub());
+  }, [ownClassIds.join(",")]);
+
+  useEffect(() => {
+    if (studentIds.length > 0 && !studentIds.includes(activeStudentId)) {
+      setActiveStudentId(studentIds[0]);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [portalParent]);
 
   async function handleSignOut() {
     await signOut();
@@ -298,9 +316,9 @@ export default function ParentPortalPage() {
       <main className="max-w-3xl mx-auto px-4 py-8 space-y-6">
         {announcement && <AnnouncementCard announcement={announcement} />}
 
-        {schoolRankings.filter((r) => (r.positions || []).length > 0).length > 0 && (
+        {Object.values(ownRankings).filter((r) => (r.positions || []).length > 0).length > 0 && (
           <div className="space-y-4">
-            {schoolRankings
+            {Object.values(ownRankings)
               .filter((r) => (r.positions || []).length > 0)
               .sort((a, b) => (a.className || "").localeCompare(b.className || ""))
               .map((r) => (

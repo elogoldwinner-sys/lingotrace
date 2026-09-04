@@ -105,20 +105,6 @@ export async function getClassRankingOnce(classId: string): Promise<ClassRanking
 }
 
 /**
- * Live-subscribes to every class's current ranking at once — used for the
- * parent portal's school-wide "students of the week" view, which shows
- * every class's board (not only the classes this parent's own children
- * belong to). `classRankings` is readable by anyone signed in (see
- * firestore.rules), matching the same school-wide posture as the single
- * announcements/current doc.
- */
-export function subscribeToAllClassRankings(onData: (rankings: ClassRanking[]) => void) {
-  return onSnapshot(collection(db, "classRankings"), (snapshot) => {
-    onData(snapshot.docs.map((d) => d.data() as ClassRanking));
-  });
-}
-
-/**
  * Groups a points-descending list of students into up to 3 podium spots,
  * merging students with equal points into the same spot instead of
  * letting a tie push someone out of the top 3 entirely — e.g. two
@@ -179,7 +165,6 @@ export async function computeAndSaveWeeklyRankingIfNeeded(
       studentId: d.id,
       name: (d.data().name as string) || "",
       points: (d.data().points as number) || 0,
-      photoURL: (d.data().photoURL as string) || "",
     }))
     .filter((entry) => entry.points > 0)
     .sort((a, b) => b.points - a.points || a.name.localeCompare(b.name));
