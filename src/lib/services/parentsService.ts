@@ -1,4 +1,4 @@
-import { arrayUnion, doc, getDoc, setDoc, updateDoc } from "firebase/firestore";
+import { arrayRemove, arrayUnion, doc, getDoc, setDoc, updateDoc } from "firebase/firestore";
 import { db } from "../firebase";
 import type { ParentProfile } from "../../types";
 
@@ -30,6 +30,19 @@ export async function getParentProfile(uid: string): Promise<ParentProfile | nul
     studentIds,
     createdAt: (data.createdAt as number) || 0,
   };
+}
+
+/**
+ * Removes one child from a parent's portal account — used when a teacher
+ * revokes a specific parent's access to a student (see
+ * `StudentsPage.handleRemoveParentAccess`). Only ever removes, never adds:
+ * `firestore.rules` allows a teacher to shrink a parent's `studentIds` by
+ * exactly one entry, and only when that entry is a student in a class they
+ * own — a teacher can't touch any other entry in the same parent's list
+ * (e.g. a sibling in a different teacher's class).
+ */
+export async function removeChildFromParent(parentUid: string, studentId: string) {
+  await updateDoc(doc(db, "parents", parentUid), { studentIds: arrayRemove(studentId) });
 }
 
 /**

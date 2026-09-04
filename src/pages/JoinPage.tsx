@@ -9,7 +9,7 @@ import {
   subscribeToStudents,
   createStudent,
   createStudentAccountMapping,
-  updateStudent,
+  recordParentJoin,
   findStudentByAuthUid,
 } from "../lib/services/studentsService";
 import { addChildToParent } from "../lib/services/parentsService";
@@ -102,10 +102,13 @@ export default function JoinPage() {
         studentId,
       });
       // The only place parent contact info gets captured now — needed for
-      // the "send report" email feature.
-      await updateStudent(studentId, {
+      // the "send report" email feature — plus recording this parent's uid
+      // on the student so a teacher can later revoke just this parent's
+      // access (see StudentsPage's "remove from parent portal" action).
+      await recordParentJoin(studentId, {
         parentName: firebaseUser.displayName || "",
         parentEmail: firebaseUser.email || "",
+        parentUid: firebaseUser.uid,
       });
     }
     await refreshPortalRole();

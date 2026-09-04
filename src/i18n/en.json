@@ -74,7 +74,12 @@
     "chooseFile": "Choose CSV file",
     "bulkErrorMissingName": "Missing name",
     "bulkImportDone": "Students added!",
-    "importCount": "Add {{count}} student(s)"
+    "importCount": "Add {{count}} student(s)",
+    "parentPortalAccess": "Parent portal access",
+    "removeParentAccess": "Remove access",
+    "confirmRemoveParentAccess": "Remove {{name}}'s parent from their portal account? They'll lose access to this student's points, badges, attendance and notes immediately, and can only see it again if you send them a new invite link.",
+    "removeParentAccessUnavailable": "Linked before this feature — can't be removed here",
+    "removeParentAccessUnavailableHint": "This parent joined before this feature was added, so there's no record of which portal account to remove. Ask them to stop using the portal, or contact support."
   },
   "attendance": {
     "title": "Attendance",

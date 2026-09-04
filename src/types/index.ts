@@ -68,6 +68,16 @@ export interface StudentRecord {
   classId: string;
   parentName?: string;
   parentEmail?: string;
+  /**
+   * Auth uid(s) of parent portal account(s) linked to this student, recorded
+   * at join time (see `recordParentJoin`) so the teacher can later revoke a
+   * specific parent's portal access (see `removeChildFromParent`) without
+   * needing read access to the `parents` collection itself — the teacher
+   * already has full read/write on their own students. Links formed before
+   * this field existed won't have an entry here, so they can't be revoked
+   * this way.
+   */
+  parentUids?: string[];
   /** Comes from Google at join time; the student can replace it with their own upload afterward. */
   photoURL?: string;
   points: number;

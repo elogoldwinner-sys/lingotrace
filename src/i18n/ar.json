@@ -74,7 +74,12 @@
     "chooseFile": "اختر ملف CSV",
     "bulkErrorMissingName": "الاسم مفقود",
     "bulkImportDone": "تمت إضافة الطلاب!",
-    "importCount": "إضافة {{count}} طالب"
+    "importCount": "إضافة {{count}} طالب",
+    "parentPortalAccess": "وصول بوابة ولي الأمر",
+    "removeParentAccess": "إزالة الوصول",
+    "confirmRemoveParentAccess": "هل تريد إزالة ولي أمر {{name}} من حساب البوابة الخاص به؟ سيفقد فورًا إمكانية الوصول إلى نقاط هذا الطالب وشاراته وحضوره وملاحظاته، ولن يتمكن من رؤيتها مرة أخرى إلا إذا أرسلت له رابط دعوة جديدًا.",
+    "removeParentAccessUnavailable": "تم الربط قبل إضافة هذه الميزة — لا يمكن إزالته من هنا",
+    "removeParentAccessUnavailableHint": "انضم ولي الأمر هذا قبل إضافة هذه الميزة، لذا لا يوجد سجل بحساب البوابة المطلوب إزالته. اطلب منه التوقف عن استخدام البوابة، أو تواصل مع الدعم."
   },
   "attendance": {
     "title": "الحضور",

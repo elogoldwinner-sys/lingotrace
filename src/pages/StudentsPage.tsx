@@ -13,6 +13,7 @@ import {
   CheckSquare,
   Square,
   X,
+  UserX,
 } from "lucide-react";
 import { useAuth } from "../contexts/AuthContext";
 import { subscribeToClasses } from "../lib/services/classesService";
@@ -31,6 +32,7 @@ import { subscribeToSessions } from "../lib/services/sessionsService";
 import { sendPeriodReportToParent } from "../lib/services/reportService";
 import { getBadgeDefinition } from "../lib/services/badgesService";
 import { resetStudentData, resetClassData } from "../lib/services/resetService";
+import { removeChildFromParent } from "../lib/services/parentsService";
 import {
   computeAndSaveWeeklyRankingIfNeeded,
   legacyDayTimeToAnchor,
@@ -134,6 +136,7 @@ export default function StudentsPage() {
   const [resettingClass, setResettingClass] = useState(false);
   const [resettingStudent, setResettingStudent] = useState(false);
   const [resetDone, setResetDone] = useState(false);
+  const [removingParentAccess, setRemovingParentAccess] = useState(false);
 
   // Student photo (edited by teacher from the detail panel)
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
@@ -200,6 +203,7 @@ export default function StudentsPage() {
 
   useEffect(() => {
     if (!detailStudent) return;
+    setResetDone(false);
     const unsubPoints = subscribeToStudentPointsHistory(detailStudent.id, setDetailPoints);
     const unsubAttendance = subscribeToStudentAttendance(detailStudent.id, setDetailAttendance);
     const unsubNotes = subscribeToStudentNotes(detailStudent.id, setDetailNotes);
@@ -366,6 +370,27 @@ export default function StudentsPage() {
       setResetDone(true);
     } finally {
       setResettingStudent(false);
+    }
+  }
+
+  async function handleRemoveParentAccess() {
+    if (!detailStudent) return;
+    const parentUids = detailStudent.parentUids || [];
+    if (parentUids.length === 0) return;
+    if (!window.confirm(t("students.confirmRemoveParentAccess", { name: detailStudent.name }))) return;
+    setRemovingParentAccess(true);
+    try {
+      // Each removal only ever drops one entry from that parent's own
+      // studentIds array — see firestore.rules — so these run one at a
+      // time rather than in parallel to avoid two writes racing on the
+      // same parent doc if a student somehow has more than one linked
+      // parent account.
+      for (const uid of parentUids) {
+        await removeChildFromParent(uid, detailStudent.id);
+      }
+      await updateStudent(detailStudent.id, { parentUids: [], parentName: "", parentEmail: "" });
+    } finally {
+      setRemovingParentAccess(false);
     }
   }
 
@@ -719,6 +744,40 @@ export default function StudentsPage() {
                     : t("students.resetStudent")}
               </button>
             </div>
+
+            {(detailStudent.parentName || detailStudent.parentEmail) && (
+              <div>
+                <h3 className="text-sm font-semibold text-navy mb-2">{t("students.parentPortalAccess")}</h3>
+                <div className="flex items-center justify-between gap-3 flex-wrap rounded-lg border border-cream-300 px-3 py-2.5">
+                  <div className="min-w-0">
+                    <p className="text-sm font-medium text-navy truncate">
+                      {detailStudent.parentName || detailStudent.parentEmail}
+                    </p>
+                    {detailStudent.parentName && detailStudent.parentEmail && (
+                      <p className="text-xs text-cream-600 truncate">{detailStudent.parentEmail}</p>
+                    )}
+                  </div>
+                  {(detailStudent.parentUids || []).length > 0 ? (
+                    <button
+                      type="button"
+                      onClick={handleRemoveParentAccess}
+                      disabled={removingParentAccess}
+                      className="text-sm font-semibold text-red-600 hover:text-red-700 inline-flex items-center gap-1.5 disabled:opacity-50 shrink-0"
+                    >
+                      <UserX size={14} />
+                      {removingParentAccess ? t("common.loading") : t("students.removeParentAccess")}
+                    </button>
+                  ) : (
+                    <span
+                      className="text-xs text-cream-500 shrink-0"
+                      title={t("students.removeParentAccessUnavailableHint")}
+                    >
+                      {t("students.removeParentAccessUnavailable")}
+                    </span>
+                  )}
+                </div>
+              </div>
+            )}
 
             <div>
               <h3 className="text-sm font-semibold text-navy mb-2">{t("attendance.title")}</h3>

@@ -47,6 +47,27 @@ export async function deleteManyStudents(ids: string[]) {
 }
 
 /**
+ * Records a parent's join at the point they link to a child: denormalizes
+ * their contact info onto the student (for the "send report" feature, as
+ * before) and adds their auth uid to `parentUids` — the reverse-index that
+ * later lets the teacher revoke just that parent's portal access for this
+ * student (see `removeChildFromParent`) without the teacher's client
+ * needing read access to the `parents` collection. Uses `arrayUnion` so
+ * re-clicking the same invite link is a safe no-op, matching
+ * `addChildToParent`'s behavior on the parent-account side.
+ */
+export async function recordParentJoin(
+  studentId: string,
+  data: { parentName: string; parentEmail: string; parentUid: string }
+) {
+  await updateDoc(doc(db, "students", studentId), {
+    parentName: data.parentName,
+    parentEmail: data.parentEmail,
+    parentUids: arrayUnion(data.parentUid),
+  });
+}
+
+/**
  * Creates a single student manually (teacher-entered, no invite/Google
  * account involved). Used by the "Add student" form.
  */
