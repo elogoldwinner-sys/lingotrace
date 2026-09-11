@@ -9,79 +9,34 @@ import {
   where,
 } from "firebase/firestore";
 import { db } from "../firebase";
-import type { ClassRanking, RankingEntry, RankingPosition } from "../../types";
+import { toMillis } from "../timestamps";
+import type { ClassRanking, RankingEntry, RankingPosition, PointsTransaction } from "../../types";
 
 /**
- * The weekly class-champions reveal moment, teacher-configurable as one
- * exact date+time rather than an abstract "day of week" — periods repeat
- * every 7 days from this anchor, forward and backward, so picking any one
- * precise reveal moment fully determines every week's boundary.
+ * A teacher-chosen reporting window for the class-champions podium — an
+ * explicit start/end date range (ms since epoch, inclusive) rather than a
+ * recurring cycle. The podium only counts points *earned* within this
+ * window (summed from each student's pointsTransactions log entries that
+ * fall in range), not each student's all-time running total.
  */
-export interface RankingSchedule {
-  /** ms since epoch of one exact reveal moment; every other reveal is exactly N×7 days from this. */
-  anchor: number;
+export interface RankingPeriod {
+  start: number;
+  end: number;
 }
 
-const WEEK_MS = 7 * 24 * 60 * 60 * 1000;
-
-// Jan 4, 2024 was a Thursday — an arbitrary but stable anchor that
-// reproduces the feature's original default ("reveals Thursday at
-// midnight") for any teacher who hasn't set their own schedule yet. Any
-// Thursday-midnight timestamp works equally well here since periods repeat
-// every exact 7 days.
-export const DEFAULT_RANKING_SCHEDULE: RankingSchedule = {
-  anchor: new Date(2024, 0, 4, 0, 0, 0, 0).getTime(),
-};
+const DEFAULT_PERIOD_MS = 7 * 24 * 60 * 60 * 1000;
 
 /**
- * Converts an old day-of-week + "HH:MM" schedule (from before this became
- * an exact-date picker) into an equivalent anchor timestamp, so teachers
- * who already configured a schedule under the previous version don't lose
- * it. Only used as a one-time fallback when reading a profile that has the
- * legacy fields but no `rankingAnchor` yet.
+ * Falls back to "the last 7 days, ending now" for any teacher who hasn't
+ * picked their own start/end date range yet via the trophy icon.
  */
-export function legacyDayTimeToAnchor(day: number, time: string): number {
-  const [h, m] = time.split(":").map((n) => parseInt(n, 10));
-  const hours = Number.isFinite(h) ? Math.min(Math.max(h, 0), 23) : 0;
-  const minutes = Number.isFinite(m) ? Math.min(Math.max(m, 0), 59) : 0;
-
-  const now = new Date();
-  const daysSince = (now.getDay() - day + 7) % 7;
-  const moment = new Date(now.getFullYear(), now.getMonth(), now.getDate() - daysSince);
-  moment.setHours(hours, minutes, 0, 0);
-  if (moment.getTime() > now.getTime()) {
-    moment.setDate(moment.getDate() - 7);
-  }
-  return moment.getTime();
+export function getDefaultRankingPeriod(): RankingPeriod {
+  const end = Date.now();
+  return { start: end - DEFAULT_PERIOD_MS, end };
 }
 
-/**
- * The ranking period is always exactly 7 days, ending at the most recent
- * occurrence of the configured anchor (defaulting to Thursday midnight so
- * classes work unchanged until a teacher picks their own). `weekId` is
- * that moment's date — a simple string comparison tells the caller "is
- * this still current, or stale and due for recompute" — and it naturally
- * changes the moment the next reveal moment arrives.
- */
-export function getCurrentRankingWeek(
-  schedule: RankingSchedule = DEFAULT_RANKING_SCHEDULE
-): {
-  weekId: string;
-  periodStart: number;
-  periodEnd: number;
-} {
-  const now = Date.now();
-  const weeksSinceAnchor = Math.floor((now - schedule.anchor) / WEEK_MS);
-  const periodEnd = schedule.anchor + weeksSinceAnchor * WEEK_MS;
-  const periodStart = periodEnd - WEEK_MS;
-
-  const revealMoment = new Date(periodEnd);
-  const weekId = `${revealMoment.getFullYear()}-${String(revealMoment.getMonth() + 1).padStart(
-    2,
-    "0"
-  )}-${String(revealMoment.getDate()).padStart(2, "0")}`;
-
-  return { weekId, periodStart, periodEnd };
+function periodId(period: RankingPeriod): string {
+  return `${period.start}_${period.end}`;
 }
 
 function rankingRef(classId: string) {
@@ -109,7 +64,7 @@ export async function getClassRankingOnce(classId: string): Promise<ClassRanking
  * merging students with equal points into the same spot instead of
  * letting a tie push someone out of the top 3 entirely — e.g. two
  * students tied for 2nd both get shown at 2nd place, and nobody appears
- * at 3rd that week.
+ * at 3rd that period.
  */
 function groupIntoPositions(ranked: RankingEntry[]): RankingPosition[] {
   const positions: RankingPosition[] = [];
@@ -127,44 +82,60 @@ function groupIntoPositions(ranked: RankingEntry[]): RankingPosition[] {
 }
 
 /**
- * Computes this week's top-3 by current total points for a class and
- * saves it, but only if the stored ranking is missing or for a past week
- * — a repeat call for a week that's already computed is a cheap no-op
- * read. Ranked by each student's current `points` total (the same number
- * shown on their card), not by points earned in some rolling window —
- * "renews every week" means the board is re-snapshotted fresh at each
- * scheduled reveal moment and then held steady until the next one, not
- * that only that week's activity counts. Only a class's teacher has read
- * access to every student's record, so this can only ever run from the
- * teacher's own client (see firestore.rules) — it's triggered from the
- * teacher dashboard/students tab on load, not on a real schedule, since
- * this app has no backend to run one.
+ * Computes the class-champions top-3 for a class over an explicit
+ * start/end date range and saves it, but only if the stored ranking is
+ * missing or was computed for a different range — a repeat call for a
+ * range that's already computed is a cheap no-op read. Ranked by points
+ * *earned within the period* (summed from each student's
+ * pointsTransactions log entries that fall in range), not by their
+ * all-time running total — so picking a new date range always starts the
+ * podium fresh from just that window, not from whatever's accumulated
+ * since the start of the school year. Only a class's teacher has read
+ * access to its points log, so this can only ever run from the teacher's
+ * own client (see firestore.rules) — it's triggered from the teacher
+ * dashboard/students tab on load, not on a real schedule, since this app
+ * has no backend to run one.
  */
-export async function computeAndSaveWeeklyRankingIfNeeded(
+export async function computeAndSaveRankingForPeriod(
   classId: string,
-  schedule: RankingSchedule = DEFAULT_RANKING_SCHEDULE,
+  period: RankingPeriod,
   force = false
 ): Promise<ClassRanking | null> {
-  const { weekId, periodStart, periodEnd } = getCurrentRankingWeek(schedule);
+  const id = periodId(period);
 
   if (!force) {
     const existing = await getDoc(rankingRef(classId));
-    if (existing.exists() && (existing.data() as ClassRanking).weekId === weekId) {
+    if (existing.exists() && (existing.data() as ClassRanking).periodId === id) {
       return existing.data() as ClassRanking;
     }
   }
 
-  const [classSnap, studentsSnap] = await Promise.all([
+  const [classSnap, studentsSnap, transactionsSnap] = await Promise.all([
     getDoc(doc(db, "classes", classId)),
     getDocs(query(collection(db, "students"), where("classId", "==", classId))),
+    getDocs(query(collection(db, "pointsTransactions"), where("classId", "==", classId))),
   ]);
   const className = (classSnap.data()?.name as string) || "";
 
-  const ranked: RankingEntry[] = studentsSnap.docs
-    .map((d) => ({
-      studentId: d.id,
-      name: (d.data().name as string) || "",
-      points: (d.data().points as number) || 0,
+  const namesByStudent = new Map<string, string>();
+  studentsSnap.docs.forEach((d) => namesByStudent.set(d.id, (d.data().name as string) || ""));
+
+  // Sum only the transactions whose createdAt falls inside [period.start, period.end] —
+  // filtered client-side (like getPointsForStudentInRange) since createdAt is stored as
+  // a Firestore server Timestamp, not a plain number Firestore can range-query directly.
+  const totals = new Map<string, number>();
+  transactionsSnap.docs.forEach((d) => {
+    const txn = d.data() as PointsTransaction;
+    const created = toMillis(txn.createdAt);
+    if (created < period.start || created > period.end) return;
+    totals.set(txn.studentId, (totals.get(txn.studentId) || 0) + (txn.amount || 0));
+  });
+
+  const ranked: RankingEntry[] = Array.from(totals.entries())
+    .map(([studentId, points]) => ({
+      studentId,
+      name: namesByStudent.get(studentId) || "",
+      points,
     }))
     .filter((entry) => entry.points > 0)
     .sort((a, b) => b.points - a.points || a.name.localeCompare(b.name));
@@ -172,26 +143,25 @@ export async function computeAndSaveWeeklyRankingIfNeeded(
   const ranking: ClassRanking = {
     classId,
     className,
-    weekId,
-    periodStart,
-    periodEnd,
+    periodId: id,
+    periodStart: period.start,
+    periodEnd: period.end,
     positions: groupIntoPositions(ranked),
     computedAt: Date.now(),
-
   };
 
   await setDoc(rankingRef(classId), ranking);
   return ranking;
 }
 
-/** Runs computeAndSaveWeeklyRankingIfNeeded for several classes at once (a teacher's whole class list on dashboard load). */
-export async function computeAndSaveWeeklyRankingsForClasses(
+/** Runs computeAndSaveRankingForPeriod for several classes at once (a teacher's whole class list on dashboard load). */
+export async function computeAndSaveRankingsForClasses(
   classIds: string[],
-  schedule: RankingSchedule = DEFAULT_RANKING_SCHEDULE,
+  period: RankingPeriod,
   force = false
 ): Promise<ClassRanking[]> {
   const results = await Promise.all(
-    classIds.map((id) => computeAndSaveWeeklyRankingIfNeeded(id, schedule, force))
+    classIds.map((id) => computeAndSaveRankingForPeriod(id, period, force))
   );
   return results.filter((r): r is ClassRanking => r !== null);
 }

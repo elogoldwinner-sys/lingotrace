@@ -9,15 +9,13 @@ export interface UserProfile {
   /** Teacher's WhatsApp contact number (with country code), shown to parents in the parent portal. */
   whatsappNumber?: string;
   /**
-   * The exact moment the weekly class-champions board reveals/updates,
-   * teacher-configurable — periods repeat every 7 days from this anchor.
-   * Defaults to Thursday at 00:00 when unset (see classRankingsService).
+   * The teacher-chosen start/end (ms since epoch, inclusive) of the class-
+   * champions reporting window — an explicit custom date range rather than
+   * a recurring cycle. Defaults to "the last 7 days" when unset (see
+   * classRankingsService.getDefaultRankingPeriod).
    */
-  rankingAnchor?: number;
-  /** @deprecated superseded by `rankingAnchor` — kept only so a teacher's schedule set under the old day/time picker still converts over. */
-  rankingDay?: number;
-  /** @deprecated superseded by `rankingAnchor`. */
-  rankingTime?: string;
+  rankingPeriodStart?: number;
+  rankingPeriodEnd?: number;
   createdAt: number;
 }
 
@@ -170,7 +168,15 @@ export type PointsReason =
   | "assignment"
   | "project"
   | "manual"
-  | "other";
+  | "other"
+  // Deduction-only reasons (shown when the amount is negative).
+  | "misbehavior"
+  | "sideTalkNoise"
+  | "nonParticipation"
+  | "missingHomework"
+  | "incompleteWork"
+  | "missingTools"
+  | "custom";
 
 export interface PointsTransaction {
   id: string;
@@ -216,20 +222,20 @@ export interface Announcement {
   updatedAt: number;
 }
 
-/** One student's placement in a weekly class ranking. */
+/** One student's placement in a class ranking for a given reporting period. */
 export interface RankingEntry {
   studentId: string;
   name: string;
-  /** The student's current points total (same number shown on their card) at the time this board was computed. */
+  /** Points earned within the ranking period only (summed from pointsTransactions in range) — not the student's all-time total. */
   points: number;
 }
 
 /**
- * One podium spot (1st, 2nd, or 3rd place) in a class's weekly board.
+ * One podium spot (1st, 2nd, or 3rd place) in a class's champions board.
  * `entries` holds more than one student whenever they're tied on points —
  * a tie always shares the same spot rather than spilling into the next
  * one, so a class can show e.g. two students at 2nd place and nobody at
- * 3rd for that week.
+ * 3rd for that period.
  */
 export interface RankingPosition {
   rank: 1 | 2 | 3;
@@ -239,14 +245,15 @@ export interface RankingPosition {
 }
 
 /**
- * The current top-3 board for a class, for one weekly period. Doc id =
- * classId (one "current" ranking per class, overwritten each week — not a
- * history log). `weekId` is the YYYY-MM-DD of the reveal moment the period
- * ends on, so the portal/dashboard can tell "is this still this week's
- * board, or stale and due for recompute" at a glance. Computed client-side
- * by the teacher (see classRankingsService) since this app has no backend
- * to run a schedule — recomputed lazily the next time the teacher opens
- * the dashboard or students tab on or after a reveal moment.
+ * The current top-3 board for a class, for one teacher-chosen start/end
+ * date range. Doc id = classId (one "current" ranking per class,
+ * overwritten whenever the period is recomputed — not a history log).
+ * `periodId` is a cheap "is this still the board for the currently
+ * configured period, or stale and due for recompute" check (derived from
+ * `periodStart`/`periodEnd`). Computed client-side by the teacher (see
+ * classRankingsService) since this app has no backend to run a schedule —
+ * recomputed lazily the next time the teacher opens the dashboard or
+ * students tab.
  *
  * `className` is denormalized at compute time (only the owning teacher's
  * client can read the `classes` collection) so the parent portal's
@@ -256,7 +263,7 @@ export interface RankingPosition {
 export interface ClassRanking {
   classId: string;
   className: string;
-  weekId: string; // YYYY-MM-DD of the period's ending reveal moment
+  periodId: string; // derived from periodStart/periodEnd, for change detection
   periodStart: number;
   periodEnd: number;
   /** Up to 3 podium spots, highest points first. Empty when nobody earned points this period. */

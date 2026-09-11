@@ -9,7 +9,7 @@ import {
   saveAnnouncement,
   clearAnnouncement,
 } from "../lib/services/announcementsService";
-import { computeAndSaveWeeklyRankingsForClasses, legacyDayTimeToAnchor } from "../lib/services/classRankingsService";
+import { computeAndSaveRankingsForClasses, getDefaultRankingPeriod } from "../lib/services/classRankingsService";
 import { triggerWeeklyChampionsCelebration } from "../lib/confetti";
 import { uploadToCloudinary } from "../lib/cloudinary";
 import type { ClassRecord, Announcement } from "../types";
@@ -254,31 +254,29 @@ export default function DashboardPage() {
     return unsubscribe;
   }, []);
 
-  // Weekly champions: recompute for every class the teacher owns each time
-  // the dashboard loads (not just once per calendar week — a teacher who
-  // awards points mid-week expects the board to reflect that immediately,
-  // not wait for the next scheduled reveal), then celebrate once per
-  // dashboard visit if any class has a board to show. The board itself is
-  // displayed in the class header on the Students tab, not here — this
-  // just keeps it warm and fires the confetti. Only the teacher's client
-  // has read access to every student's points in a class, so this is the
-  // one place this can run.
+  // Class champions: recompute for every class the teacher owns each time
+  // the dashboard loads (not just once per configured period — a teacher
+  // who awards points mid-period expects the board to reflect that
+  // immediately), then celebrate once per dashboard visit if any class has
+  // a board to show. The board itself is displayed in the class header on
+  // the Students tab, not here — this just keeps it warm and fires the
+  // confetti. Only the teacher's client has read access to every student's
+  // points in a class, so this is the one place this can run.
   useEffect(() => {
     const classIds = classes.map((c) => c.id);
     if (classIds.length === 0) return;
-    const schedule = profile?.rankingAnchor
-      ? { anchor: profile.rankingAnchor }
-      : profile?.rankingDay !== undefined && profile?.rankingTime
-        ? { anchor: legacyDayTimeToAnchor(profile.rankingDay, profile.rankingTime) }
-        : undefined;
-    computeAndSaveWeeklyRankingsForClasses(classIds, schedule, true).then((results) => {
+    const period =
+      profile?.rankingPeriodStart !== undefined && profile?.rankingPeriodEnd !== undefined
+        ? { start: profile.rankingPeriodStart, end: profile.rankingPeriodEnd }
+        : getDefaultRankingPeriod();
+    computeAndSaveRankingsForClasses(classIds, period, true).then((results) => {
       if (!celebratedRef.current && results.some((r) => (r.positions || []).length > 0)) {
         celebratedRef.current = true;
         triggerWeeklyChampionsCelebration();
       }
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [classes.map((c) => c.id).join(","), profile?.rankingAnchor, profile?.rankingDay, profile?.rankingTime]);
+  }, [classes.map((c) => c.id).join(","), profile?.rankingPeriodStart, profile?.rankingPeriodEnd]);
 
   const totalStudents = classes.reduce(
     (sum, c) => sum + (studentCounts[c.id] || 0),

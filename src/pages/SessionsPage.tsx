@@ -27,16 +27,7 @@ import Modal from "../components/common/Modal";
 import EmptyState from "../components/common/EmptyState";
 import Spinner from "../components/common/Spinner";
 import ClassSelector from "../components/common/ClassSelector";
-
-const POINTS_REASONS: PointsReason[] = [
-  "participation",
-  "homework",
-  "behavior",
-  "attendance",
-  "assignment",
-  "manual",
-  "other",
-];
+import { reasonsForAmount } from "../lib/pointsReasons";
 
 const STATUS_STYLES: Record<AttendanceStatus, string> = {
   present: "bg-green-100 text-green-700 border-green-300",
@@ -77,6 +68,7 @@ export default function SessionsPage() {
   const [pointsModalStudent, setPointsModalStudent] = useState<StudentRecord | null>(null);
   const [pointsAmount, setPointsAmount] = useState(1);
   const [pointsReason, setPointsReason] = useState<PointsReason>("participation");
+  const [pointsNote, setPointsNote] = useState("");
 
   const [noteModalStudent, setNoteModalStudent] = useState<StudentRecord | null>(null);
   const [noteContent, setNoteContent] = useState("");
@@ -149,8 +141,19 @@ export default function SessionsPage() {
 
   function openPointsModal(student: StudentRecord, direction: 1 | -1 = 1) {
     setPointsAmount(direction * 1);
-    setPointsReason("participation");
+    setPointsReason(reasonsForAmount(direction)[0]);
+    setPointsNote("");
     setPointsModalStudent(student);
+  }
+
+  /** Keeps the selected reason valid for the current sign of the amount — resetting to that side's first option (and clearing the custom-detail box) the moment the sign flips, e.g. from typing a negative number directly into the amount field. */
+  function handlePointsAmountChange(next: number) {
+    setPointsAmount(next);
+    const list = reasonsForAmount(next);
+    if (!list.includes(pointsReason)) {
+      setPointsReason(list[0]);
+      setPointsNote("");
+    }
   }
 
   function openNoteModal(student: StudentRecord) {
@@ -199,6 +202,7 @@ export default function SessionsPage() {
       classId: pointsModalStudent.classId,
       amount: pointsAmount,
       reason: pointsReason,
+      note: pointsReason === "custom" ? pointsNote.trim() : undefined,
       awardedBy: user.uid,
     });
     setPointsModalStudent(null);
@@ -509,7 +513,7 @@ export default function SessionsPage() {
       <Modal
         open={!!pointsModalStudent}
         onClose={() => setPointsModalStudent(null)}
-        title={`${t("points.award")} — ${pointsModalStudent?.name || ""}`}
+        title={`${t("points.modalTitle")} — ${pointsModalStudent?.name || ""}`}
       >
         <form onSubmit={handleAwardPoints} className="space-y-4">
           <div>
@@ -517,7 +521,7 @@ export default function SessionsPage() {
             <div className="flex items-center gap-2">
               <button
                 type="button"
-                onClick={() => setPointsAmount((v) => -Math.abs(v || 1))}
+                onClick={() => handlePointsAmountChange(-Math.abs(pointsAmount || 1))}
                 className={`h-9 w-9 shrink-0 flex items-center justify-center rounded-full border transition ${
                   pointsAmount < 0
                     ? "border-red-400 bg-red-50 text-red-600"
@@ -529,12 +533,12 @@ export default function SessionsPage() {
               <input
                 type="number"
                 value={pointsAmount}
-                onChange={(e) => setPointsAmount(Number(e.target.value))}
+                onChange={(e) => handlePointsAmountChange(Number(e.target.value))}
                 className="input-field text-center"
               />
               <button
                 type="button"
-                onClick={() => setPointsAmount((v) => Math.abs(v || 1))}
+                onClick={() => handlePointsAmountChange(Math.abs(pointsAmount || 1))}
                 className={`h-9 w-9 shrink-0 flex items-center justify-center rounded-full border transition ${
                   pointsAmount > 0
                     ? "border-gold bg-gold-50 text-gold"
@@ -548,7 +552,7 @@ export default function SessionsPage() {
           <div>
             <label className="label-eyebrow block mb-1.5">{t("points.reason")}</label>
             <div className="flex flex-wrap gap-2">
-              {POINTS_REASONS.map((reason) => (
+              {reasonsForAmount(pointsAmount).map((reason) => (
                 <button
                   key={reason}
                   type="button"
@@ -563,6 +567,15 @@ export default function SessionsPage() {
                 </button>
               ))}
             </div>
+            {pointsReason === "custom" && (
+              <input
+                type="text"
+                value={pointsNote}
+                onChange={(e) => setPointsNote(e.target.value)}
+                placeholder={t("points.customPlaceholder")}
+                className="input-field mt-2"
+              />
+            )}
           </div>
           <div className="flex justify-end gap-2">
             <button type="button" onClick={() => setPointsModalStudent(null)} className="btn-secondary">

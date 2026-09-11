@@ -7,6 +7,7 @@ import {
   Send,
   Check,
   Plus,
+  Minus,
   Upload,
   Download,
   RotateCcw,
@@ -14,6 +15,7 @@ import {
   Square,
   X,
   UserX,
+  Pencil,
 } from "lucide-react";
 import { useAuth } from "../contexts/AuthContext";
 import { subscribeToClasses } from "../lib/services/classesService";
@@ -34,8 +36,8 @@ import { getBadgeDefinition } from "../lib/services/badgesService";
 import { resetStudentData, resetClassData } from "../lib/services/resetService";
 import { removeChildFromParent } from "../lib/services/parentsService";
 import {
-  computeAndSaveWeeklyRankingIfNeeded,
-  legacyDayTimeToAnchor,
+  computeAndSaveRankingForPeriod,
+  getDefaultRankingPeriod,
   subscribeToClassRanking,
 } from "../lib/services/classRankingsService";
 import { parseCsv, buildCsv, downloadTextFile } from "../lib/csv";
@@ -56,6 +58,7 @@ import EmptyState from "../components/common/EmptyState";
 import Spinner from "../components/common/Spinner";
 import ClassSelector from "../components/common/ClassSelector";
 import WeeklyChampions from "../components/common/WeeklyChampions";
+import { reasonsForAmount } from "../lib/pointsReasons";
 
 interface BulkRow {
   name: string;
@@ -63,16 +66,6 @@ interface BulkRow {
   parentEmail?: string;
   error?: string;
 }
-
-const POINTS_REASONS: PointsReason[] = [
-  "participation",
-  "homework",
-  "behavior",
-  "attendance",
-  "assignment",
-  "manual",
-  "other",
-];
 
 function todayISO() {
   return new Date().toISOString().slice(0, 10);
@@ -99,6 +92,7 @@ export default function StudentsPage() {
   const [pointsModalStudent, setPointsModalStudent] = useState<StudentRecord | null>(null);
   const [pointsAmount, setPointsAmount] = useState(1);
   const [pointsReason, setPointsReason] = useState<PointsReason>("participation");
+  const [pointsNote, setPointsNote] = useState("");
 
   // Performance detail panel
   const [detailStudent, setDetailStudent] = useState<StudentRecord | null>(null);
@@ -142,6 +136,11 @@ export default function StudentsPage() {
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
   const detailPhotoInputRef = useRef<HTMLInputElement>(null);
 
+  // Student name (edited by teacher from the detail panel)
+  const [editingName, setEditingName] = useState(false);
+  const [nameDraft, setNameDraft] = useState("");
+  const [savingName, setSavingName] = useState(false);
+
   useEffect(() => {
     if (!user) return;
     const unsubscribe = subscribeToClasses(user.uid, (data) => {
@@ -172,25 +171,24 @@ export default function StudentsPage() {
     return unsubscribe;
   }, [selectedClassId]);
 
-  // Weekly class-champions board for whichever class tab is selected, shown
-  // in the class header below. Recomputed (cheaply — a no-op read if this
-  // week's board already exists) whenever the selected class or the
-  // teacher's reveal schedule changes, so it's up to date even for a
-  // teacher who opens Students directly without visiting the Dashboard
-  // first.
+  // Class-champions board for whichever class tab is selected, shown in
+  // the class header below. Recomputed (cheaply — a no-op read if the
+  // board for the currently configured period already exists) whenever
+  // the selected class or the teacher's chosen date range changes, so
+  // it's up to date even for a teacher who opens Students directly
+  // without visiting the Dashboard first.
   useEffect(() => {
     if (!selectedClassId) {
       setRanking(null);
       return;
     }
-    const schedule = profile?.rankingAnchor
-      ? { anchor: profile.rankingAnchor }
-      : profile?.rankingDay !== undefined && profile?.rankingTime
-        ? { anchor: legacyDayTimeToAnchor(profile.rankingDay, profile.rankingTime) }
-        : undefined;
-    computeAndSaveWeeklyRankingIfNeeded(selectedClassId, schedule).catch(() => {});
+    const period =
+      profile?.rankingPeriodStart !== undefined && profile?.rankingPeriodEnd !== undefined
+        ? { start: profile.rankingPeriodStart, end: profile.rankingPeriodEnd }
+        : getDefaultRankingPeriod();
+    computeAndSaveRankingForPeriod(selectedClassId, period).catch(() => {});
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedClassId, profile?.rankingAnchor, profile?.rankingDay, profile?.rankingTime]);
+  }, [selectedClassId, profile?.rankingPeriodStart, profile?.rankingPeriodEnd]);
 
   useEffect(() => {
     if (!selectedClassId) {
@@ -427,17 +425,50 @@ export default function StudentsPage() {
       classId: pointsModalStudent.classId,
       amount: pointsAmount,
       reason: pointsReason,
+      note: pointsReason === "custom" ? pointsNote.trim() : undefined,
       awardedBy: user.uid,
     });
     setPointsModalStudent(null);
     setPointsAmount(1);
+    setPointsNote("");
+  }
+
+  /** Keeps the selected reason valid for the current sign of the amount — resetting to that side's first option (and clearing the custom-detail box) the moment the sign flips. */
+  function handlePointsAmountChange(next: number) {
+    setPointsAmount(next);
+    const list = reasonsForAmount(next);
+    if (!list.includes(pointsReason)) {
+      setPointsReason(list[0]);
+      setPointsNote("");
+    }
   }
 
   function openDetail(student: StudentRecord) {
     setReportSent(false);
     setReportError("");
     setResetDone(false);
+    setEditingName(false);
     setDetailStudent(student);
+  }
+
+  function startEditingName() {
+    if (!detailStudent) return;
+    setNameDraft(detailStudent.name);
+    setEditingName(true);
+  }
+
+  async function handleSaveName(e: React.FormEvent) {
+    e.preventDefault();
+    if (!detailStudent) return;
+    const trimmed = nameDraft.trim();
+    if (!trimmed) return;
+    setSavingName(true);
+    try {
+      await updateStudent(detailStudent.id, { name: trimmed });
+      setEditingName(false);
+    } finally {
+      setSavingName(false);
+    }
   }
 
   async function handleSendReport() {
@@ -595,12 +626,13 @@ export default function StudentsPage() {
                     e.stopPropagation();
                     setPointsAmount(1);
                     setPointsReason("participation");
+                    setPointsNote("");
                     setPointsModalStudent(s);
                   }}
                   className="btn-gold py-1.5 px-3 text-xs"
                 >
                   <Award size={14} />
-                  {t("points.award")}
+                  {t("points.modalTitle")}
                 </button>
               </div>
 
@@ -629,22 +661,46 @@ export default function StudentsPage() {
       <Modal
         open={!!pointsModalStudent}
         onClose={() => setPointsModalStudent(null)}
-        title={`${t("points.award")} — ${pointsModalStudent?.name || ""}`}
+        title={`${t("points.modalTitle")} — ${pointsModalStudent?.name || ""}`}
       >
         <form onSubmit={handleAwardPoints} className="space-y-4">
           <div>
             <label className="label-eyebrow block mb-1.5">{t("points.amount")}</label>
-            <input
-              type="number"
-              value={pointsAmount}
-              onChange={(e) => setPointsAmount(Number(e.target.value))}
-              className="input-field"
-            />
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => handlePointsAmountChange(-Math.abs(pointsAmount || 1))}
+                className={`h-9 w-9 shrink-0 flex items-center justify-center rounded-full border transition ${
+                  pointsAmount < 0
+                    ? "border-red-400 bg-red-50 text-red-600"
+                    : "border-cream-300 text-cream-600 hover:border-red-400 hover:text-red-600"
+                }`}
+              >
+                <Minus size={16} />
+              </button>
+              <input
+                type="number"
+                value={pointsAmount}
+                onChange={(e) => handlePointsAmountChange(Number(e.target.value))}
+                className="input-field text-center"
+              />
+              <button
+                type="button"
+                onClick={() => handlePointsAmountChange(Math.abs(pointsAmount || 1))}
+                className={`h-9 w-9 shrink-0 flex items-center justify-center rounded-full border transition ${
+                  pointsAmount > 0
+                    ? "border-gold bg-gold-50 text-gold"
+                    : "border-cream-300 text-cream-600 hover:border-gold hover:text-gold"
+                }`}
+              >
+                <Plus size={16} />
+              </button>
+            </div>
           </div>
           <div>
             <label className="label-eyebrow block mb-1.5">{t("points.reason")}</label>
             <div className="flex flex-wrap gap-2">
-              {POINTS_REASONS.map((reason) => (
+              {reasonsForAmount(pointsAmount).map((reason) => (
                 <button
                   key={reason}
                   type="button"
@@ -659,6 +715,15 @@ export default function StudentsPage() {
                 </button>
               ))}
             </div>
+            {pointsReason === "custom" && (
+              <input
+                type="text"
+                value={pointsNote}
+                onChange={(e) => setPointsNote(e.target.value)}
+                placeholder={t("points.customPlaceholder")}
+                className="input-field mt-2"
+              />
+            )}
           </div>
           <div className="flex justify-end gap-2">
             <button type="button" onClick={() => setPointsModalStudent(null)} className="btn-secondary">
@@ -679,6 +744,39 @@ export default function StudentsPage() {
       >
         {detailStudent && (
           <div className="space-y-5">
+            {editingName ? (
+              <form onSubmit={handleSaveName} className="flex items-center gap-2">
+                <input
+                  autoFocus
+                  type="text"
+                  required
+                  value={nameDraft}
+                  onChange={(e) => setNameDraft(e.target.value)}
+                  className="input-field flex-1"
+                />
+                <button type="submit" disabled={savingName} className="btn-primary py-1.5 px-3 text-sm">
+                  {savingName ? t("common.loading") : t("common.save")}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setEditingName(false)}
+                  className="btn-secondary py-1.5 px-3 text-sm"
+                >
+                  {t("common.cancel")}
+                </button>
+              </form>
+            ) : (
+              <button
+                type="button"
+                onClick={startEditingName}
+                title={t("students.editName")}
+                className="flex items-center gap-1.5 text-cream-600 hover:text-navy text-sm font-medium"
+              >
+                <Pencil size={13} />
+                {t("students.editName")}
+              </button>
+            )}
+
             <div className="flex items-center justify-between gap-3 flex-wrap">
               <div className="flex items-center gap-3 flex-wrap">
                 <input
@@ -798,7 +896,7 @@ export default function StudentsPage() {
             </div>
 
             <div>
-              <h3 className="text-sm font-semibold text-navy mb-2">{t("points.award")}</h3>
+              <h3 className="text-sm font-semibold text-navy mb-2">{t("points.history")}</h3>
               {detailPoints.length === 0 ? (
                 <p className="text-sm text-cream-600">{t("portal.noPointsYet")}</p>
               ) : (

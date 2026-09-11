@@ -79,7 +79,8 @@
     "removeParentAccess": "Remove access",
     "confirmRemoveParentAccess": "Remove {{name}}'s parent from their portal account? They'll lose access to this student's points, badges, attendance and notes immediately, and can only see it again if you send them a new invite link.",
     "removeParentAccessUnavailable": "Linked before this feature — can't be removed here",
-    "removeParentAccessUnavailableHint": "This parent joined before this feature was added, so there's no record of which portal account to remove. Ask them to stop using the portal, or contact support."
+    "removeParentAccessUnavailableHint": "This parent joined before this feature was added, so there's no record of which portal account to remove. Ask them to stop using the portal, or contact support.",
+    "editName": "Edit name"
   },
   "attendance": {
     "title": "Attendance",
@@ -135,18 +136,28 @@
   },
   "points": {
     "award": "Award points",
+    "modalTitle": "Points",
+    "history": "Points history",
     "amount": "Amount",
     "reason": "Reason",
     "deduct": "Deduct points",
+    "customPlaceholder": "Add detail…",
     "reasons": {
       "participation": "Participation",
       "homework": "Homework",
       "behavior": "Behavior",
       "attendance": "Attendance",
-      "assignment": "Assignment",
+      "assignment": "Dictation",
       "project": "Project",
       "manual": "Manual",
-      "other": "Other"
+      "other": "Other",
+      "misbehavior": "Misbehavior",
+      "sideTalkNoise": "Side Talk & Noise",
+      "nonParticipation": "Non-Participation",
+      "missingHomework": "Missing Homework",
+      "incompleteWork": "Incomplete Work",
+      "missingTools": "Missing Tools",
+      "custom": "Custom"
     }
   },
   "common": {
@@ -259,12 +270,13 @@
     "parentPortalDesc": "Follow your child's progress and attendance"
   },
   "ranking": {
-    "title": "This Week's Champions",
-    "schedule": "Champions schedule",
-    "scheduleLabel": "Weekly champions schedule",
-    "scheduleHint": "Pick the exact date and time the weekly top-3 board first reveals. It repeats every 7 days from that moment, and updates the next time you open the dashboard on or after each reveal.",
-    "noneYet": "No weekly champions yet — award some points this week to get the board started.",
-    "dateTime": "Reveal date & time"
+    "title": "Champions",
+    "schedule": "Champions period",
+    "scheduleLabel": "Champions reporting period",
+    "scheduleHint": "Pick a start and end date. The top-3 board only counts points earned inside that range — not each student's total since the start of the school year — and updates the next time you open the dashboard.",
+    "noneYet": "No champions yet for this period — award some points to get the board started.",
+    "startDate": "Start date",
+    "endDate": "End date"
   },
   "theme": {
     "kidMode": "Kid mode",

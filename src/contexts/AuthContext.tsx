@@ -49,7 +49,7 @@ interface AuthContextValue {
   beginGoogleSignIn: () => Promise<User>;
   updateTeacherPhoto: (photoURL: string) => Promise<void>;
   updateTeacherWhatsapp: (whatsappNumber: string) => Promise<void>;
-  updateTeacherRankingSchedule: (anchor: number) => Promise<void>;
+  updateTeacherRankingPeriod: (start: number, end: number) => Promise<void>;
   refreshPortalRole: () => Promise<void>;
   signOut: () => Promise<void>;
 }
@@ -277,26 +277,31 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }
 
   /**
-   * Lets a teacher choose the exact date+time the weekly class-champions
-   * board reveals and updates (default is Thursday at midnight — see
-   * DEFAULT_RANKING_SCHEDULE). Purely a teacher-side setting: only the
+   * Lets a teacher choose the exact start/end date range the class-
+   * champions board is computed over (default is "the last 7 days" — see
+   * getDefaultRankingPeriod). Purely a teacher-side setting: only the
    * teacher's own client ever reads it (to know which period to compute),
    * so no denormalization onto students/parents is needed the way
    * whatsappNumber requires.
    */
-  async function updateTeacherRankingSchedule(anchor: number) {
+  async function updateTeacherRankingPeriod(start: number, end: number) {
     const currentUser = auth.currentUser;
     if (!currentUser) return;
-    await setDoc(doc(db, "teachers", currentUser.uid), { rankingAnchor: anchor }, { merge: true });
+    await setDoc(
+      doc(db, "teachers", currentUser.uid),
+      { rankingPeriodStart: start, rankingPeriodEnd: end },
+      { merge: true }
+    );
     setProfile((prev) =>
       prev
-        ? { ...prev, rankingAnchor: anchor }
+        ? { ...prev, rankingPeriodStart: start, rankingPeriodEnd: end }
         : {
             uid: currentUser.uid,
             email: currentUser.email || "",
             displayName: currentUser.displayName || "Teacher",
             role: "teacher",
-            rankingAnchor: anchor,
+            rankingPeriodStart: start,
+            rankingPeriodEnd: end,
             createdAt: Date.now(),
           }
     );
@@ -319,7 +324,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         beginGoogleSignIn,
         updateTeacherPhoto,
         updateTeacherWhatsapp,
-        updateTeacherRankingSchedule,
+        updateTeacherRankingPeriod,
         refreshPortalRole,
         signOut,
       }}

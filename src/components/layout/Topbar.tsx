@@ -4,20 +4,20 @@ import { useNavigate } from "react-router-dom";
 import { LogOut, Globe, Camera, MessageCircle, Trophy } from "lucide-react";
 import { useAuth } from "../../contexts/AuthContext";
 import { uploadToCloudinary } from "../../lib/cloudinary";
-import { DEFAULT_RANKING_SCHEDULE, legacyDayTimeToAnchor } from "../../lib/services/classRankingsService";
+import { getDefaultRankingPeriod } from "../../lib/services/classRankingsService";
 import Modal from "../common/Modal";
 import ThemeToggle from "../common/ThemeToggle";
 
-/** "YYYY-MM-DDTHH:mm" in local time, the format <input type="datetime-local"> needs. */
-function msToLocalDatetimeValue(ms: number): string {
+/** "YYYY-MM-DD" in local time, the format <input type="date"> needs. */
+function msToLocalDateValue(ms: number): string {
   const d = new Date(ms);
   const pad = (n: number) => String(n).padStart(2, "0");
-  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
 }
 
 export default function Topbar() {
   const { t, i18n } = useTranslation();
-  const { profile, signOut, updateTeacherPhoto, updateTeacherWhatsapp, updateTeacherRankingSchedule } = useAuth();
+  const { profile, signOut, updateTeacherPhoto, updateTeacherWhatsapp, updateTeacherRankingPeriod } = useAuth();
   const navigate = useNavigate();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [uploading, setUploading] = useState(false);
@@ -26,8 +26,10 @@ export default function Topbar() {
   const [whatsappInput, setWhatsappInput] = useState("");
   const [savingWhatsapp, setSavingWhatsapp] = useState(false);
 
+  const defaultPeriod = getDefaultRankingPeriod();
   const [scheduleModalOpen, setScheduleModalOpen] = useState(false);
-  const [scheduleValue, setScheduleValue] = useState(msToLocalDatetimeValue(DEFAULT_RANKING_SCHEDULE.anchor));
+  const [scheduleStart, setScheduleStart] = useState(msToLocalDateValue(defaultPeriod.start));
+  const [scheduleEnd, setScheduleEnd] = useState(msToLocalDateValue(defaultPeriod.end));
   const [savingSchedule, setSavingSchedule] = useState(false);
 
   async function handleSignOut() {
@@ -69,21 +71,21 @@ export default function Topbar() {
   }
 
   function openScheduleModal() {
-    const currentAnchor =
-      profile?.rankingAnchor ??
-      (profile?.rankingDay !== undefined && profile?.rankingTime
-        ? legacyDayTimeToAnchor(profile.rankingDay, profile.rankingTime)
-        : DEFAULT_RANKING_SCHEDULE.anchor);
-    setScheduleValue(msToLocalDatetimeValue(currentAnchor));
+    const period = getDefaultRankingPeriod();
+    setScheduleStart(msToLocalDateValue(profile?.rankingPeriodStart ?? period.start));
+    setScheduleEnd(msToLocalDateValue(profile?.rankingPeriodEnd ?? period.end));
     setScheduleModalOpen(true);
   }
 
   async function handleSaveSchedule(e: React.FormEvent) {
     e.preventDefault();
-    if (!scheduleValue) return;
+    if (!scheduleStart || !scheduleEnd) return;
     setSavingSchedule(true);
     try {
-      await updateTeacherRankingSchedule(new Date(scheduleValue).getTime());
+      // End date is inclusive through the end of that calendar day.
+      const startMs = new Date(`${scheduleStart}T00:00:00`).getTime();
+      const endMs = new Date(`${scheduleEnd}T23:59:59.999`).getTime();
+      await updateTeacherRankingPeriod(startMs, endMs);
       setScheduleModalOpen(false);
     } finally {
       setSavingSchedule(false);
@@ -194,15 +196,27 @@ export default function Topbar() {
 
       <Modal open={scheduleModalOpen} onClose={() => setScheduleModalOpen(false)} title={t("ranking.scheduleLabel")}>
         <form onSubmit={handleSaveSchedule} className="space-y-4">
-          <div>
-            <label className="label-eyebrow block mb-1.5">{t("ranking.dateTime")}</label>
-            <input
-              type="datetime-local"
-              required
-              value={scheduleValue}
-              onChange={(e) => setScheduleValue(e.target.value)}
-              className="input-field"
-            />
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="label-eyebrow block mb-1.5">{t("ranking.startDate")}</label>
+              <input
+                type="date"
+                required
+                value={scheduleStart}
+                onChange={(e) => setScheduleStart(e.target.value)}
+                className="input-field"
+              />
+            </div>
+            <div>
+              <label className="label-eyebrow block mb-1.5">{t("ranking.endDate")}</label>
+              <input
+                type="date"
+                required
+                value={scheduleEnd}
+                onChange={(e) => setScheduleEnd(e.target.value)}
+                className="input-field"
+              />
+            </div>
           </div>
           <p className="text-xs text-cream-600">{t("ranking.scheduleHint")}</p>
           <div className="flex justify-end gap-2">
