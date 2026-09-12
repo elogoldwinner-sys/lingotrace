@@ -161,6 +161,9 @@ export interface NoteRecord {
 }
 
 export type PointsReason =
+  // Legacy positive reasons — kept only so historical transactions still
+  // display correctly; no longer offered when awarding new points (see
+  // POSITIVE_POINTS_REASONS in lib/pointsReasons.ts for the current set).
   | "participation"
   | "homework"
   | "behavior"
@@ -169,6 +172,17 @@ export type PointsReason =
   | "project"
   | "manual"
   | "other"
+  // Current positive (award) reasons.
+  | "homeworkMaster"
+  | "teamPlayer"
+  | "participationStar"
+  | "learningChampion"
+  | "classroomLeader"
+  | "effortHero"
+  | "classroomHelper"
+  | "responsibilityStar"
+  | "improvementHero"
+  | "superLearner"
   // Deduction-only reasons (shown when the amount is negative).
   | "misbehavior"
   | "sideTalkNoise"
@@ -176,6 +190,7 @@ export type PointsReason =
   | "missingHomework"
   | "incompleteWork"
   | "missingTools"
+  // Shared by both directions — pairs with a free-text detail box.
   | "custom";
 
 export interface PointsTransaction {

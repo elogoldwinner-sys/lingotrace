@@ -11,7 +11,8 @@
     "notes": "Notes",
     "projects": "Projects submission",
     "settings": "Settings",
-    "signOut": "Sign out"
+    "signOut": "Sign out",
+    "toggleSidebar": "Toggle menu"
   },
   "auth": {
     "continueWithGoogle": "Continue with Google",
@@ -151,6 +152,16 @@
       "project": "Project",
       "manual": "Manual",
       "other": "Other",
+      "homeworkMaster": "Homework Master",
+      "teamPlayer": "Team Player",
+      "participationStar": "Participation Star",
+      "learningChampion": "Learning Champion",
+      "classroomLeader": "Classroom Leader",
+      "effortHero": "Effort Hero",
+      "classroomHelper": "Classroom Helper",
+      "responsibilityStar": "Responsibility Star",
+      "improvementHero": "Improvement Hero",
+      "superLearner": "Super Learner",
       "misbehavior": "Misbehavior",
       "sideTalkNoise": "Side Talk & Noise",
       "nonParticipation": "Non-Participation",
@@ -190,7 +201,9 @@
     "recentPoints": "Recent points",
     "noPointsYet": "No points recorded yet.",
     "noAttendanceYet": "No attendance recorded yet.",
-    "contactWhatsapp": "Contact via WhatsApp"
+    "contactWhatsapp": "Contact via WhatsApp",
+    "childRemoved": "This child's record has been removed by the teacher.",
+    "noChildrenLinked": "No children linked to your account anymore."
   },
   "projects": {
     "title": "Projects submission",

@@ -11,7 +11,8 @@
     "notes": "الملاحظات",
     "projects": "تسليم المشاريع",
     "settings": "الإعدادات",
-    "signOut": "تسجيل الخروج"
+    "signOut": "تسجيل الخروج",
+    "toggleSidebar": "تبديل القائمة"
   },
   "auth": {
     "continueWithGoogle": "المتابعة باستخدام جوجل",
@@ -151,6 +152,16 @@
       "project": "المشروع",
       "manual": "يدوي",
       "other": "أخرى",
+      "homeworkMaster": "بطل الواجبات",
+      "teamPlayer": "روح الفريق",
+      "participationStar": "نجم المشاركة",
+      "learningChampion": "بطل التعلّم",
+      "classroomLeader": "قائد الصف",
+      "effortHero": "بطل الاجتهاد",
+      "classroomHelper": "مساعد الصف",
+      "responsibilityStar": "نجم المسؤولية",
+      "improvementHero": "بطل التحسّن",
+      "superLearner": "متعلم متميز",
       "misbehavior": "سوء السلوك",
       "sideTalkNoise": "الحديث الجانبي والإزعاج",
       "nonParticipation": "عدم المشاركة",
@@ -190,7 +201,9 @@
     "recentPoints": "النقاط الأخيرة",
     "noPointsYet": "لم يتم تسجيل أي نقاط بعد.",
     "noAttendanceYet": "لم يتم تسجيل أي حضور بعد.",
-    "contactWhatsapp": "تواصل عبر واتساب"
+    "contactWhatsapp": "تواصل عبر واتساب",
+    "childRemoved": "تمت إزالة سجل هذا الطالب من قبل المعلم.",
+    "noChildrenLinked": "لا يوجد أطفال مرتبطون بحسابك بعد الآن."
   },
   "projects": {
     "title": "تسليم المشاريع",

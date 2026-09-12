@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
 import { LogOut, Globe, MessageCircle } from "lucide-react";
@@ -40,17 +40,25 @@ const STATUS_STYLES: Record<AttendanceStatus, string> = {
  * selected. Kept as a separate component so switching tabs cleanly tears
  * down and re-subscribes listeners for just that child, instead of the
  * page juggling parallel listener sets for every child at once.
+ *
+ * `onRemoved` fires once, the moment we get a confirmed "this student
+ * document no longer exists" (as opposed to "still loading") — e.g. the
+ * teacher deleted the student. Before this, that case looked identical to
+ * still-loading (both had `child === null`), so the panel just spun
+ * forever instead of ever telling the parent what happened.
  */
-function ChildPanel({ studentId }: { studentId: string }) {
+function ChildPanel({ studentId, onRemoved }: { studentId: string; onRemoved: (studentId: string) => void }) {
   const { t, i18n } = useTranslation();
   const [child, setChild] = useState<StudentRecord | null>(null);
   const [pointsHistory, setPointsHistory] = useState<PointsTransaction[]>([]);
   const [attendance, setAttendance] = useState<AttendanceRecord[]>([]);
   const [notes, setNotes] = useState<NoteRecord[]>([]);
   const [loading, setLoading] = useState(true);
+  const [pointsPage, setPointsPage] = useState(0);
 
   useEffect(() => {
     setLoading(true);
+    setPointsPage(0);
     const unsubChild = subscribeToStudent(studentId, (data) => {
       setChild(data);
       setLoading(false);
@@ -66,7 +74,13 @@ function ChildPanel({ studentId }: { studentId: string }) {
     };
   }, [studentId]);
 
-  if (loading || !child) {
+  useEffect(() => {
+    if (!loading && !child) {
+      onRemoved(studentId);
+    }
+  }, [loading, child, studentId, onRemoved]);
+
+  if (loading) {
     return (
       <div className="py-16 flex items-center justify-center">
         <Spinner />
@@ -74,7 +88,14 @@ function ChildPanel({ studentId }: { studentId: string }) {
     );
   }
 
+  // Confirmed gone (not just still loading) — render nothing here; the
+  // parent page's onRemoved handler pops the alert and drops this tab.
+  if (!child) return null;
+
   const contactHref = child.teacherWhatsapp ? whatsappLink(child.teacherWhatsapp) : null;
+  const POINTS_PAGE_SIZE = 10;
+  const pointsPageCount = Math.max(1, Math.ceil(pointsHistory.length / POINTS_PAGE_SIZE));
+  const pagedPoints = pointsHistory.slice(pointsPage * POINTS_PAGE_SIZE, (pointsPage + 1) * POINTS_PAGE_SIZE);
 
   return (
     <div className="space-y-6">
@@ -152,20 +173,42 @@ function ChildPanel({ studentId }: { studentId: string }) {
         {pointsHistory.length === 0 ? (
           <p className="text-sm text-cream-600">{t("portal.noPointsYet")}</p>
         ) : (
-          <div className="divide-y divide-cream-400">
-            {pointsHistory.slice(0, 10).map((txn) => (
-              <div key={txn.id} className="flex items-center justify-between py-3">
-                <div>
-                  <p className="text-sm font-medium text-navy">{t(`points.reasons.${txn.reason}`)}</p>
-                  {txn.note && <p className="text-xs text-cream-600">{txn.note}</p>}
+          <>
+            <div className="divide-y divide-cream-400">
+              {pagedPoints.map((txn) => (
+                <div key={txn.id} className="flex items-center justify-between py-3">
+                  <div>
+                    <p className="text-sm font-medium text-navy">{t(`points.reasons.${txn.reason}`)}</p>
+                    {txn.note && <p className="text-xs text-cream-600">{txn.note}</p>}
+                    {txn.createdAt && (
+                      <p className="text-xs text-cream-500 mt-0.5">{formatNoteDate(txn.createdAt, i18n.language)}</p>
+                    )}
+                  </div>
+                  <span className={`font-semibold ${txn.amount >= 0 ? "text-green-700" : "text-red-700"}`}>
+                    {txn.amount >= 0 ? "+" : ""}
+                    {txn.amount}
+                  </span>
                 </div>
-                <span className={`font-semibold ${txn.amount >= 0 ? "text-green-700" : "text-red-700"}`}>
-                  {txn.amount >= 0 ? "+" : ""}
-                  {txn.amount}
-                </span>
+              ))}
+            </div>
+            {pointsPageCount > 1 && (
+              <div className="flex flex-wrap gap-1.5 justify-center mt-4">
+                {Array.from({ length: pointsPageCount }, (_, i) => i).map((page) => (
+                  <button
+                    key={page}
+                    onClick={() => setPointsPage(page)}
+                    className={`h-8 w-8 rounded-lg text-sm font-semibold transition ${
+                      pointsPage === page
+                        ? "bg-gold text-navy"
+                        : "text-cream-600 hover:bg-cream-300"
+                    }`}
+                  >
+                    {page + 1}
+                  </button>
+                ))}
               </div>
-            ))}
-          </div>
+            )}
+          </>
         )}
       </div>
 
@@ -208,8 +251,24 @@ export default function ParentPortalPage() {
   const [announcement, setAnnouncement] = useState<Announcement | null>(null);
   const [ownClassIds, setOwnClassIds] = useState<string[]>([]);
   const [ownRankings, setOwnRankings] = useState<Record<string, ClassRanking>>({});
+  const [removedStudentIds, setRemovedStudentIds] = useState<string[]>([]);
+  const alertedRemovalsRef = useRef<Set<string>>(new Set());
 
-  const studentIds = portalParent?.studentIds || [];
+  const studentIds = (portalParent?.studentIds || []).filter((id) => !removedStudentIds.includes(id));
+
+  // Fires once per child, the moment ChildPanel confirms that student's
+  // record no longer exists (e.g. the teacher deleted it). Pops a one-time
+  // notice and drops that tab immediately, instead of leaving a tab that
+  // spins forever — the permanent fix (the teacher's deletion now detaches
+  // the parent from that student — see studentsService.deleteStudent) means
+  // it won't even show up here again after a refresh, but this covers the
+  // current session and anything already orphaned before that fix shipped.
+  function handleChildRemoved(studentId: string) {
+    if (alertedRemovalsRef.current.has(studentId)) return;
+    alertedRemovalsRef.current.add(studentId);
+    window.alert(t("portal.childRemoved"));
+    setRemovedStudentIds((prev) => [...prev, studentId]);
+  }
 
   useEffect(() => {
     const unsubscribe = subscribeToAnnouncement(setAnnouncement);
@@ -266,9 +325,11 @@ export default function ParentPortalPage() {
   useEffect(() => {
     if (studentIds.length > 0 && !studentIds.includes(activeStudentId)) {
       setActiveStudentId(studentIds[0]);
+    } else if (studentIds.length === 0 && activeStudentId) {
+      setActiveStudentId("");
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [portalParent]);
+  }, [portalParent, removedStudentIds, studentIds.join(",")]);
 
   async function handleSignOut() {
     await signOut();
@@ -279,13 +340,18 @@ export default function ParentPortalPage() {
     i18n.changeLanguage(i18n.language === "ar" ? "en" : "ar");
   }
 
-  if (!portalParent || !activeStudentId) {
+  if (!portalParent) {
     return (
       <div className="min-h-screen bg-cream flex items-center justify-center">
         <Spinner />
       </div>
     );
   }
+
+  // Falls back to the first remaining child instead of waiting a render
+  // cycle for the effect above to catch up (e.g. right after a removal) —
+  // avoids a one-frame flash of the empty state.
+  const currentStudentId = studentIds.includes(activeStudentId) ? activeStudentId : studentIds[0] || "";
 
   return (
     <div className="min-h-screen bg-cream">
@@ -334,7 +400,7 @@ export default function ParentPortalPage() {
                 key={sid}
                 onClick={() => setActiveStudentId(sid)}
                 className={`rounded-lg border px-4 py-2 text-sm font-semibold transition ${
-                  activeStudentId === sid
+                  currentStudentId === sid
                     ? "border-gold bg-gold-50 text-navy"
                     : "border-cream-300 bg-white text-cream-600 hover:border-gold/50"
                 }`}
@@ -345,7 +411,11 @@ export default function ParentPortalPage() {
           </div>
         )}
 
-        <ChildPanel key={activeStudentId} studentId={activeStudentId} />
+        {currentStudentId ? (
+          <ChildPanel key={currentStudentId} studentId={currentStudentId} onRemoved={handleChildRemoved} />
+        ) : (
+          <div className="card p-6 text-center text-sm text-cream-600">{t("portal.noChildrenLinked")}</div>
+        )}
       </main>
     </div>
   );

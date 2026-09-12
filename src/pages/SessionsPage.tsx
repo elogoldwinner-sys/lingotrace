@@ -27,7 +27,7 @@ import Modal from "../components/common/Modal";
 import EmptyState from "../components/common/EmptyState";
 import Spinner from "../components/common/Spinner";
 import ClassSelector from "../components/common/ClassSelector";
-import { reasonsForAmount } from "../lib/pointsReasons";
+import { reasonsForAmount, POINTS_REASON_ICONS, POSITIVE_POINTS_REASONS } from "../lib/pointsReasons";
 
 const STATUS_STYLES: Record<AttendanceStatus, string> = {
   present: "bg-green-100 text-green-700 border-green-300",
@@ -67,7 +67,7 @@ export default function SessionsPage() {
   const [students, setStudents] = useState<StudentRecord[]>([]);
   const [pointsModalStudent, setPointsModalStudent] = useState<StudentRecord | null>(null);
   const [pointsAmount, setPointsAmount] = useState(1);
-  const [pointsReason, setPointsReason] = useState<PointsReason>("participation");
+  const [pointsReason, setPointsReason] = useState<PointsReason>(POSITIVE_POINTS_REASONS[0]);
   const [pointsNote, setPointsNote] = useState("");
 
   const [noteModalStudent, setNoteModalStudent] = useState<StudentRecord | null>(null);
@@ -515,7 +515,27 @@ export default function SessionsPage() {
         onClose={() => setPointsModalStudent(null)}
         title={`${t("points.modalTitle")} — ${pointsModalStudent?.name || ""}`}
       >
-        <form onSubmit={handleAwardPoints} className="space-y-4">
+        {/*
+          Guards against a real bug that was silently mislabeling awards:
+          the amount field is a plain <input>, and this <form> has a submit
+          button, so pressing Enter right after typing the amount — a very
+          natural thing to do — submitted the form immediately, before the
+          teacher ever got to click a reason chip. The award still went
+          through (with whatever amount was typed), just always logged
+          under the still-default reason instead of the one intended. This
+          stops Enter from submitting while focus is in any text/number
+          field; the Save button still works as normal either by click or
+          by Enter once it's focused.
+        */}
+        <form
+          onSubmit={handleAwardPoints}
+          onKeyDown={(e) => {
+            if (e.key === "Enter" && (e.target as HTMLElement).tagName === "INPUT") {
+              e.preventDefault();
+            }
+          }}
+          className="space-y-4"
+        >
           <div>
             <label className="label-eyebrow block mb-1.5">{t("points.amount")}</label>
             <div className="flex items-center gap-2">
@@ -552,20 +572,24 @@ export default function SessionsPage() {
           <div>
             <label className="label-eyebrow block mb-1.5">{t("points.reason")}</label>
             <div className="flex flex-wrap gap-2">
-              {reasonsForAmount(pointsAmount).map((reason) => (
-                <button
-                  key={reason}
-                  type="button"
-                  onClick={() => setPointsReason(reason)}
-                  className={`rounded-lg border px-3 py-1.5 text-sm font-semibold transition ${
-                    pointsReason === reason
-                      ? "border-gold bg-gold-50 text-gold"
-                      : "border-cream-300 text-cream-600 hover:border-gold/50 hover:text-gold"
-                  }`}
-                >
-                  {t(`points.reasons.${reason}`)}
-                </button>
-              ))}
+              {reasonsForAmount(pointsAmount).map((reason) => {
+                const ReasonIcon = POINTS_REASON_ICONS[reason];
+                return (
+                  <button
+                    key={reason}
+                    type="button"
+                    onClick={() => setPointsReason(reason)}
+                    className={`flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-sm font-semibold transition ${
+                      pointsReason === reason
+                        ? "border-gold bg-gold-50 text-gold"
+                        : "border-cream-300 text-cream-600 hover:border-gold/50 hover:text-gold"
+                    }`}
+                  >
+                    {ReasonIcon && <ReasonIcon size={14} />}
+                    {t(`points.reasons.${reason}`)}
+                  </button>
+                );
+              })}
             </div>
             {pointsReason === "custom" && (
               <input

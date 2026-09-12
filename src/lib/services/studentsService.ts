@@ -1,6 +1,7 @@
 import { arrayUnion, doc, getDoc, getDocs, onSnapshot, query, setDoc, updateDoc, where, collection, writeBatch } from "firebase/firestore";
 import { db } from "../firebase";
 import { createFirestoreService } from "../firestoreService";
+import { removeChildFromParent } from "./parentsService";
 import type { StudentRecord } from "../../types";
 
 const service = createFirestoreService<StudentRecord>("students");
@@ -37,12 +38,35 @@ export async function updateStudent(id: string, data: Partial<StudentRecord>) {
   return service.update(id, data);
 }
 
+/**
+ * Detaches every parent portal account linked to a student from that
+ * student, before the student's own record is deleted. Without this, a
+ * deleted student's id lingers forever in a parent's `studentIds` — the
+ * portal has no way to know the child is gone, so it keeps trying (and
+ * failing) to load it. Best-effort per parent: one already-broken/legacy
+ * link (see StudentsPage's "linked before this feature" case) shouldn't
+ * block deleting the student.
+ */
+async function detachParents(studentId: string) {
+  const snapshot = await getDoc(doc(db, "students", studentId));
+  const parentUids: string[] = (snapshot.data()?.parentUids as string[]) || [];
+  for (const uid of parentUids) {
+    try {
+      await removeChildFromParent(uid, studentId);
+    } catch {
+      // Ignore and continue deleting the student regardless.
+    }
+  }
+}
+
 export async function deleteStudent(id: string) {
+  await detachParents(id);
   return service.remove(id);
 }
 
 /** Deletes many students at once (multi-select delete from the roster). */
 export async function deleteManyStudents(ids: string[]) {
+  await Promise.all(ids.map((id) => detachParents(id)));
   await Promise.all(ids.map((id) => service.remove(id)));
 }
 
