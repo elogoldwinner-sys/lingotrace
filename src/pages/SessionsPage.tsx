@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Plus, Minus, Trash2, Shuffle, X, Layers, NotebookPen } from "lucide-react";
+import { startOfWeek, addDays, format as formatDate, parseISO } from "date-fns";
+import { Plus, Minus, Trash2, Shuffle, ChevronDown, X, Layers, NotebookPen } from "lucide-react";
 import { useAuth } from "../contexts/AuthContext";
 import { subscribeToClasses } from "../lib/services/classesService";
 import { subscribeToStudents } from "../lib/services/studentsService";
@@ -84,6 +85,13 @@ export default function SessionsPage() {
   const [activeSessionId, setActiveSessionId] = useState<string | null>(null);
   const [sessionAttendance, setSessionAttendance] = useState<AttendanceRecord[]>([]);
 
+  // Which week groups are expanded. Keyed by that week's Sunday (yyyy-MM-dd).
+  const [expandedWeeks, setExpandedWeeks] = useState<Set<string>>(new Set());
+  // Tracks which class we've already applied the "open latest week" default
+  // for, so a teacher's manual expand/collapse of an older week isn't
+  // stomped on every time the sessions snapshot re-fires.
+  const defaultedClassRef = useRef<string | null>(null);
+
   useEffect(() => {
     return () => {
       if (pickIntervalRef.current) clearInterval(pickIntervalRef.current);
@@ -138,6 +146,53 @@ export default function SessionsPage() {
     sessionAttendance.forEach((r) => map.set(r.studentId, r));
     return map;
   }, [sessionAttendance]);
+
+  // Group sessions into their Sunday-first school week. `sessions` already
+  // arrives sorted ascending by date, so each group's contents stay sorted
+  // too; we just bucket them and then list the weeks most-recent-first so
+  // the latest week (the one open by default) is the one teachers see
+  // without scrolling.
+  const weekGroups = useMemo(() => {
+    const byWeek = new Map<string, SessionRecord[]>();
+    for (const s of sessions) {
+      const weekStart = startOfWeek(parseISO(s.date), { weekStartsOn: 0 });
+      const key = formatDate(weekStart, "yyyy-MM-dd");
+      const bucket = byWeek.get(key);
+      if (bucket) bucket.push(s);
+      else byWeek.set(key, [s]);
+    }
+    return Array.from(byWeek.entries())
+      .map(([key, weekSessions]) => ({
+        key,
+        weekStart: parseISO(key),
+        sessions: weekSessions,
+      }))
+      .sort((a, b) => b.key.localeCompare(a.key));
+  }, [sessions]);
+
+  // Reset the "latest week open" default whenever the selected class
+  // changes, then apply it once the first batch of weeks for that class
+  // has loaded.
+  useEffect(() => {
+    defaultedClassRef.current = null;
+    setExpandedWeeks(new Set());
+  }, [selectedClassId]);
+
+  useEffect(() => {
+    if (defaultedClassRef.current === selectedClassId) return;
+    if (weekGroups.length === 0) return;
+    setExpandedWeeks(new Set([weekGroups[0].key]));
+    defaultedClassRef.current = selectedClassId;
+  }, [weekGroups, selectedClassId]);
+
+  function toggleWeek(key: string) {
+    setExpandedWeeks((prev) => {
+      const next = new Set(prev);
+      if (next.has(key)) next.delete(key);
+      else next.add(key);
+      return next;
+    });
+  }
 
   function openPointsModal(student: StudentRecord, direction: 1 | -1 = 1) {
     setPointsAmount(direction * 1);
@@ -287,147 +342,178 @@ export default function SessionsPage() {
       ) : sessions.length === 0 ? (
         <EmptyState message={t("sessions.noSessions")} icon="📝" />
       ) : (
-        <div className="card divide-y divide-cream-400">
-          {sessions.map((s) => (
-            <div key={s.id}>
-              <button
-                onClick={() => setActiveSessionId(activeSessionId === s.id ? null : s.id)}
-                className={`w-full text-left flex items-start justify-between px-5 py-4 transition-colors ${
-                  activeSessionId === s.id ? "bg-gold-50" : "hover:bg-cream-300/40"
-                }`}
-              >
-                <div>
-                  <p className="font-semibold text-navy">{s.title}</p>
-                  <p className="text-xs text-cream-600">{s.date}</p>
-                  {s.topic && (
-                    <p className="text-sm text-navy mt-1">
-                      {t("sessions.topic")}: {s.topic}
-                    </p>
-                  )}
-                  {s.objectives && <p className="text-sm text-cream-600 mt-1">{s.objectives}</p>}
-                </div>
-                <span
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    deleteSession(s.id);
-                    if (activeSessionId === s.id) setActiveSessionId(null);
-                  }}
-                  className="text-cream-600 hover:text-red-600 p-1 shrink-0"
+        <div className="space-y-3">
+          {weekGroups.map((week) => {
+            const isWeekOpen = expandedWeeks.has(week.key);
+            const weekEnd = addDays(week.weekStart, 4);
+            const weekLabel = `${formatDate(week.weekStart, "MMM d")} – ${formatDate(weekEnd, "MMM d, yyyy")}`;
+            return (
+              <div key={week.key} className="card overflow-hidden">
+                <button
+                  onClick={() => toggleWeek(week.key)}
+                  className={`w-full flex items-center justify-between px-5 py-3.5 transition-colors ${
+                    isWeekOpen ? "bg-cream-300/50" : "hover:bg-cream-300/30"
+                  }`}
                 >
-                  <Trash2 size={16} />
-                </span>
-              </button>
-
-              {activeSessionId === s.id && (
-                <div className="px-5 pb-5 space-y-4 bg-cream-100/60">
-                  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 pt-2">
-                    <h3 className="text-sm font-semibold text-navy">{t("sessions.rosterTitle")}</h3>
-                    <div className="flex items-center gap-2">
-                      <button
-                        onClick={handleRandomPick}
-                        disabled={isPicking}
-                        className="btn-gold py-1.5 px-3 text-sm disabled:opacity-60"
-                      >
-                        <Shuffle size={16} className={isPicking ? "animate-spin" : ""} />
-                        {isPicking ? t("sessions.picking") : t("sessions.randomPick")}
-                      </button>
-                      <button
-                        onClick={() => setActiveSessionId(null)}
-                        className="h-8 w-8 flex items-center justify-center rounded-full text-cream-600 hover:bg-cream-300"
-                      >
-                        <X size={16} />
-                      </button>
-                    </div>
+                  <div className="flex items-center gap-2">
+                    <span className="font-semibold text-navy">{weekLabel}</span>
+                    <span className="pill border text-xs bg-white text-cream-600 border-cream-400">
+                      {t("sessions.weekSessionCount", { count: week.sessions.length })}
+                    </span>
                   </div>
+                  <ChevronDown
+                    size={18}
+                    className={`text-cream-600 transition-transform ${isWeekOpen ? "rotate-180" : ""}`}
+                  />
+                </button>
 
-                  {pickNotice && (
-                    <p className="text-xs text-red-600 -mt-2">{pickNotice}</p>
-                  )}
-                  <p className="text-xs text-cream-600 -mt-2">{t("sessions.attendanceHint")}</p>
-                  <p className="text-xs text-cream-600 -mt-2">{t("sessions.randomPickHint")}</p>
-
-                  <div className="space-y-2">
-                    {students.map((st) => {
-                      const currentStatus = sessionAttendanceByStudent.get(st.id)?.status;
-                      const isBlocked = currentStatus === "absent" || currentStatus === "excused";
-                      return (
-                        <div
-                          key={st.id}
-                          className={`flex flex-col sm:flex-row sm:items-center gap-3 rounded-lg border px-3 py-2.5 transition ${
-                            highlightedId === st.id
-                              ? "border-gold bg-gold-50 sm:scale-[1.01] shadow-sm"
-                              : "border-cream-300 bg-white"
-                          } ${isBlocked ? "opacity-50" : ""}`}
+                {isWeekOpen && (
+                  <div className="divide-y divide-cream-400 border-t border-cream-400">
+                    {week.sessions.map((s) => (
+                      <div key={s.id}>
+                        <button
+                          onClick={() => setActiveSessionId(activeSessionId === s.id ? null : s.id)}
+                          className={`w-full text-left flex items-start justify-between px-5 py-4 transition-colors ${
+                            activeSessionId === s.id ? "bg-gold-50" : "hover:bg-cream-300/40"
+                          }`}
                         >
-                          <div className="flex items-center gap-3 flex-1 min-w-0">
-                            {st.photoURL ? (
-                              <img
-                                src={st.photoURL}
-                                alt={st.name}
-                                className="h-9 w-9 rounded-full object-cover border border-gold/40 shrink-0"
-                              />
-                            ) : (
-                              <div className="h-9 w-9 shrink-0 rounded-full bg-navy text-cream-100 flex items-center justify-center text-sm font-semibold">
-                                {st.name[0]?.toUpperCase()}
-                              </div>
-                            )}
-                            <div className="flex-1 min-w-0">
-                              <p className="text-sm font-semibold text-navy truncate">{st.name}</p>
-                              <p className="text-xs text-cream-600">
-                                {st.points} {t("students.points")}
+                          <div>
+                            <p className="font-semibold text-navy">{s.title}</p>
+                            <p className="text-xs text-cream-600">{s.date}</p>
+                            {s.topic && (
+                              <p className="text-sm text-navy mt-1">
+                                {t("sessions.topic")}: {s.topic}
                               </p>
-                            </div>
-                            <div className="flex items-center gap-1 shrink-0">
-                              <button
-                                onClick={() => openNoteModal(st)}
-                                disabled={isBlocked}
-                                title={t("notes.add")}
-                                className="h-7 w-7 flex items-center justify-center rounded-full border border-cream-300 text-cream-700 hover:border-navy hover:text-navy transition disabled:pointer-events-none disabled:opacity-40"
-                              >
-                                <NotebookPen size={14} />
-                              </button>
-                              <button
-                                onClick={() => openPointsModal(st, -1)}
-                                disabled={isBlocked}
-                                title={t("points.deduct")}
-                                className="h-7 w-7 flex items-center justify-center rounded-full border border-cream-300 text-cream-700 hover:border-red-400 hover:text-red-600 transition disabled:pointer-events-none disabled:opacity-40"
-                              >
-                                <Minus size={14} />
-                              </button>
-                              <button
-                                onClick={() => openPointsModal(st, 1)}
-                                disabled={isBlocked}
-                                title={t("points.award")}
-                                className="h-7 w-7 flex items-center justify-center rounded-full border border-cream-300 text-cream-700 hover:border-gold hover:text-gold transition disabled:pointer-events-none disabled:opacity-40"
-                              >
-                                <Plus size={14} />
-                              </button>
-                            </div>
-                          </div>
-                          <div className="shrink-0">
-                            {currentStatus ? (
-                              <span className={`pill border text-xs ${STATUS_STYLES[currentStatus]}`}>
-                                {t(`attendance.${currentStatus}`)}
-                              </span>
-                            ) : (
-                              <span className="pill border text-xs bg-white text-cream-500 border-cream-400">
-                                {t("attendance.notMarked")}
-                              </span>
                             )}
+                            {s.objectives && <p className="text-sm text-cream-600 mt-1">{s.objectives}</p>}
                           </div>
-                        </div>
-                      );
-                    })}
-                    {students.length === 0 && (
-                      <p className="text-center text-sm text-cream-600 py-4">
-                        {t("students.noStudents")}
-                      </p>
-                    )}
+                          <span
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              deleteSession(s.id);
+                              if (activeSessionId === s.id) setActiveSessionId(null);
+                            }}
+                            className="text-cream-600 hover:text-red-600 p-1 shrink-0"
+                          >
+                            <Trash2 size={16} />
+                          </span>
+                        </button>
+
+                        {activeSessionId === s.id && (
+                          <div className="px-5 pb-5 space-y-4 bg-cream-100/60">
+                            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 pt-2">
+                              <h3 className="text-sm font-semibold text-navy">{t("sessions.rosterTitle")}</h3>
+                              <div className="flex items-center gap-2">
+                                <button
+                                  onClick={handleRandomPick}
+                                  disabled={isPicking}
+                                  className="btn-gold py-1.5 px-3 text-sm disabled:opacity-60"
+                                >
+                                  <Shuffle size={16} className={isPicking ? "animate-spin" : ""} />
+                                  {isPicking ? t("sessions.picking") : t("sessions.randomPick")}
+                                </button>
+                                <button
+                                  onClick={() => setActiveSessionId(null)}
+                                  className="h-8 w-8 flex items-center justify-center rounded-full text-cream-600 hover:bg-cream-300"
+                                >
+                                  <X size={16} />
+                                </button>
+                              </div>
+                            </div>
+
+                            {pickNotice && (
+                              <p className="text-xs text-red-600 -mt-2">{pickNotice}</p>
+                            )}
+                            <p className="text-xs text-cream-600 -mt-2">{t("sessions.attendanceHint")}</p>
+                            <p className="text-xs text-cream-600 -mt-2">{t("sessions.randomPickHint")}</p>
+
+                            <div className="space-y-2">
+                              {students.map((st) => {
+                                const currentStatus = sessionAttendanceByStudent.get(st.id)?.status;
+                                const isBlocked = currentStatus === "absent" || currentStatus === "excused";
+                                return (
+                                  <div
+                                    key={st.id}
+                                    className={`flex flex-col sm:flex-row sm:items-center gap-3 rounded-lg border px-3 py-2.5 transition ${
+                                      highlightedId === st.id
+                                        ? "border-gold bg-gold-50 sm:scale-[1.01] shadow-sm"
+                                        : "border-cream-300 bg-white"
+                                    } ${isBlocked ? "opacity-50" : ""}`}
+                                  >
+                                    <div className="flex items-center gap-3 flex-1 min-w-0">
+                                      {st.photoURL ? (
+                                        <img
+                                          src={st.photoURL}
+                                          alt={st.name}
+                                          className="h-9 w-9 rounded-full object-cover border border-gold/40 shrink-0"
+                                        />
+                                      ) : (
+                                        <div className="h-9 w-9 shrink-0 rounded-full bg-navy text-cream-100 flex items-center justify-center text-sm font-semibold">
+                                          {st.name[0]?.toUpperCase()}
+                                        </div>
+                                      )}
+                                      <div className="flex-1 min-w-0">
+                                        <p className="text-sm font-semibold text-navy truncate">{st.name}</p>
+                                        <p className="text-xs text-cream-600">
+                                          {st.points} {t("students.points")}
+                                        </p>
+                                      </div>
+                                      <div className="flex items-center gap-1 shrink-0">
+                                        <button
+                                          onClick={() => openNoteModal(st)}
+                                          disabled={isBlocked}
+                                          title={t("notes.add")}
+                                          className="h-7 w-7 flex items-center justify-center rounded-full border border-cream-300 text-cream-700 hover:border-navy hover:text-navy transition disabled:pointer-events-none disabled:opacity-40"
+                                        >
+                                          <NotebookPen size={14} />
+                                        </button>
+                                        <button
+                                          onClick={() => openPointsModal(st, -1)}
+                                          disabled={isBlocked}
+                                          title={t("points.deduct")}
+                                          className="h-7 w-7 flex items-center justify-center rounded-full border border-cream-300 text-cream-700 hover:border-red-400 hover:text-red-600 transition disabled:pointer-events-none disabled:opacity-40"
+                                        >
+                                          <Minus size={14} />
+                                        </button>
+                                        <button
+                                          onClick={() => openPointsModal(st, 1)}
+                                          disabled={isBlocked}
+                                          title={t("points.award")}
+                                          className="h-7 w-7 flex items-center justify-center rounded-full border border-cream-300 text-cream-700 hover:border-gold hover:text-gold transition disabled:pointer-events-none disabled:opacity-40"
+                                        >
+                                          <Plus size={14} />
+                                        </button>
+                                      </div>
+                                    </div>
+                                    <div className="shrink-0">
+                                      {currentStatus ? (
+                                        <span className={`pill border text-xs ${STATUS_STYLES[currentStatus]}`}>
+                                          {t(`attendance.${currentStatus}`)}
+                                        </span>
+                                      ) : (
+                                        <span className="pill border text-xs bg-white text-cream-500 border-cream-400">
+                                          {t("attendance.notMarked")}
+                                        </span>
+                                      )}
+                                    </div>
+                                  </div>
+                                );
+                              })}
+                              {students.length === 0 && (
+                                <p className="text-center text-sm text-cream-600 py-4">
+                                  {t("students.noStudents")}
+                                </p>
+                              )}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    ))}
                   </div>
-                </div>
-              )}
-            </div>
-          ))}
+                )}
+              </div>
+            );
+          })}
         </div>
       )}
 

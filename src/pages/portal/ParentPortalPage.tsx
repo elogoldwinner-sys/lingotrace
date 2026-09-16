@@ -107,19 +107,26 @@ function ChildPanel({ studentId, onRemoved }: { studentId: string; onRemoved: (s
             <span className="text-3xl font-bold text-gold">{child.points}</span>
             <span className="text-sm text-cream-600">{t("students.points")}</span>
           </div>
-          {contactHref && (
-            <a
-              href={contactHref}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="btn-secondary py-1.5 px-3 text-sm ms-auto"
-            >
-              <MessageCircle size={16} />
-              {t("portal.contactWhatsapp")}
-            </a>
-          )}
         </div>
       </div>
+
+      {/*
+        Floating WhatsApp action button — fixed to the viewport corner so it
+        stays reachable while scrolling, instead of living inline in the
+        header card where it scrolled out of view with the rest of the page.
+      */}
+      {contactHref && (
+        <a
+          href={contactHref}
+          target="_blank"
+          rel="noopener noreferrer"
+          title={t("portal.contactWhatsapp")}
+          aria-label={t("portal.contactWhatsapp")}
+          className="fixed bottom-6 end-6 z-50 flex h-14 w-14 items-center justify-center rounded-full bg-[#25D366] text-white shadow-lg transition hover:scale-105 hover:shadow-xl"
+        >
+          <MessageCircle size={26} />
+        </a>
+      )}
 
       <div className="card p-6">
         <h2 className="text-lg font-semibold text-navy mb-4">{t("students.badges")}</h2>
