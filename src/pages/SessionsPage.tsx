@@ -151,7 +151,8 @@ export default function SessionsPage() {
   // arrives sorted ascending by date, so each group's contents stay sorted
   // too; we just bucket them and then list the weeks most-recent-first so
   // the latest week (the one open by default) is the one teachers see
-  // without scrolling.
+  // without scrolling. Week numbers count up chronologically (Week 1 =
+  // earliest week) regardless of that most-recent-first display order.
   const weekGroups = useMemo(() => {
     const byWeek = new Map<string, SessionRecord[]>();
     for (const s of sessions) {
@@ -161,10 +162,13 @@ export default function SessionsPage() {
       if (bucket) bucket.push(s);
       else byWeek.set(key, [s]);
     }
+    const ascendingKeys = Array.from(byWeek.keys()).sort((a, b) => a.localeCompare(b));
+    const weekNumberByKey = new Map(ascendingKeys.map((key, index) => [key, index + 1]));
     return Array.from(byWeek.entries())
       .map(([key, weekSessions]) => ({
         key,
         weekStart: parseISO(key),
+        weekNumber: weekNumberByKey.get(key)!,
         sessions: weekSessions,
       }))
       .sort((a, b) => b.key.localeCompare(a.key));
@@ -346,7 +350,8 @@ export default function SessionsPage() {
           {weekGroups.map((week) => {
             const isWeekOpen = expandedWeeks.has(week.key);
             const weekEnd = addDays(week.weekStart, 4);
-            const weekLabel = `${formatDate(week.weekStart, "MMM d")} – ${formatDate(weekEnd, "MMM d, yyyy")}`;
+            const weekRange = `${formatDate(week.weekStart, "MMM d")} – ${formatDate(weekEnd, "MMM d, yyyy")}`;
+            const weekLabel = t("sessions.weekLabel", { number: week.weekNumber, range: weekRange });
             return (
               <div key={week.key} className="card overflow-hidden">
                 <button

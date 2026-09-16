@@ -125,7 +125,8 @@
     },
     "generate": "توليد الجلسات",
     "attendanceHint": "يتم تسجيل الحضور من صفحة الحضور. يظهر الطلاب الغائبون أو المعذورون هنا بشكل باهت ولا يمكن منحهم نقاطًا أو ملاحظات.",
-    "weekSessionCount": "{{count}} جلسة"
+    "weekSessionCount": "{{count}} جلسة",
+    "weekLabel": "الأسبوع {{number}} ({{range}})"
   },
   "notes": {
     "title": "الملاحظات",

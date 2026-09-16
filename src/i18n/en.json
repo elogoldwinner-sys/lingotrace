@@ -125,7 +125,8 @@
     },
     "generate": "Generate sessions",
     "attendanceHint": "Attendance is recorded on the Attendance page. Absent/excused students are shown greyed out here and can't be given points or notes.",
-    "weekSessionCount": "{{count}} session(s)"
+    "weekSessionCount": "{{count}} session(s)",
+    "weekLabel": "Week {{number}} ({{range}})"
   },
   "notes": {
     "title": "Notes",

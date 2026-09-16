@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
-import { LogOut, Globe, MessageCircle } from "lucide-react";
+import { LogOut, Globe } from "lucide-react";
 import { useAuth } from "../../contexts/AuthContext";
 import { subscribeToStudent, getStudentOnce } from "../../lib/services/studentsService";
 import { subscribeToStudentPointsHistory } from "../../lib/services/pointsService";
@@ -13,6 +13,7 @@ import { getClassRankingOnce, subscribeToClassRanking } from "../../lib/services
 import { triggerWeeklyChampionsCelebration } from "../../lib/confetti";
 import { formatNoteDate } from "../../lib/timestamps";
 import { whatsappLink } from "../../lib/whatsapp";
+import whatsappIcon from "../../assets/whatsapp-icon.png";
 import Logo from "../../components/common/Logo";
 import ThemeToggle from "../../components/common/ThemeToggle";
 import AnnouncementCard from "../../components/common/AnnouncementCard";
@@ -122,9 +123,9 @@ function ChildPanel({ studentId, onRemoved }: { studentId: string; onRemoved: (s
           rel="noopener noreferrer"
           title={t("portal.contactWhatsapp")}
           aria-label={t("portal.contactWhatsapp")}
-          className="fixed bottom-6 end-6 z-50 flex h-14 w-14 items-center justify-center rounded-full bg-[#25D366] text-white shadow-lg transition hover:scale-105 hover:shadow-xl"
+          className="fixed bottom-6 end-6 z-50 flex h-14 w-14 items-center justify-center rounded-full shadow-lg transition hover:scale-105 hover:shadow-xl"
         >
-          <MessageCircle size={26} />
+          <img src={whatsappIcon} alt="" className="h-full w-full rounded-full" />
         </a>
       )}
 
