@@ -93,7 +93,6 @@ function ChildPanel({ studentId, onRemoved }: { studentId: string; onRemoved: (s
   // parent page's onRemoved handler pops the alert and drops this tab.
   if (!child) return null;
 
-  const contactHref = child.teacherWhatsapp ? whatsappLink(child.teacherWhatsapp) : null;
   const POINTS_PAGE_SIZE = 10;
   const pointsPageCount = Math.max(1, Math.ceil(pointsHistory.length / POINTS_PAGE_SIZE));
   const pagedPoints = pointsHistory.slice(pointsPage * POINTS_PAGE_SIZE, (pointsPage + 1) * POINTS_PAGE_SIZE);
@@ -110,24 +109,6 @@ function ChildPanel({ studentId, onRemoved }: { studentId: string; onRemoved: (s
           </div>
         </div>
       </div>
-
-      {/*
-        Floating WhatsApp action button — fixed to the viewport corner so it
-        stays reachable while scrolling, instead of living inline in the
-        header card where it scrolled out of view with the rest of the page.
-      */}
-      {contactHref && (
-        <a
-          href={contactHref}
-          target="_blank"
-          rel="noopener noreferrer"
-          title={t("portal.contactWhatsapp")}
-          aria-label={t("portal.contactWhatsapp")}
-          className="fixed bottom-6 end-6 z-50 flex h-14 w-14 items-center justify-center rounded-full shadow-lg transition hover:scale-105 hover:shadow-xl"
-        >
-          <img src={whatsappIcon} alt="" className="h-full w-full rounded-full" />
-        </a>
-      )}
 
       <div className="card p-6">
         <h2 className="text-lg font-semibold text-navy mb-4">{t("students.badges")}</h2>
@@ -241,14 +222,32 @@ function ChildPanel({ studentId, onRemoved }: { studentId: string; onRemoved: (s
   );
 }
 
-/** Tiny standalone piece just for a tab's label (child's name), kept live so a name edit reflects immediately. */
-function ChildTabLabel({ studentId }: { studentId: string }) {
-  const [name, setName] = useState("");
+/**
+ * Tiny standalone piece just for a tab's label (child's name), kept live so
+ * a name edit reflects immediately. Also independently watches for that
+ * child being removed — same undefined (still loading) vs null (confirmed
+ * gone) distinction ChildPanel uses — so a removal is caught and the tab
+ * dropped even when that child ISN'T the currently active tab, instead of
+ * only ever being detected once the parent happens to click into it.
+ */
+function ChildTabLabel({
+  studentId,
+  onRemoved,
+}: {
+  studentId: string;
+  onRemoved: (studentId: string) => void;
+}) {
+  const [child, setChild] = useState<StudentRecord | null | undefined>(undefined);
   useEffect(() => {
-    const unsub = subscribeToStudent(studentId, (data) => setName(data?.name || ""));
+    setChild(undefined);
+    const unsub = subscribeToStudent(studentId, setChild);
     return unsub;
   }, [studentId]);
-  return <>{name || "…"}</>;
+  useEffect(() => {
+    if (child === null) onRemoved(studentId);
+  }, [child, studentId, onRemoved]);
+  if (child === null) return null;
+  return <>{child?.name || "…"}</>;
 }
 
 export default function ParentPortalPage() {
@@ -261,6 +260,7 @@ export default function ParentPortalPage() {
   const [ownRankings, setOwnRankings] = useState<Record<string, ClassRanking>>({});
   const [removedStudentIds, setRemovedStudentIds] = useState<string[]>([]);
   const alertedRemovalsRef = useRef<Set<string>>(new Set());
+  const [whatsappByStudent, setWhatsappByStudent] = useState<Record<string, string | undefined>>({});
 
   const studentIds = (portalParent?.studentIds || []).filter((id) => !removedStudentIds.includes(id));
 
@@ -282,6 +282,24 @@ export default function ParentPortalPage() {
     const unsubscribe = subscribeToAnnouncement(setAnnouncement);
     return unsubscribe;
   }, []);
+
+  // Live per-child WhatsApp numbers for ALL linked children at once (not
+  // just whichever tab is active) — this is what lets the floating contact
+  // button below stay put across every tab instead of disappearing/
+  // reappearing depending on which single child ChildPanel currently has
+  // mounted.
+  useEffect(() => {
+    if (studentIds.length === 0) {
+      setWhatsappByStudent({});
+      return;
+    }
+    const unsubscribes = studentIds.map((sid) =>
+      subscribeToStudent(sid, (data) => {
+        setWhatsappByStudent((prev) => ({ ...prev, [sid]: data?.teacherWhatsapp }));
+      })
+    );
+    return () => unsubscribes.forEach((unsub) => unsub());
+  }, [studentIds.join(",")]);
 
   // Only the classes this parent's own children actually belong to — not
   // every class in the school. Also triggers the celebration confetti once
@@ -361,6 +379,14 @@ export default function ParentPortalPage() {
   // avoids a one-frame flash of the empty state.
   const currentStudentId = studentIds.includes(activeStudentId) ? activeStudentId : studentIds[0] || "";
 
+  // Prefer the active tab's own teacher number; if that particular child
+  // doesn't have one set, fall back to any linked sibling that does — this
+  // is what makes the floating button show up on every tab instead of only
+  // whichever child happens to have the field populated.
+  const contactNumber =
+    whatsappByStudent[currentStudentId] || studentIds.map((sid) => whatsappByStudent[sid]).find(Boolean);
+  const contactHref = contactNumber ? whatsappLink(contactNumber) : null;
+
   return (
     <div className="min-h-screen bg-cream">
       <header className="flex items-center justify-between border-b border-cream-400 bg-cream-100/90 px-6 py-4">
@@ -413,7 +439,7 @@ export default function ParentPortalPage() {
                     : "border-cream-300 bg-white text-cream-600 hover:border-gold/50"
                 }`}
               >
-                <ChildTabLabel studentId={sid} />
+                <ChildTabLabel studentId={sid} onRemoved={handleChildRemoved} />
               </button>
             ))}
           </div>
@@ -425,6 +451,26 @@ export default function ParentPortalPage() {
           <div className="card p-6 text-center text-sm text-cream-600">{t("portal.noChildrenLinked")}</div>
         )}
       </main>
+
+      {/*
+        Floating WhatsApp action button — lives at the page level (not
+        inside ChildPanel) and is fixed to the viewport corner, so it stays
+        put across every tab switch and reflects ANY of the parent's linked
+        children's teacher number, not just whichever single child panel
+        happens to be mounted.
+      */}
+      {contactHref && (
+        <a
+          href={contactHref}
+          target="_blank"
+          rel="noopener noreferrer"
+          title={t("portal.contactWhatsapp")}
+          aria-label={t("portal.contactWhatsapp")}
+          className="fixed bottom-6 end-6 z-50 flex h-14 w-14 items-center justify-center rounded-full shadow-lg transition hover:scale-105 hover:shadow-xl"
+        >
+          <img src={whatsappIcon} alt="" className="h-full w-full rounded-full" />
+        </a>
+      )}
     </div>
   );
 }
