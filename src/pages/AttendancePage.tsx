@@ -1,6 +1,7 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Send, Check } from "lucide-react";
+import { Send, Check, ChevronDown } from "lucide-react";
+import { startOfWeek, addDays, format as formatDate, parseISO } from "date-fns";
 import { useAuth } from "../contexts/AuthContext";
 import { subscribeToClasses } from "../lib/services/classesService";
 import { subscribeToStudents } from "../lib/services/studentsService";
@@ -74,6 +75,11 @@ export default function AttendancePage() {
 
   const [expandedSessionId, setExpandedSessionId] = useState<string | null>(null);
 
+  // Which week groups are expanded in the "Record attendance" list below,
+  // mirroring the Sessions page: keyed by that week's Sunday (yyyy-MM-dd).
+  const [expandedWeeks, setExpandedWeeks] = useState<Set<string>>(new Set());
+  const defaultedClassRef = useRef<string | null>(null);
+
   const [startDate, setStartDate] = useState(daysAgoISO(30));
   const [endDate, setEndDate] = useState(todayISO());
 
@@ -119,6 +125,55 @@ export default function AttendancePage() {
         .sort((a, b) => (a.date < b.date ? -1 : 1)),
     [sessions, startDate, endDate]
   );
+
+  // Group the "Record attendance" session list into its Sunday-first school
+  // week, same as the Sessions page: bucket, number weeks chronologically
+  // (Week 1 = earliest), then list most-recent-first so the latest week —
+  // the one open by default — is the one teachers see without scrolling.
+  const weekGroups = useMemo(() => {
+    const byWeek = new Map<string, SessionRecord[]>();
+    for (const s of sessions) {
+      const weekStart = startOfWeek(parseISO(s.date), { weekStartsOn: 0 });
+      const key = formatDate(weekStart, "yyyy-MM-dd");
+      const bucket = byWeek.get(key);
+      if (bucket) bucket.push(s);
+      else byWeek.set(key, [s]);
+    }
+    const ascendingKeys = Array.from(byWeek.keys()).sort((a, b) => a.localeCompare(b));
+    const weekNumberByKey = new Map(ascendingKeys.map((key, index) => [key, index + 1]));
+    return Array.from(byWeek.entries())
+      .map(([key, weekSessions]) => ({
+        key,
+        weekStart: parseISO(key),
+        weekNumber: weekNumberByKey.get(key)!,
+        sessions: weekSessions,
+      }))
+      .sort((a, b) => b.key.localeCompare(a.key));
+  }, [sessions]);
+
+  // Reset the "latest week open" default whenever the selected class
+  // changes, then apply it once the first batch of weeks for that class
+  // has loaded.
+  useEffect(() => {
+    defaultedClassRef.current = null;
+    setExpandedWeeks(new Set());
+  }, [selectedClassId]);
+
+  useEffect(() => {
+    if (defaultedClassRef.current === selectedClassId) return;
+    if (weekGroups.length === 0) return;
+    setExpandedWeeks(new Set([weekGroups[0].key]));
+    defaultedClassRef.current = selectedClassId;
+  }, [weekGroups, selectedClassId]);
+
+  function toggleWeek(key: string) {
+    setExpandedWeeks((prev) => {
+      const next = new Set(prev);
+      if (next.has(key)) next.delete(key);
+      else next.add(key);
+      return next;
+    });
+  }
 
   const recordsInRange = useMemo(
     () => records.filter((r) => r.date >= startDate && r.date <= endDate),
@@ -217,66 +272,100 @@ export default function AttendancePage() {
             {sessions.length === 0 ? (
               <EmptyState message={t("sessions.noSessions")} icon="📝" />
             ) : (
-              <div className="card divide-y divide-cream-400">
-                {sessions.map((s) => (
-                  <div key={s.id}>
-                    <button
-                      onClick={() => setExpandedSessionId(expandedSessionId === s.id ? null : s.id)}
-                      className={`w-full text-left flex items-start justify-between px-5 py-4 transition-colors ${
-                        expandedSessionId === s.id ? "bg-gold-50" : "hover:bg-cream-300/40"
-                      }`}
-                    >
-                      <div>
-                        <p className="font-semibold text-navy">{s.title}</p>
-                        <p className="text-xs text-cream-600">{s.date}</p>
-                      </div>
-                    </button>
+              <div className="space-y-3">
+                {weekGroups.map((week) => {
+                  const isWeekOpen = expandedWeeks.has(week.key);
+                  const weekEnd = addDays(week.weekStart, 4);
+                  const weekRange = `${formatDate(week.weekStart, "MMM d")} – ${formatDate(weekEnd, "MMM d, yyyy")}`;
+                  const weekLabel = t("sessions.weekLabel", { number: week.weekNumber, range: weekRange });
+                  return (
+                    <div key={week.key} className="card overflow-hidden">
+                      <button
+                        onClick={() => toggleWeek(week.key)}
+                        className={`w-full flex items-center justify-between px-5 py-3.5 transition-colors ${
+                          isWeekOpen ? "bg-cream-300/50" : "hover:bg-cream-300/30"
+                        }`}
+                      >
+                        <div className="flex items-center gap-2">
+                          <span className="font-semibold text-navy">{weekLabel}</span>
+                          <span className="pill border text-xs bg-white text-cream-600 border-cream-400">
+                            {t("sessions.weekSessionCount", { count: week.sessions.length })}
+                          </span>
+                        </div>
+                        <ChevronDown
+                          size={18}
+                          className={`text-cream-600 transition-transform ${isWeekOpen ? "rotate-180" : ""}`}
+                        />
+                      </button>
 
-                    {expandedSessionId === s.id && (
-                      <div className="px-5 pb-5 space-y-2 bg-cream-100/60 pt-2">
-                        {students.map((st) => {
-                          const currentStatus = recordByStudentAndSession.get(`${st.id}:${s.id}`)?.status;
-                          return (
-                            <div
-                              key={st.id}
-                              className="flex flex-col sm:flex-row sm:items-center gap-3 rounded-lg border border-cream-300 bg-white px-3 py-2.5"
-                            >
-                              <div className="flex items-center gap-3 flex-1 min-w-0">
-                                {st.photoURL ? (
-                                  <img
-                                    src={st.photoURL}
-                                    alt={st.name}
-                                    className="h-9 w-9 rounded-full object-cover border border-gold/40 shrink-0"
-                                  />
-                                ) : (
-                                  <div className="h-9 w-9 shrink-0 rounded-full bg-navy text-cream-100 flex items-center justify-center text-sm font-semibold">
-                                    {st.name[0]?.toUpperCase()}
-                                  </div>
-                                )}
-                                <p className="text-sm font-semibold text-navy truncate">{st.name}</p>
-                              </div>
-                              <div className="flex gap-1.5 shrink-0">
-                                {ATTENDANCE_STATUSES.map((status) => (
-                                  <button
-                                    key={status}
-                                    onClick={() => handleSetStatus(st, s, status)}
-                                    className={`pill border text-xs ${
-                                      currentStatus === status
-                                        ? STATUS_STYLES[status]
-                                        : "bg-white text-cream-600 border-cream-400"
-                                    }`}
-                                  >
-                                    {t(`attendance.${status}`)}
-                                  </button>
-                                ))}
-                              </div>
+                      {isWeekOpen && (
+                        <div className="divide-y divide-cream-400 border-t border-cream-400">
+                          {week.sessions.map((s) => (
+                            <div key={s.id}>
+                              <button
+                                onClick={() => setExpandedSessionId(expandedSessionId === s.id ? null : s.id)}
+                                className={`w-full text-left flex items-start justify-between px-5 py-4 transition-colors ${
+                                  expandedSessionId === s.id ? "bg-gold-50" : "hover:bg-cream-300/40"
+                                }`}
+                              >
+                                <div>
+                                  <p className="font-semibold text-navy">{s.title}</p>
+                                  <p className="text-xs text-cream-600">{s.date}</p>
+                                </div>
+                              </button>
+
+                              {expandedSessionId === s.id && (
+                                <div className="px-5 pb-5 space-y-2 bg-cream-100/60 pt-2">
+                                  {students.map((st) => {
+                                    const currentStatus = recordByStudentAndSession.get(
+                                      `${st.id}:${s.id}`
+                                    )?.status;
+                                    return (
+                                      <div
+                                        key={st.id}
+                                        className="flex flex-col sm:flex-row sm:items-center gap-3 rounded-lg border border-cream-300 bg-white px-3 py-2.5"
+                                      >
+                                        <div className="flex items-center gap-3 flex-1 min-w-0">
+                                          {st.photoURL ? (
+                                            <img
+                                              src={st.photoURL}
+                                              alt={st.name}
+                                              className="h-9 w-9 rounded-full object-cover border border-gold/40 shrink-0"
+                                            />
+                                          ) : (
+                                            <div className="h-9 w-9 shrink-0 rounded-full bg-navy text-cream-100 flex items-center justify-center text-sm font-semibold">
+                                              {st.name[0]?.toUpperCase()}
+                                            </div>
+                                          )}
+                                          <p className="text-sm font-semibold text-navy truncate">{st.name}</p>
+                                        </div>
+                                        <div className="flex gap-1.5 shrink-0">
+                                          {ATTENDANCE_STATUSES.map((status) => (
+                                            <button
+                                              key={status}
+                                              onClick={() => handleSetStatus(st, s, status)}
+                                              className={`pill border text-xs ${
+                                                currentStatus === status
+                                                  ? STATUS_STYLES[status]
+                                                  : "bg-white text-cream-600 border-cream-400"
+                                              }`}
+                                            >
+                                              {t(`attendance.${status}`)}
+                                            </button>
+                                          ))}
+                                        </div>
+                                      </div>
+                                    );
+                                  })}
+                                </div>
+                              )}
                             </div>
-                          );
-                        })}
-                      </div>
-                    )}
-                  </div>
-                ))}
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
               </div>
             )}
           </div>
