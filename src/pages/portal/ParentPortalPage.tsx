@@ -81,6 +81,30 @@ function ChildPanel({ studentId, onRemoved }: { studentId: string; onRemoved: (s
     }
   }, [loading, child, studentId, onRemoved]);
 
+  // "Legend" a parent asked for: totals per point reason across the child's
+  // whole history (not just the current page), so strengths (top, green)
+  // and weak spots (bottom, red) are visible at a glance instead of having
+  // to scroll and mentally tally the raw transaction feed below.
+  //
+  // Must run before the loading/removed early returns below — React
+  // requires every hook to run on every render, in the same order, so a
+  // hook placed after a conditional `return` fires on some renders (once
+  // loaded) but not others (while loading), which is exactly what threw
+  // the "Rendered more hooks than during the previous render" (#310)
+  // error a teacher hit after deploying this.
+  const pointsBreakdown = useMemo(() => {
+    const totals = new Map<string, { total: number; count: number }>();
+    for (const txn of pointsHistory) {
+      const entry = totals.get(txn.reason) || { total: 0, count: 0 };
+      entry.total += txn.amount;
+      entry.count += 1;
+      totals.set(txn.reason, entry);
+    }
+    return Array.from(totals.entries())
+      .map(([reason, { total, count }]) => ({ reason, total, count }))
+      .sort((a, b) => b.total - a.total);
+  }, [pointsHistory]);
+
   if (loading) {
     return (
       <div className="py-16 flex items-center justify-center">
@@ -96,23 +120,6 @@ function ChildPanel({ studentId, onRemoved }: { studentId: string; onRemoved: (s
   const POINTS_PAGE_SIZE = 10;
   const pointsPageCount = Math.max(1, Math.ceil(pointsHistory.length / POINTS_PAGE_SIZE));
   const pagedPoints = pointsHistory.slice(pointsPage * POINTS_PAGE_SIZE, (pointsPage + 1) * POINTS_PAGE_SIZE);
-
-  // "Legend" a parent asked for: totals per point reason across the child's
-  // whole history (not just the current page), so strengths (top, green)
-  // and weak spots (bottom, red) are visible at a glance instead of having
-  // to scroll and mentally tally the raw transaction feed below.
-  const pointsBreakdown = useMemo(() => {
-    const totals = new Map<string, { total: number; count: number }>();
-    for (const txn of pointsHistory) {
-      const entry = totals.get(txn.reason) || { total: 0, count: 0 };
-      entry.total += txn.amount;
-      entry.count += 1;
-      totals.set(txn.reason, entry);
-    }
-    return Array.from(totals.entries())
-      .map(([reason, { total, count }]) => ({ reason, total, count }))
-      .sort((a, b) => b.total - a.total);
-  }, [pointsHistory]);
 
   return (
     <div className="space-y-6">
