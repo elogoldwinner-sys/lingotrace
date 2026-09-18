@@ -183,6 +183,7 @@ export type PointsReason =
   | "responsibilityStar"
   | "improvementHero"
   | "superLearner"
+  | "dictationStar"
   // Deduction-only reasons (shown when the amount is negative).
   | "misbehavior"
   | "sideTalkNoise"
