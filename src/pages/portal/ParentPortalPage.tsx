@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
 import { LogOut, Globe } from "lucide-react";
@@ -97,6 +97,23 @@ function ChildPanel({ studentId, onRemoved }: { studentId: string; onRemoved: (s
   const pointsPageCount = Math.max(1, Math.ceil(pointsHistory.length / POINTS_PAGE_SIZE));
   const pagedPoints = pointsHistory.slice(pointsPage * POINTS_PAGE_SIZE, (pointsPage + 1) * POINTS_PAGE_SIZE);
 
+  // "Legend" a parent asked for: totals per point reason across the child's
+  // whole history (not just the current page), so strengths (top, green)
+  // and weak spots (bottom, red) are visible at a glance instead of having
+  // to scroll and mentally tally the raw transaction feed below.
+  const pointsBreakdown = useMemo(() => {
+    const totals = new Map<string, { total: number; count: number }>();
+    for (const txn of pointsHistory) {
+      const entry = totals.get(txn.reason) || { total: 0, count: 0 };
+      entry.total += txn.amount;
+      entry.count += 1;
+      totals.set(txn.reason, entry);
+    }
+    return Array.from(totals.entries())
+      .map(([reason, { total, count }]) => ({ reason, total, count }))
+      .sort((a, b) => b.total - a.total);
+  }, [pointsHistory]);
+
   return (
     <div className="space-y-6">
       <div className="card p-6">
@@ -156,6 +173,32 @@ function ChildPanel({ studentId, onRemoved }: { studentId: string; onRemoved: (s
           </div>
         </div>
       )}
+
+      <div className="card p-6">
+        <h2 className="text-lg font-semibold text-navy mb-1">{t("portal.pointsBreakdown")}</h2>
+        <p className="text-xs text-cream-600 mb-4">{t("portal.pointsBreakdownHint")}</p>
+        {pointsBreakdown.length === 0 ? (
+          <p className="text-sm text-cream-600">{t("portal.noPointsYet")}</p>
+        ) : (
+          <div className="flex flex-wrap gap-2">
+            {pointsBreakdown.map(({ reason, total, count }) => (
+              <div
+                key={reason}
+                className={`flex items-center gap-2 rounded-lg border px-3 py-2 ${
+                  total >= 0 ? "border-green-300 bg-green-50" : "border-red-300 bg-red-50"
+                }`}
+              >
+                <span className="text-sm font-medium text-navy">{t(`points.reasons.${reason}`)}</span>
+                <span className="text-xs text-cream-500">×{count}</span>
+                <span className={`text-sm font-bold ${total >= 0 ? "text-green-700" : "text-red-700"}`}>
+                  {total >= 0 ? "+" : ""}
+                  {total}
+                </span>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
 
       <div className="card p-6">
         <h2 className="text-lg font-semibold text-navy mb-4">{t("portal.recentPoints")}</h2>
