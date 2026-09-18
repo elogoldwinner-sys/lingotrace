@@ -201,6 +201,8 @@
     "parentWelcome": "Your child",
     "noBadgesYet": "No badges earned yet.",
     "recentPoints": "Recent points",
+    "pointsBreakdown": "Points by category",
+    "pointsBreakdownHint": "Totals across all recorded points, grouped by category — a quick look at where your child is excelling and where they could use support.",
     "noPointsYet": "No points recorded yet.",
     "noAttendanceYet": "No attendance recorded yet.",
     "contactWhatsapp": "Contact via WhatsApp",

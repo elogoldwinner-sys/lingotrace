@@ -201,6 +201,8 @@
     "parentWelcome": "ابنك/ابنتك",
     "noBadgesYet": "لم يتم الحصول على أي شارات بعد.",
     "recentPoints": "النقاط الأخيرة",
+    "pointsBreakdown": "النقاط حسب الفئة",
+    "pointsBreakdownHint": "إجمالي النقاط المسجلة مجمعة حسب الفئة — نظرة سريعة على نقاط التميز ونقاط الضعف عند طفلك.",
     "noPointsYet": "لم يتم تسجيل أي نقاط بعد.",
     "noAttendanceYet": "لم يتم تسجيل أي حضور بعد.",
     "contactWhatsapp": "تواصل عبر واتساب",
