@@ -4,11 +4,14 @@ import { Link, useNavigate } from "react-router-dom";
 import { ArrowLeft } from "lucide-react";
 import { useAuth, isDismissedPopupError } from "../contexts/AuthContext";
 import Logo from "../components/common/Logo";
+import KidTeacherLogin from "../components/home/KidTeacherLogin";
+import { useTheme } from "../contexts/ThemeContext";
 
 export default function LoginPage() {
   const { t } = useTranslation();
   const { signInTeacherWithGoogle } = useAuth();
   const navigate = useNavigate();
+  const { theme } = useTheme();
 
   const [error, setError] = useState("");
   const [submitting, setSubmitting] = useState(false);
@@ -30,6 +33,11 @@ export default function LoginPage() {
     } finally {
       setSubmitting(false);
     }
+  }
+
+  // Kid mode has its own Teacher Portal scene; the sign-in logic is shared.
+  if (theme === "kid") {
+    return <KidTeacherLogin onSignIn={handleGoogleSignIn} submitting={submitting} error={error} />;
   }
 
   return (

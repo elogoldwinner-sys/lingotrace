@@ -5,6 +5,15 @@
  * Everything here is decorative (aria-hidden) and carries no text.
  */
 
+/** Lavender sky shared by the kid-mode pages (home, teacher portal, …). */
+export const KID_SKY_BACKGROUND = [
+  "radial-gradient(48% 44% at 50% 52%, rgba(255,255,255,0.8) 0%, rgba(255,255,255,0) 100%)",
+  "radial-gradient(60% 34% at 50% -8%, #BDB5FD 0%, rgba(189,181,253,0) 100%)",
+  "radial-gradient(38% 42% at 0% 0%, #B3AAFC 0%, rgba(179,170,252,0) 100%)",
+  "radial-gradient(38% 42% at 100% 0%, #B8B0FD 0%, rgba(184,176,253,0) 100%)",
+  "linear-gradient(180deg, #E4E0FE 0%, #F4F2FE 38%, #F1EFFD 72%, #E2DDFD 100%)",
+].join(", ");
+
 function starPoints(cx: number, cy: number, outer: number, inner: number) {
   const pts: string[] = [];
   for (let i = 0; i < 10; i++) {

@@ -11,6 +11,7 @@ import {
   CloudLeft,
   CloudRight,
   HeartRibbonIcon,
+  KID_SKY_BACKGROUND,
   PurpleHill,
   Sparks,
   Star,
@@ -31,14 +32,6 @@ import globe from "../../assets/kid-home/globe.webp";
  * Art is positioned with physical left/right utilities on purpose: the scene
  * looks the same in Arabic (RTL) as in English.
  */
-const SKY_BACKGROUND = [
-  "radial-gradient(48% 44% at 50% 52%, rgba(255,255,255,0.8) 0%, rgba(255,255,255,0) 100%)",
-  "radial-gradient(60% 34% at 50% -8%, #BDB5FD 0%, rgba(189,181,253,0) 100%)",
-  "radial-gradient(38% 42% at 0% 0%, #B3AAFC 0%, rgba(179,170,252,0) 100%)",
-  "radial-gradient(38% 42% at 100% 0%, #B8B0FD 0%, rgba(184,176,253,0) 100%)",
-  "linear-gradient(180deg, #E4E0FE 0%, #F4F2FE 38%, #F1EFFD 72%, #E2DDFD 100%)",
-].join(", ");
-
 type Tone = "teacher" | "parent";
 
 const TONES: Record<
@@ -113,7 +106,7 @@ export default function KidHome() {
   const { t } = useTranslation();
 
   return (
-    <div className="relative min-h-screen overflow-hidden" style={{ background: SKY_BACKGROUND }}>
+    <div className="relative min-h-screen overflow-hidden" style={{ background: KID_SKY_BACKGROUND }}>
       {/* ───────────── scenery (decorative, behind the content) ───────────── */}
       <div className="pointer-events-none absolute inset-0 select-none" aria-hidden="true">
         <CloudFloor className="absolute inset-x-0 bottom-0 h-auto w-full" />
