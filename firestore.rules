@@ -148,14 +148,33 @@ service cloud.firestore {
       allow update, delete: if ownsClass(resource.data.classId);
     }
 
-    // A single school-wide announcement (doc id is always "current"). Any
-    // signed-in user — teacher, student, or parent — can read it. Only a
-    // signed-in teacher (verified by having their own teachers/{uid}
-    // profile doc) can create, edit, or clear it.
+    // Announcements — one doc per post (auto id), each optionally targeted at
+    // specific classes via `classIds` (absent/empty = everyone). The original
+    // single school-wide announcement lives on as announcements/current.
+    //
+    // Any signed-in user can read, because a Firestore rule can't filter a
+    // list query by "is one of my classes in this doc's classIds" — so the
+    // student and parent portals show only the announcements meant for their
+    // class. That makes targeting a display rule, not secret-keeping: don't
+    // put anything in an announcement that no signed-in user should see.
+    //
+    // Only a signed-in teacher (verified by having their own teachers/{uid}
+    // profile doc) can write, and only their own posts: `authorId` must be
+    // their uid on create/update, and they can only edit or delete a post
+    // whose `authorId` is theirs. Posts with no `authorId` (the original
+    // announcements/current) can be edited or removed by any teacher.
     match /announcements/{docId} {
       allow read: if isSignedIn();
-      allow write: if isSignedIn() &&
-        exists(/databases/$(database)/documents/teachers/$(request.auth.uid));
+      allow create: if isSignedIn() &&
+        exists(/databases/$(database)/documents/teachers/$(request.auth.uid)) &&
+        request.resource.data.authorId == request.auth.uid;
+      allow update: if isSignedIn() &&
+        exists(/databases/$(database)/documents/teachers/$(request.auth.uid)) &&
+        request.resource.data.authorId == request.auth.uid &&
+        resource.data.get('authorId', request.auth.uid) == request.auth.uid;
+      allow delete: if isSignedIn() &&
+        exists(/databases/$(database)/documents/teachers/$(request.auth.uid)) &&
+        resource.data.get('authorId', request.auth.uid) == request.auth.uid;
     }
 
     // A class's current weekly top-3 (doc id = classId, overwritten each

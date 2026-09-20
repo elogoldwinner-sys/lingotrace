@@ -1,4 +1,70 @@
-# LingoTrace — Announcement feature
+# LingoTrace — Announcement targeting, clickable icons, select-all attendance
+
+## What's new
+
+1. **Choose who sees an announcement.** In the announcement editor, pick
+   **Everyone** or **Specific classes** (tick one or more of your classes).
+   Students and parents only see announcements meant for their class (a
+   parent sees the announcements for every class one of their children is
+   in) plus anything sent to Everyone.
+2. **Clickable icons.** In the editor, under **Clickable icons**, tap
+   **Add icon**, upload the icon image, and paste the link it should open
+   (optionally a short label shown under it). Up to 8 per announcement. They
+   show under the message text and open the link in a new tab. Only
+   `http(s)`, `mailto` and `tel` links are accepted.
+3. **Select all students in attendance.** When a session is open on the
+   Attendance page there's now a **Select all students** checkbox (plus a
+   checkbox on each student). With anyone ticked, **Mark selected as:
+   Present / Absent / Late / Excused** applies that status to all of them at
+   once — points are granted exactly as if you'd tapped each button.
+
+Because each class can now have its own announcement, announcements are no
+longer a single replace-the-last post: you can have several live at once,
+newest first. Each one shows who it's for on your Dashboard, with its own
+**Edit announcement** link, and **Remove announcement** inside the editor
+deletes just that one. The announcement you already had keeps showing to
+everyone until you edit or remove it.
+
+## Files in this zip (all overwrite existing files at these paths)
+
+- `src/types/index.ts`
+- `src/lib/services/announcementsService.ts`
+- `src/components/common/AnnouncementCard.tsx`
+- `src/pages/DashboardPage.tsx`
+- `src/pages/portal/StudentPortalPage.tsx`
+- `src/pages/portal/ParentPortalPage.tsx`
+- `src/pages/AttendancePage.tsx`
+- `src/i18n/en.json`, `src/i18n/ar.json`
+- `firestore.rules`
+- `README_ANNOUNCEMENT.md`
+
+## ⚠️ Firestore rules — publish this in the Firebase console
+
+Same as before, this doesn't go out with your GitHub Pages deploy. Open
+Firebase console → Firestore Database → Rules, paste the full contents of
+this zip's `firestore.rules`, and click **Publish**. Until you do, saving an
+announcement will fail with a permissions error.
+
+The `/announcements` rule now lets a teacher create announcements as
+themselves and edit/delete only their own (the original announcement, which
+has no owner, can be edited or removed by any teacher).
+
+**Note on privacy:** targeting decides what each portal *shows*. Firestore
+can't filter a list of documents by "is this the reader's class", so any
+signed-in user's account could technically read every announcement. Fine for
+class notices; don't put anything in an announcement that no signed-in
+student or parent should see.
+
+## Build check
+`tsc -b`, `vite build`, and `oxlint src` all ran clean with zero errors
+before this was packaged.
+
+---
+
+# LingoTrace — Announcement feature (original version)
+
+*(Superseded where it differs from the section above: announcements used to
+be a single school-wide post.)*
 
 New: a single school-wide announcement (text + optional image + optional
 video, all in one post) that any signed-in user — teacher, student, or

@@ -8,7 +8,7 @@ import { subscribeToStudentPointsHistory } from "../../lib/services/pointsServic
 import { subscribeToStudentAttendance } from "../../lib/services/attendanceService";
 import { subscribeToVisibleParentNotes } from "../../lib/services/notesService";
 import { getBadgeDefinition } from "../../lib/services/badgesService";
-import { subscribeToAnnouncement } from "../../lib/services/announcementsService";
+import { subscribeToAnnouncements, isAnnouncementVisibleTo } from "../../lib/services/announcementsService";
 import { getClassRankingOnce, subscribeToClassRanking } from "../../lib/services/classRankingsService";
 import { triggerWeeklyChampionsCelebration } from "../../lib/confetti";
 import { formatNoteDate } from "../../lib/timestamps";
@@ -305,7 +305,7 @@ export default function ParentPortalPage() {
   const navigate = useNavigate();
   const { portalParent, signOut } = useAuth();
   const [activeStudentId, setActiveStudentId] = useState("");
-  const [announcement, setAnnouncement] = useState<Announcement | null>(null);
+  const [allAnnouncements, setAllAnnouncements] = useState<Announcement[]>([]);
   const [ownClassIds, setOwnClassIds] = useState<string[]>([]);
   const [ownRankings, setOwnRankings] = useState<Record<string, ClassRanking>>({});
   const [removedStudentIds, setRemovedStudentIds] = useState<string[]>([]);
@@ -329,9 +329,16 @@ export default function ParentPortalPage() {
   }
 
   useEffect(() => {
-    const unsubscribe = subscribeToAnnouncement(setAnnouncement);
+    const unsubscribe = subscribeToAnnouncements(setAllAnnouncements, console.error);
     return unsubscribe;
   }, []);
+
+  // Shown once above the child tabs: everything for everyone, plus anything
+  // targeted at a class one of this parent's children is in.
+  const announcements = useMemo(
+    () => allAnnouncements.filter((a) => isAnnouncementVisibleTo(a, ownClassIds)),
+    [allAnnouncements, ownClassIds]
+  );
 
   // Live per-child WhatsApp numbers for ALL linked children at once (not
   // just whichever tab is active) — this is what lets the floating contact
@@ -464,7 +471,9 @@ export default function ParentPortalPage() {
       </header>
 
       <main className="max-w-3xl mx-auto px-4 py-8 space-y-6">
-        {announcement && <AnnouncementCard announcement={announcement} />}
+        {announcements.map((a) => (
+          <AnnouncementCard key={a.id} announcement={a} />
+        ))}
 
         {Object.values(ownRankings).filter((r) => (r.positions || []).length > 0).length > 0 && (
           <div className="space-y-4">

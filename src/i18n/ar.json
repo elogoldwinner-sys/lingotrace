@@ -97,7 +97,12 @@
     "noParentEmail": "لا يوجد بريد إلكتروني لولي الأمر لهذا الطالب.",
     "recordTitle": "تسجيل الحضور",
     "recordHint": "سجّل حالة كل طالب أدناه. سيصبح الطلاب الحاضرون أو المتأخرون متاحين للتعامل معهم في الجلسة المطابقة.",
-    "notMarked": "لم يُسجَّل"
+    "notMarked": "لم يُسجَّل",
+    "selectAll": "تحديد جميع الطلاب",
+    "selectedCount": "تم تحديد {{count}}",
+    "markSelectedAs": "تسجيل المحدَّدين كـ:",
+    "clearSelection": "إلغاء التحديد",
+    "bulkError": "تعذّر تحديث جميع الطلاب. يرجى المحاولة مرة أخرى."
   },
   "sessions": {
     "title": "الجلسات",
@@ -277,7 +282,25 @@
     "replaceImage": "استبدال الصورة",
     "addVideo": "إضافة فيديو",
     "replaceVideo": "استبدال الفيديو",
-    "errorEmpty": "أضف نصًا أو صورة أو فيديو قبل النشر."
+    "errorEmpty": "أضف نصًا أو صورة أو فيديو أو أيقونة قبل النشر.",
+    "audienceLabel": "من يرى هذا الإعلان؟",
+    "audienceEveryone": "الجميع",
+    "audienceEveryoneHint": "جميع الفصول — الطلاب وأولياء الأمور والمعلمون.",
+    "audienceClasses": "فصول محددة",
+    "audienceClassesHint": "فقط طلاب وأولياء أمور الفصول التي تختارها.",
+    "noClassesYet": "أنشئ فصلًا أولًا لتتمكن من استهدافه.",
+    "audienceUnknown": "الفصل لم يعد موجودًا",
+    "errorNoClasses": "اختر فصلًا واحدًا على الأقل، أو اختر الجميع.",
+    "iconsLabel": "أيقونات قابلة للنقر",
+    "iconsHint": "ارفع أيقونة وأضف الرابط الذي ستفتحه. يضغط الطلاب وأولياء الأمور على الأيقونة للانتقال إليه.",
+    "addIcon": "إضافة أيقونة",
+    "uploadIcon": "رفع أيقونة",
+    "replaceIcon": "استبدال الأيقونة",
+    "removeIcon": "إزالة الأيقونة",
+    "iconUrlPlaceholder": "الرابط، مثل https://example.com",
+    "iconLabelPlaceholder": "تسمية أسفل الأيقونة (اختياري)",
+    "errorIconIncomplete": "كل أيقونة تحتاج إلى صورة مرفوعة ورابط.",
+    "errorIconUrl": "أحد روابط الأيقونات غير صالح. استخدم عنوان ويب مثل https://example.com."
   },
   "home": {
     "welcome": "مرحبًا بك في {{appName}}",

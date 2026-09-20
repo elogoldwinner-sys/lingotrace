@@ -97,7 +97,12 @@
     "noParentEmail": "No parent email on file for this student.",
     "recordTitle": "Record attendance",
     "recordHint": "Mark each student's status below. Present/late students become available to work with in the matching session.",
-    "notMarked": "Not marked"
+    "notMarked": "Not marked",
+    "selectAll": "Select all students",
+    "selectedCount": "{{count}} selected",
+    "markSelectedAs": "Mark selected as:",
+    "clearSelection": "Clear",
+    "bulkError": "Couldn't update every student. Please try again."
   },
   "sessions": {
     "title": "Sessions",
@@ -277,7 +282,25 @@
     "replaceImage": "Replace image",
     "addVideo": "Add video",
     "replaceVideo": "Replace video",
-    "errorEmpty": "Add some text, an image, or a video before posting."
+    "errorEmpty": "Add some text, an image, a video, or an icon before posting.",
+    "audienceLabel": "Who sees this?",
+    "audienceEveryone": "Everyone",
+    "audienceEveryoneHint": "All classes — students, parents, and teachers.",
+    "audienceClasses": "Specific classes",
+    "audienceClassesHint": "Only students and parents in the classes you pick.",
+    "noClassesYet": "Create a class first to target it.",
+    "audienceUnknown": "Class no longer exists",
+    "errorNoClasses": "Pick at least one class, or choose Everyone.",
+    "iconsLabel": "Clickable icons",
+    "iconsHint": "Upload an icon and add the link it should open. Students and parents tap the icon to go there.",
+    "addIcon": "Add icon",
+    "uploadIcon": "Upload icon",
+    "replaceIcon": "Replace icon",
+    "removeIcon": "Remove icon",
+    "iconUrlPlaceholder": "Link, e.g. https://example.com",
+    "iconLabelPlaceholder": "Label under the icon (optional)",
+    "errorIconIncomplete": "Each icon needs both an uploaded image and a link.",
+    "errorIconUrl": "One of the icon links isn't valid. Use a web address like https://example.com."
   },
   "home": {
     "welcome": "Welcome to {{appName}}",

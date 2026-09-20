@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
 import { LogOut, Globe, Camera } from "lucide-react";
@@ -8,7 +8,7 @@ import { subscribeToStudentAttendance } from "../../lib/services/attendanceServi
 import { updateStudent } from "../../lib/services/studentsService";
 import { uploadToCloudinary } from "../../lib/cloudinary";
 import { getBadgeDefinition } from "../../lib/services/badgesService";
-import { subscribeToAnnouncement } from "../../lib/services/announcementsService";
+import { subscribeToAnnouncements, isAnnouncementVisibleTo } from "../../lib/services/announcementsService";
 import { subscribeToClassRanking, getClassRankingOnce } from "../../lib/services/classRankingsService";
 import { triggerWeeklyChampionsCelebration } from "../../lib/confetti";
 import type { PointsTransaction, AttendanceRecord, AttendanceStatus, Announcement, ClassRanking } from "../../types";
@@ -35,16 +35,22 @@ export default function StudentPortalPage() {
   const isKid = theme === "kid";
   const [pointsHistory, setPointsHistory] = useState<PointsTransaction[]>([]);
   const [attendance, setAttendance] = useState<AttendanceRecord[]>([]);
-  const [announcement, setAnnouncement] = useState<Announcement | null>(null);
+  const [allAnnouncements, setAllAnnouncements] = useState<Announcement[]>([]);
   const [ranking, setRanking] = useState<ClassRanking | null>(null);
   const [loading, setLoading] = useState(true);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
 
   useEffect(() => {
-    const unsubscribe = subscribeToAnnouncement(setAnnouncement);
+    const unsubscribe = subscribeToAnnouncements(setAllAnnouncements, console.error);
     return unsubscribe;
   }, []);
+
+  // Only the announcements meant for this student's class (or for everyone).
+  const announcements = useMemo(
+    () => allAnnouncements.filter((a) => isAnnouncementVisibleTo(a, portalStudent?.classId ? [portalStudent.classId] : [])),
+    [allAnnouncements, portalStudent?.classId]
+  );
 
   useEffect(() => {
     if (!portalStudent) return;
@@ -142,7 +148,9 @@ export default function StudentPortalPage() {
             <StudyMascot size={80} />
           </div>
         )}
-        {announcement && <AnnouncementCard announcement={announcement} />}
+        {announcements.map((a) => (
+          <AnnouncementCard key={a.id} announcement={a} />
+        ))}
 
         <WeeklyChampions ranking={ranking} />
 

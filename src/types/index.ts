@@ -224,16 +224,41 @@ export interface StudentBadge {
 }
 
 /**
- * A single, school-wide announcement — one post at a time (posting a new one
- * replaces the last), visible to every signed-in user (teacher, student, or
- * parent) regardless of which class/teacher they're linked to. Stored as a
- * singleton document at announcements/current. Only a signed-in teacher can
- * create/edit/clear it (see firestore.rules).
+ * A clickable icon shown inside an announcement: an image the teacher
+ * uploaded (`iconUrl`, hosted on Cloudinary) that opens `url` in a new tab
+ * when tapped. `label` is optional — it's shown under the icon and used as
+ * its accessible name.
+ */
+export interface AnnouncementLink {
+  iconUrl: string;
+  url: string;
+  label?: string;
+}
+
+/**
+ * An announcement posted by a teacher. Several can be live at once (one doc
+ * each in `announcements/{id}`), newest first.
+ *
+ * Audience: `classIds` lists the classes that should see it. Absent or empty
+ * means everyone signed in (teachers, students, and parents of every class) —
+ * which is also how the original single school-wide announcement, stored at
+ * announcements/current before targeting existed, is treated.
+ *
+ * Note: targeting is enforced by what each portal chooses to show, not by
+ * Firestore rules — see the note on /announcements in firestore.rules.
  */
 export interface Announcement {
+  /** Firestore doc id (filled in by announcementsService when reading). */
+  id: string;
   text: string;
   imageUrl?: string;
   videoUrl?: string;
+  /** Clickable icons, shown in order. */
+  links?: AnnouncementLink[];
+  /** Classes that can see this announcement; absent/empty = everyone. */
+  classIds?: string[];
+  /** Auth uid of the teacher who posted it (absent on the pre-targeting announcement). */
+  authorId?: string;
   postedByName: string;
   updatedAt: number;
 }

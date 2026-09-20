@@ -75,6 +75,12 @@ export default function AttendancePage() {
 
   const [expandedSessionId, setExpandedSessionId] = useState<string | null>(null);
 
+  // Students ticked in the open session's roster, for marking several at
+  // once. Cleared whenever the open session or class changes.
+  const [selectedStudentIds, setSelectedStudentIds] = useState<Set<string>>(new Set());
+  const [bulkBusy, setBulkBusy] = useState(false);
+  const [bulkError, setBulkError] = useState(false);
+
   // Which week groups are expanded in the "Record attendance" list below,
   // mirroring the Sessions page: keyed by that week's Sunday (yyyy-MM-dd).
   const [expandedWeeks, setExpandedWeeks] = useState<Set<string>>(new Set());
@@ -117,6 +123,11 @@ export default function AttendancePage() {
       unsubAttendance();
     };
   }, [selectedClassId]);
+
+  useEffect(() => {
+    setSelectedStudentIds(new Set());
+    setBulkError(false);
+  }, [expandedSessionId, selectedClassId]);
 
   const sessionsInRange = useMemo(
     () =>
@@ -232,6 +243,47 @@ export default function AttendancePage() {
     });
   }
 
+  // Only counts students still on the roster (one may have been removed
+  // while ticked).
+  const selectedStudents = students.filter((st) => selectedStudentIds.has(st.id));
+  const allSelected = students.length > 0 && selectedStudents.length === students.length;
+
+  function toggleStudentSelected(studentId: string) {
+    setSelectedStudentIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(studentId)) next.delete(studentId);
+      else next.add(studentId);
+      return next;
+    });
+  }
+
+  function toggleSelectAll() {
+    setSelectedStudentIds(allSelected ? new Set() : new Set(students.map((st) => st.id)));
+  }
+
+  // Applies one status to every ticked student via the same per-student path
+  // as tapping a status button, so points are granted/adjusted identically.
+  // Students already at that status are skipped (nothing to change).
+  async function handleBulkSetStatus(session: SessionRecord, status: AttendanceStatus) {
+    const targets = selectedStudents.filter(
+      (st) => recordByStudentAndSession.get(`${st.id}:${session.id}`)?.status !== status
+    );
+    if (targets.length === 0) {
+      setSelectedStudentIds(new Set());
+      return;
+    }
+    setBulkBusy(true);
+    setBulkError(false);
+    try {
+      await Promise.all(targets.map((st) => handleSetStatus(st, session, status)));
+      setSelectedStudentIds(new Set());
+    } catch {
+      setBulkError(true);
+    } finally {
+      setBulkBusy(false);
+    }
+  }
+
   async function handleSendReport(student: StudentRecord) {
     const className = classes.find((c) => c.id === selectedClassId)?.name || "";
     setSendingId(student.id);
@@ -316,6 +368,50 @@ export default function AttendancePage() {
 
                               {expandedSessionId === s.id && (
                                 <div className="px-5 pb-5 space-y-2 bg-cream-100/60 pt-2">
+                                  <div className="flex flex-wrap items-center gap-x-4 gap-y-2 rounded-lg border border-cream-300 bg-white px-3 py-2.5">
+                                    <label className="flex items-center gap-3 cursor-pointer">
+                                      <input
+                                        type="checkbox"
+                                        checked={allSelected}
+                                        ref={(el) => {
+                                          if (el) el.indeterminate = selectedStudents.length > 0 && !allSelected;
+                                        }}
+                                        onChange={toggleSelectAll}
+                                        className="h-4 w-4 shrink-0 accent-gold"
+                                      />
+                                      <span className="text-sm font-semibold text-navy">{t("attendance.selectAll")}</span>
+                                    </label>
+
+                                    {selectedStudents.length > 0 && (
+                                      <>
+                                        <span className="text-xs text-cream-600">
+                                          {t("attendance.selectedCount", { count: selectedStudents.length })}
+                                        </span>
+                                        <div className="flex flex-wrap items-center gap-1.5 sm:ms-auto">
+                                          <span className="text-xs text-cream-600">{t("attendance.markSelectedAs")}</span>
+                                          {ATTENDANCE_STATUSES.map((status) => (
+                                            <button
+                                              key={status}
+                                              onClick={() => handleBulkSetStatus(s, status)}
+                                              disabled={bulkBusy}
+                                              className={`pill border text-xs disabled:opacity-50 ${STATUS_STYLES[status]}`}
+                                            >
+                                              {t(`attendance.${status}`)}
+                                            </button>
+                                          ))}
+                                          <button
+                                            onClick={() => setSelectedStudentIds(new Set())}
+                                            disabled={bulkBusy}
+                                            className="text-xs font-semibold text-cream-600 hover:text-navy px-1"
+                                          >
+                                            {t("attendance.clearSelection")}
+                                          </button>
+                                        </div>
+                                      </>
+                                    )}
+                                  </div>
+                                  {bulkError && <p className="text-xs text-red-600">{t("attendance.bulkError")}</p>}
+
                                   {students.map((st) => {
                                     const currentStatus = recordByStudentAndSession.get(
                                       `${st.id}:${s.id}`
@@ -326,6 +422,13 @@ export default function AttendancePage() {
                                         className="flex flex-col sm:flex-row sm:items-center gap-3 rounded-lg border border-cream-300 bg-white px-3 py-2.5"
                                       >
                                         <div className="flex items-center gap-3 flex-1 min-w-0">
+                                          <input
+                                            type="checkbox"
+                                            checked={selectedStudentIds.has(st.id)}
+                                            onChange={() => toggleStudentSelected(st.id)}
+                                            aria-label={st.name}
+                                            className="h-4 w-4 shrink-0 accent-gold"
+                                          />
                                           {st.photoURL ? (
                                             <img
                                               src={st.photoURL}
