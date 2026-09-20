@@ -152,7 +152,10 @@ export interface NoteRecord {
   studentId: string;
   classId: string;
   authorId: string;
+  /** Plain-text version of the note (always present; used by the parent report e-mail). */
   content: string;
+  /** Formatted (sanitized HTML) version, when the note was written with the formatting toolbar. */
+  contentHtml?: string;
   sentiment: NoteSentiment;
   visibleToParent: boolean;
   /** Set when the note was added from inside a specific session's roster. */
@@ -250,7 +253,10 @@ export interface AnnouncementLink {
 export interface Announcement {
   /** Firestore doc id (filled in by announcementsService when reading). */
   id: string;
+  /** Plain-text version of the announcement (always present). */
   text: string;
+  /** Formatted (sanitized HTML) version, when written with the formatting toolbar. */
+  textHtml?: string;
   imageUrl?: string;
   videoUrl?: string;
   /** Clickable icons, shown in order. */

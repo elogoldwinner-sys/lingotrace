@@ -208,3 +208,106 @@
     @apply font-bold;
   }
 }
+
+/* Formatted text (announcements and notes): shown by RichText and edited in
+   RichTextEditor. Tailwind's reset strips list bullets, heading sizes and
+   link styling, so they're put back here — only for this content. */
+.rich-text,
+.rich-editor {
+  overflow-wrap: anywhere;
+}
+
+.rich-text p,
+.rich-text div,
+.rich-editor p,
+.rich-editor div {
+  min-height: 1.25em;
+}
+
+.rich-text ul,
+.rich-editor ul {
+  list-style: disc;
+  padding-inline-start: 1.5rem;
+  margin: 0.25rem 0;
+}
+
+.rich-text ol,
+.rich-editor ol {
+  list-style: decimal;
+  padding-inline-start: 1.5rem;
+  margin: 0.25rem 0;
+}
+
+.rich-text h2,
+.rich-text h3,
+.rich-editor h2,
+.rich-editor h3 {
+  font-size: 1.125em;
+  font-weight: 700;
+  margin: 0.4rem 0 0.15rem;
+}
+
+.rich-text a,
+.rich-editor a {
+  text-decoration: underline;
+  color: rgb(var(--color-gold-700, 161 118 40));
+}
+
+.rich-text b,
+.rich-text strong,
+.rich-editor b,
+.rich-editor strong {
+  font-weight: 700;
+}
+
+.rich-text i,
+.rich-text em,
+.rich-editor i,
+.rich-editor em {
+  font-style: italic;
+}
+
+.rich-text u,
+.rich-editor u {
+  text-decoration: underline;
+}
+
+.rich-text s,
+.rich-text strike,
+.rich-text del,
+.rich-editor s,
+.rich-editor strike,
+.rich-editor del {
+  text-decoration: line-through;
+}
+
+/* Editing surface: each paragraph follows its own language direction, and
+   the placeholder shows only while the editor is truly empty. */
+.rich-editor p,
+.rich-editor div,
+.rich-editor li,
+.rich-editor h2,
+.rich-editor h3 {
+  unicode-bidi: plaintext;
+}
+
+/* A paragraph the teacher set to LTR/RTL by hand keeps that direction. */
+.rich-editor p[dir="ltr"], .rich-editor div[dir="ltr"], .rich-editor li[dir="ltr"], .rich-editor h2[dir="ltr"], .rich-editor h3[dir="ltr"],
+.rich-editor p[dir="rtl"], .rich-editor div[dir="rtl"], .rich-editor li[dir="rtl"], .rich-editor h2[dir="rtl"], .rich-editor h3[dir="rtl"] {
+  unicode-bidi: isolate;
+}
+
+.rich-editor:empty::before {
+  content: attr(data-placeholder);
+  color: rgb(var(--color-cream-600, 120 113 108));
+  pointer-events: none;
+}
+
+.rich-editor-box {
+  @apply rounded-lg border border-cream-400 bg-white text-sm text-navy
+    focus-within:ring-2 focus-within:ring-gold/60;
+}
+
+[data-theme="kid"] .rich-editor-box {
+  @apply border-2 rounded-xl;
+}

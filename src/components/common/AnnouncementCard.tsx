@@ -3,6 +3,7 @@ import { Megaphone, Users } from "lucide-react";
 import type { Announcement } from "../../types";
 import { formatNoteDate } from "../../lib/timestamps";
 import { normalizeAnnouncementUrl } from "../../lib/services/announcementsService";
+import RichText from "./RichText";
 
 interface AnnouncementCardProps {
   announcement: Announcement;
@@ -36,8 +37,13 @@ export default function AnnouncementCard({ announcement, audienceLabel }: Announ
         )}
       </div>
 
-      {announcement.text && (
-        <p className="text-navy whitespace-pre-wrap mb-3">{announcement.text}</p>
+      {(announcement.textHtml || announcement.text) && (
+        <RichText
+          html={announcement.textHtml}
+          text={announcement.text}
+          className="text-navy mb-3"
+          plainClassName="text-navy whitespace-pre-wrap mb-3"
+        />
       )}
 
       {links.length > 0 && (

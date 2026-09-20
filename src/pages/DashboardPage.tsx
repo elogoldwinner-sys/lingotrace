@@ -17,6 +17,8 @@ import { uploadToCloudinary } from "../lib/cloudinary";
 import type { ClassRecord, Announcement, AnnouncementLink } from "../types";
 import AnnouncementCard from "../components/common/AnnouncementCard";
 import Modal from "../components/common/Modal";
+import RichTextEditor from "../components/common/RichTextEditor";
+import { plainTextToHtml, richHtmlToPlainText, sanitizeRichHtml } from "../lib/richText";
 
 function StatCard({
   icon,
@@ -155,7 +157,10 @@ function AnnouncementEditor({
 }) {
   const { t } = useTranslation();
   const { user, profile } = useAuth();
-  const [text, setText] = useState(announcement?.text || "");
+  // Formatted body (HTML). Announcements posted before formatting existed only have plain text — converted so they open with their line breaks.
+  const [textHtml, setTextHtml] = useState(
+    () => announcement?.textHtml || plainTextToHtml(announcement?.text || "")
+  );
   const [imageUrl, setImageUrl] = useState(announcement?.imageUrl || "");
   const [videoUrl, setVideoUrl] = useState(announcement?.videoUrl || "");
   const [icons, setIcons] = useState<IconDraft[]>(() => (announcement?.links || []).map((l) => newIconDraft(l)));
@@ -235,7 +240,8 @@ function AnnouncementEditor({
       links.push({ iconUrl: icon.iconUrl, url: href, ...(icon.label.trim() ? { label: icon.label.trim() } : {}) });
     }
 
-    if (!text.trim() && !imageUrl && !videoUrl && links.length === 0) {
+    const plainText = richHtmlToPlainText(textHtml);
+    if (!plainText && !imageUrl && !videoUrl && links.length === 0) {
       setError(t("announcement.errorEmpty"));
       return;
     }
@@ -254,7 +260,8 @@ function AnnouncementEditor({
     try {
       await saveAnnouncement({
         id: announcement?.id,
-        text: text.trim(),
+        text: plainText,
+        textHtml: sanitizeRichHtml(textHtml),
         imageUrl: imageUrl || undefined,
         videoUrl: videoUrl || undefined,
         links,
@@ -352,12 +359,10 @@ function AnnouncementEditor({
 
       <div>
         <label className="label-eyebrow block mb-1.5">{t("announcement.textLabel")}</label>
-        <textarea
-          value={text}
-          onChange={(e) => setText(e.target.value)}
-          rows={4}
+        <RichTextEditor
+          value={textHtml}
+          onChange={setTextHtml}
           placeholder={t("announcement.textPlaceholder")}
-          className="input-field resize-none"
         />
       </div>
 

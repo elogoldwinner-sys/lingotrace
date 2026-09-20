@@ -322,6 +322,38 @@
     "saveError": "Couldn't save the period. Please try again.",
     "error": "Couldn't calculate the champions for this period. Check your connection and try again."
   },
+  "richText": {
+    "toolbar": "Text formatting",
+    "bold": "Bold",
+    "italic": "Italic",
+    "underline": "Underline",
+    "strike": "Strikethrough",
+    "heading": "Heading",
+    "bulletList": "Bulleted list",
+    "numberedList": "Numbered list",
+    "alignLeft": "Align left",
+    "alignCenter": "Center",
+    "alignRight": "Align right",
+    "ltr": "Left-to-right text",
+    "rtl": "Right-to-left text",
+    "textColor": "Text color",
+    "highlight": "Highlight",
+    "link": "Add link",
+    "clear": "Clear formatting",
+    "linkPrompt": "Paste the link (web address, email or phone):",
+    "linkInvalid": "That doesn't look like a valid link.",
+    "colors": {
+      "gray": "Gray",
+      "red": "Red",
+      "orange": "Orange",
+      "green": "Green",
+      "blue": "Blue",
+      "purple": "Purple",
+      "yellow": "Yellow",
+      "pink": "Pink",
+      "none": "No highlight"
+    }
+  },
   "theme": {
     "kidMode": "Kid mode",
     "classicMode": "Classic mode",

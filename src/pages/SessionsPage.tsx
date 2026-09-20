@@ -7,6 +7,8 @@ import { subscribeToClasses } from "../lib/services/classesService";
 import { subscribeToStudents } from "../lib/services/studentsService";
 import { awardPoints } from "../lib/services/pointsService";
 import { createNote } from "../lib/services/notesService";
+import RichTextEditor from "../components/common/RichTextEditor";
+import { richHtmlToPlainText, sanitizeRichHtml } from "../lib/richText";
 import {
   subscribeToSessions,
   createSession,
@@ -72,6 +74,7 @@ export default function SessionsPage() {
   const [pointsNote, setPointsNote] = useState("");
 
   const [noteModalStudent, setNoteModalStudent] = useState<StudentRecord | null>(null);
+  // Formatted note body (HTML) from the editor.
   const [noteContent, setNoteContent] = useState("");
   const [noteSentiment, setNoteSentiment] = useState<NoteSentiment>("positive");
   const [noteSubmitting, setNoteSubmitting] = useState(false);
@@ -270,14 +273,16 @@ export default function SessionsPage() {
 
   async function handleAddNote(e: React.FormEvent) {
     e.preventDefault();
-    if (!noteModalStudent || !user || !noteContent.trim()) return;
+    const plainNote = richHtmlToPlainText(noteContent);
+    if (!noteModalStudent || !user || !plainNote) return;
     setNoteSubmitting(true);
     try {
       await createNote({
         studentId: noteModalStudent.id,
         classId: noteModalStudent.classId,
         authorId: user.uid,
-        content: noteContent.trim(),
+        content: plainNote,
+        contentHtml: sanitizeRichHtml(noteContent),
         sentiment: noteSentiment,
         visibleToParent: true,
         sessionId: activeSessionId || undefined,
@@ -733,20 +738,18 @@ export default function SessionsPage() {
               {t("notes.negative")}
             </button>
           </div>
-          <textarea
-            required
+          <RichTextEditor
             value={noteContent}
-            onChange={(e) => setNoteContent(e.target.value)}
-            className="input-field"
-            rows={4}
+            onChange={setNoteContent}
             placeholder={t("notes.contentPlaceholder")}
+            minHeightClass="min-h-[6rem]"
           />
           <p className="text-xs text-cream-600">{t("notes.parentOnlyHint")}</p>
           <div className="flex justify-end gap-2">
             <button type="button" onClick={() => setNoteModalStudent(null)} className="btn-secondary">
               {t("common.cancel")}
             </button>
-            <button type="submit" disabled={noteSubmitting} className="btn-primary">
+            <button type="submit" disabled={noteSubmitting || !noteContent} className="btn-primary">
               {t("common.save")}
             </button>
           </div>

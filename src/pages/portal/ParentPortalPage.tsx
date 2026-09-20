@@ -18,6 +18,7 @@ import Logo from "../../components/common/Logo";
 import ThemeToggle from "../../components/common/ThemeToggle";
 import AnnouncementCard from "../../components/common/AnnouncementCard";
 import WeeklyChampions from "../../components/common/WeeklyChampions";
+import RichText from "../../components/common/RichText";
 import type {
   PointsTransaction,
   AttendanceRecord,
@@ -171,7 +172,7 @@ function ChildPanel({ studentId, onRemoved }: { studentId: string; onRemoved: (s
                     : "border-red-300 bg-red-50 text-red-800"
                 }`}
               >
-                <p className="text-sm">{note.content}</p>
+                <RichText html={note.contentHtml} text={note.content} className="text-sm" />
                 {note.createdAt && (
                   <p className="text-xs mt-1 opacity-70">{formatNoteDate(note.createdAt, i18n.language)}</p>
                 )}

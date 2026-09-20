@@ -57,6 +57,7 @@ import EmptyState from "../components/common/EmptyState";
 import Spinner from "../components/common/Spinner";
 import ClassSelector from "../components/common/ClassSelector";
 import WeeklyChampions from "../components/common/WeeklyChampions";
+import RichText from "../components/common/RichText";
 import { reasonsForAmount, POINTS_REASON_ICONS, POSITIVE_POINTS_REASONS } from "../lib/pointsReasons";
 
 interface BulkRow {
@@ -964,7 +965,7 @@ export default function StudentsPage() {
                           {noteSession && (
                             <p className="text-xs font-semibold opacity-70 mb-0.5">{noteSession.title}</p>
                           )}
-                          {n.content}
+                          <RichText html={n.contentHtml} text={n.content} />
                         </div>
                         <button
                           type="button"

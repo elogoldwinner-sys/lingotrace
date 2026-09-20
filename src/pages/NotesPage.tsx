@@ -18,6 +18,9 @@ import type {
   NoteSentiment,
 } from "../types";
 import Modal from "../components/common/Modal";
+import RichText from "../components/common/RichText";
+import RichTextEditor from "../components/common/RichTextEditor";
+import { richHtmlToPlainText, sanitizeRichHtml } from "../lib/richText";
 import EmptyState from "../components/common/EmptyState";
 import Spinner from "../components/common/Spinner";
 import ClassSelector from "../components/common/ClassSelector";
@@ -35,7 +38,8 @@ export default function NotesPage() {
   const [loading, setLoading] = useState(true);
   const [modalOpen, setModalOpen] = useState(false);
 
-  const [content, setContent] = useState("");
+  // Formatted note body (HTML) from the editor.
+  const [contentHtml, setContentHtml] = useState("");
   const [sentiment, setSentiment] = useState<NoteSentiment>("positive");
 
   useEffect(() => {
@@ -88,15 +92,18 @@ export default function NotesPage() {
   async function handleCreate(e: React.FormEvent) {
     e.preventDefault();
     if (!user || !selectedStudentId) return;
+    const plainText = richHtmlToPlainText(contentHtml);
+    if (!plainText) return;
     await createNote({
       studentId: selectedStudentId,
       classId: selectedClassId,
       authorId: user.uid,
-      content,
+      content: plainText,
+      contentHtml: sanitizeRichHtml(contentHtml),
       sentiment,
       visibleToParent: true,
     });
-    setContent("");
+    setContentHtml("");
     setSentiment("positive");
     setModalOpen(false);
   }
@@ -151,7 +158,7 @@ export default function NotesPage() {
                       </span>
                     )}
                   </p>
-                  <p className="text-sm text-navy mt-0.5">{n.content}</p>
+                  <RichText html={n.contentHtml} text={n.content} className="text-sm text-navy mt-0.5" />
                 </div>
                 <button onClick={() => deleteNote(n.id)} className="text-cream-600 hover:text-red-600 p-1 shrink-0">
                   <Trash2 size={16} />
@@ -188,19 +195,13 @@ export default function NotesPage() {
               {t("notes.negative")}
             </button>
           </div>
-          <textarea
-            required
-            value={content}
-            onChange={(e) => setContent(e.target.value)}
-            className="input-field"
-            rows={4}
-          />
+          <RichTextEditor value={contentHtml} onChange={setContentHtml} minHeightClass="min-h-[6rem]" />
           <p className="text-xs text-cream-600">{t("notes.parentOnlyHint")}</p>
           <div className="flex justify-end gap-2">
             <button type="button" onClick={() => setModalOpen(false)} className="btn-secondary">
               {t("common.cancel")}
             </button>
-            <button type="submit" className="btn-primary">
+            <button type="submit" disabled={!contentHtml} className="btn-primary">
               {t("common.save")}
             </button>
           </div>

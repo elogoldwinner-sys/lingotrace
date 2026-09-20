@@ -3,6 +3,7 @@ import { db } from "../firebase";
 import { createFirestoreService } from "../firestoreService";
 import type { NoteRecord, NoteSentiment } from "../../types";
 import { toMillis } from "../timestamps";
+import { sanitizeRichHtml } from "../richText";
 
 const service = createFirestoreService<NoteRecord>("notes");
 
@@ -60,13 +61,19 @@ export async function createNote(data: {
   studentId: string;
   classId: string;
   authorId: string;
+  /** Plain text of the note — always required. */
   content: string;
+  /** Formatted version from the editor; sanitized here before it's stored. */
+  contentHtml?: string;
   sentiment: NoteSentiment;
   visibleToParent: boolean;
   sessionId?: string;
 }) {
+  const { contentHtml, ...rest } = data;
+  const safeHtml = contentHtml ? sanitizeRichHtml(contentHtml) : "";
   const docRef = await addDoc(collection(db, "notes"), {
-    ...data,
+    ...rest,
+    ...(safeHtml ? { contentHtml: safeHtml } : {}),
     createdAt: Timestamp.now(),
   });
   return docRef.id;

@@ -11,6 +11,7 @@ import {
 } from "firebase/firestore";
 import { db } from "../firebase";
 import { toMillis } from "../timestamps";
+import { sanitizeRichHtml } from "../richText";
 import type { Announcement, AnnouncementLink } from "../../types";
 
 const announcementsCol = collection(db, "announcements");
@@ -85,7 +86,10 @@ export function normalizeAnnouncementUrl(raw: string): string | null {
  */
 export async function saveAnnouncement(data: {
   id?: string;
+  /** Plain text of the announcement. */
   text: string;
+  /** Formatted version from the editor; sanitized here before it's stored. */
+  textHtml?: string;
   imageUrl?: string;
   videoUrl?: string;
   links?: AnnouncementLink[];
@@ -100,6 +104,8 @@ export async function saveAnnouncement(data: {
     postedByName: data.postedByName,
     updatedAt: Timestamp.now(),
   };
+  const safeHtml = data.textHtml ? sanitizeRichHtml(data.textHtml) : "";
+  if (safeHtml) payload.textHtml = safeHtml;
   if (data.imageUrl) payload.imageUrl = data.imageUrl;
   if (data.videoUrl) payload.videoUrl = data.videoUrl;
   if (data.links && data.links.length > 0) payload.links = data.links;
