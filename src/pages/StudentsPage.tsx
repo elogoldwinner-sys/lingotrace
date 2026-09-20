@@ -38,7 +38,6 @@ import { removeChildFromParent } from "../lib/services/parentsService";
 import {
   computeAndSaveRankingForPeriod,
   getDefaultRankingPeriod,
-  subscribeToClassRanking,
 } from "../lib/services/classRankingsService";
 import { parseCsv, buildCsv, downloadTextFile } from "../lib/csv";
 import { uploadToCloudinary } from "../lib/cloudinary";
@@ -79,7 +78,7 @@ function daysAgoISO(days: number) {
 
 export default function StudentsPage() {
   const { t } = useTranslation();
-  const { user, profile } = useAuth();
+  const { user, profile, loading: authLoading } = useAuth();
   const [searchParams] = useSearchParams();
   const preselectedClassId = searchParams.get("classId") || "";
 
@@ -88,6 +87,7 @@ export default function StudentsPage() {
   const [students, setStudents] = useState<StudentRecord[]>([]);
   const [loading, setLoading] = useState(true);
   const [ranking, setRanking] = useState<ClassRanking | null>(null);
+  const [rankingError, setRankingError] = useState(false);
 
   const [pointsModalStudent, setPointsModalStudent] = useState<StudentRecord | null>(null);
   const [pointsAmount, setPointsAmount] = useState(1);
@@ -172,32 +172,45 @@ export default function StudentsPage() {
   }, [selectedClassId]);
 
   // Class-champions board for whichever class tab is selected, shown in
-  // the class header below. Recomputed (cheaply — a no-op read if the
-  // board for the currently configured period already exists) whenever
-  // the selected class or the teacher's chosen date range changes, so
-  // it's up to date even for a teacher who opens Students directly
-  // without visiting the Dashboard first.
+  // the class header below. Recomputed from the points log every time the
+  // selected class or the teacher's chosen date range changes (and whenever
+  // this page opens), and shown straight from that result — so saving a new
+  // range in the "Champions period" dialog updates the board right away,
+  // without waiting on anything else. The result is also saved for the
+  // student/parent portals inside computeAndSaveRankingForPeriod.
   useEffect(() => {
     if (!selectedClassId) {
       setRanking(null);
       return;
     }
+    // Don't compute until the profile has loaded — otherwise the default
+    // "last 7 days" range would be used (and saved) for a moment first.
+    if (authLoading) return;
+
+    // Never show another class's board under this class's name while loading.
+    setRanking((prev) => (prev?.classId === selectedClassId ? prev : null));
+
     const period =
       profile?.rankingPeriodStart !== undefined && profile?.rankingPeriodEnd !== undefined
         ? { start: profile.rankingPeriodStart, end: profile.rankingPeriodEnd }
         : getDefaultRankingPeriod();
-    computeAndSaveRankingForPeriod(selectedClassId, period).catch(() => {});
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedClassId, profile?.rankingPeriodStart, profile?.rankingPeriodEnd]);
 
-  useEffect(() => {
-    if (!selectedClassId) {
-      setRanking(null);
-      return;
-    }
-    const unsubscribe = subscribeToClassRanking(selectedClassId, setRanking);
-    return unsubscribe;
-  }, [selectedClassId]);
+    let cancelled = false;
+    computeAndSaveRankingForPeriod(selectedClassId, period, true)
+      .then((result) => {
+        if (cancelled) return;
+        setRanking(result);
+        setRankingError(false);
+      })
+      .catch((err) => {
+        console.error("Could not compute the champions board", err);
+        if (!cancelled) setRankingError(true);
+      });
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedClassId, authLoading, profile?.rankingPeriodStart, profile?.rankingPeriodEnd]);
 
   useEffect(() => {
     if (!detailStudent) return;
@@ -525,7 +538,9 @@ export default function StudentsPage() {
       <WeeklyChampions
         ranking={ranking}
         classLabel={classes.find((c) => c.id === selectedClassId)?.name}
+        teacherView
       />
+      {rankingError && <p className="text-sm text-red-600">{t("ranking.error")}</p>}
 
       {students.length > 0 && (
         <div className="flex flex-wrap items-center justify-between gap-3 border-b border-cream-400/70 pb-3">

@@ -314,10 +314,13 @@
     "title": "Champions",
     "schedule": "Champions period",
     "scheduleLabel": "Champions reporting period",
-    "scheduleHint": "Pick a start and end date. The top-3 board only counts points earned inside that range — not each student's total since the start of the school year — and updates the next time you open the dashboard.",
+    "scheduleHint": "Pick a start and end date. The top-3 board only counts points earned inside that range — not each student's total since the start of the school year — and the board updates as soon as you save.",
     "noneYet": "No champions yet for this period — award some points to get the board started.",
     "startDate": "Start date",
-    "endDate": "End date"
+    "endDate": "End date",
+    "invalidRange": "The end date must be on or after the start date.",
+    "saveError": "Couldn't save the period. Please try again.",
+    "error": "Couldn't calculate the champions for this period. Check your connection and try again."
   },
   "theme": {
     "kidMode": "Kid mode",

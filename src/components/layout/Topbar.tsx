@@ -31,6 +31,7 @@ export default function Topbar() {
   const [scheduleStart, setScheduleStart] = useState(msToLocalDateValue(defaultPeriod.start));
   const [scheduleEnd, setScheduleEnd] = useState(msToLocalDateValue(defaultPeriod.end));
   const [savingSchedule, setSavingSchedule] = useState(false);
+  const [scheduleError, setScheduleError] = useState("");
 
   async function handleSignOut() {
     await signOut();
@@ -74,12 +75,19 @@ export default function Topbar() {
     const period = getDefaultRankingPeriod();
     setScheduleStart(msToLocalDateValue(profile?.rankingPeriodStart ?? period.start));
     setScheduleEnd(msToLocalDateValue(profile?.rankingPeriodEnd ?? period.end));
+    setScheduleError("");
     setScheduleModalOpen(true);
   }
 
   async function handleSaveSchedule(e: React.FormEvent) {
     e.preventDefault();
     if (!scheduleStart || !scheduleEnd) return;
+    // ISO date strings sort the same as the dates they represent.
+    if (scheduleEnd < scheduleStart) {
+      setScheduleError(t("ranking.invalidRange"));
+      return;
+    }
+    setScheduleError("");
     setSavingSchedule(true);
     try {
       // End date is inclusive through the end of that calendar day.
@@ -87,6 +95,9 @@ export default function Topbar() {
       const endMs = new Date(`${scheduleEnd}T23:59:59.999`).getTime();
       await updateTeacherRankingPeriod(startMs, endMs);
       setScheduleModalOpen(false);
+    } catch (err) {
+      console.error("Could not save the champions period", err);
+      setScheduleError(t("ranking.saveError"));
     } finally {
       setSavingSchedule(false);
     }
@@ -213,12 +224,14 @@ export default function Topbar() {
                 type="date"
                 required
                 value={scheduleEnd}
+                min={scheduleStart || undefined}
                 onChange={(e) => setScheduleEnd(e.target.value)}
                 className="input-field"
               />
             </div>
           </div>
           <p className="text-xs text-cream-600">{t("ranking.scheduleHint")}</p>
+          {scheduleError && <p className="text-sm text-red-600">{scheduleError}</p>}
           <div className="flex justify-end gap-2">
             <button type="button" onClick={() => setScheduleModalOpen(false)} className="btn-secondary">
               {t("common.cancel")}

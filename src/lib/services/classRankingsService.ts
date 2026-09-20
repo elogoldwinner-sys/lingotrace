@@ -8,7 +8,7 @@ import {
   setDoc,
   where,
 } from "firebase/firestore";
-import { db } from "../firebase";
+import { auth, db } from "../firebase";
 import { toMillis } from "../timestamps";
 import type { ClassRanking, RankingEntry, RankingPosition, PointsTransaction } from "../../types";
 
@@ -82,19 +82,32 @@ function groupIntoPositions(ranked: RankingEntry[]): RankingPosition[] {
 }
 
 /**
+ * Latest request number per class. Several computations can be in flight for
+ * the same class at once (e.g. the teacher changes the date range while the
+ * dashboard is still finishing the previous one), and they finish in
+ * whatever order the network returns them. Only the most recently *started*
+ * one is allowed to write the ranking doc, so a slower, older computation can
+ * never overwrite the board for the period the teacher just picked.
+ */
+const latestRequest = new Map<string, number>();
+
+/**
  * Computes the class-champions top-3 for a class over an explicit
- * start/end date range and saves it, but only if the stored ranking is
- * missing or was computed for a different range — a repeat call for a
- * range that's already computed is a cheap no-op read. Ranked by points
- * *earned within the period* (summed from each student's
+ * start/end date range and saves it for the student/parent portals.
+ * Ranked by points *earned within the period* (summed from each student's
  * pointsTransactions log entries that fall in range), not by their
  * all-time running total — so picking a new date range always starts the
- * podium fresh from just that window, not from whatever's accumulated
- * since the start of the school year. Only a class's teacher has read
- * access to its points log, so this can only ever run from the teacher's
- * own client (see firestore.rules) — it's triggered from the teacher
- * dashboard/students tab on load, not on a real schedule, since this app
- * has no backend to run one.
+ * podium fresh from just that window.
+ *
+ * Unless `force` is set, a repeat call for a range that's already saved is a
+ * cheap no-op read. The teacher's own screens always pass `force` so a
+ * change of date range (or points awarded mid-period) shows up immediately.
+ *
+ * The returned ranking is always the freshly computed one, even if saving it
+ * fails — a failed save is logged but never hides the result from the
+ * teacher. Only a class's teacher can read its points log (see
+ * firestore.rules), so this can only ever run from the teacher's own client.
+ * Reading the log throws on failure so callers can tell the teacher.
  */
 export async function computeAndSaveRankingForPeriod(
   classId: string,
@@ -102,6 +115,8 @@ export async function computeAndSaveRankingForPeriod(
   force = false
 ): Promise<ClassRanking | null> {
   const id = periodId(period);
+  const token = (latestRequest.get(classId) ?? 0) + 1;
+  latestRequest.set(classId, token);
 
   if (!force) {
     const existing = await getDoc(rankingRef(classId));
@@ -110,10 +125,23 @@ export async function computeAndSaveRankingForPeriod(
     }
   }
 
+  // The rule on pointsTransactions lets a teacher read the entries they
+  // awarded, and Firestore only accepts a list query when the query itself
+  // guarantees that (rules are not filters) — so filter on awardedBy too.
+  // Every place that awards points stamps awardedBy with the teacher's uid.
+  const teacherUid = auth.currentUser?.uid;
+  const transactionsQuery = teacherUid
+    ? query(
+        collection(db, "pointsTransactions"),
+        where("classId", "==", classId),
+        where("awardedBy", "==", teacherUid)
+      )
+    : query(collection(db, "pointsTransactions"), where("classId", "==", classId));
+
   const [classSnap, studentsSnap, transactionsSnap] = await Promise.all([
     getDoc(doc(db, "classes", classId)),
     getDocs(query(collection(db, "students"), where("classId", "==", classId))),
-    getDocs(query(collection(db, "pointsTransactions"), where("classId", "==", classId))),
+    getDocs(transactionsQuery),
   ]);
   const className = (classSnap.data()?.name as string) || "";
 
@@ -123,9 +151,11 @@ export async function computeAndSaveRankingForPeriod(
   // Sum only the transactions whose createdAt falls inside [period.start, period.end] —
   // filtered client-side (like getPointsForStudentInRange) since createdAt is stored as
   // a Firestore server Timestamp, not a plain number Firestore can range-query directly.
+  // Students no longer on the roster (deleted) are skipped rather than shown nameless.
   const totals = new Map<string, number>();
   transactionsSnap.docs.forEach((d) => {
     const txn = d.data() as PointsTransaction;
+    if (!namesByStudent.has(txn.studentId)) return;
     const created = toMillis(txn.createdAt);
     if (created < period.start || created > period.end) return;
     totals.set(txn.studentId, (totals.get(txn.studentId) || 0) + (txn.amount || 0));
@@ -150,7 +180,15 @@ export async function computeAndSaveRankingForPeriod(
     computedAt: Date.now(),
   };
 
-  await setDoc(rankingRef(classId), ranking);
+  // A newer request for this class started while this one was running — it
+  // owns the saved board now, so don't overwrite it with this older result.
+  if (latestRequest.get(classId) === token) {
+    try {
+      await setDoc(rankingRef(classId), ranking);
+    } catch (err) {
+      console.error("Could not save the champions board for", classId, err);
+    }
+  }
   return ranking;
 }
 

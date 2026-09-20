@@ -1,5 +1,6 @@
 import { useTranslation } from "react-i18next";
 import type { ClassRanking, RankingEntry, RankingPosition } from "../../types";
+import { formatNoteDate } from "../../lib/timestamps";
 import trophy1st from "../../assets/trophies/1st.png";
 import trophy2nd from "../../assets/trophies/2nd.png";
 import trophy3rd from "../../assets/trophies/3rd.png";
@@ -59,28 +60,48 @@ function PodiumSpot({ position }: { position: RankingPosition }) {
 export default function WeeklyChampions({
   ranking,
   classLabel,
+  teacherView = false,
 }: {
   ranking: ClassRanking | null;
   classLabel?: string;
+  /**
+   * Teacher's Students tab only: also shows which date range the board
+   * covers, and an "no champions yet" message instead of disappearing when
+   * nobody earned points in that range — so it's obvious the chosen period
+   * was applied. Students/parents keep the original behavior (hidden when empty).
+   */
+  teacherView?: boolean;
 }) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
 
-  if (!ranking || !ranking.positions || ranking.positions.length === 0) return null;
+  if (!ranking) return null;
+  const isEmpty = !ranking.positions || ranking.positions.length === 0;
+  if (isEmpty && !teacherView) return null;
+
+  const periodLabel =
+    teacherView && ranking.periodStart && ranking.periodEnd
+      ? `${formatNoteDate(ranking.periodStart, i18n.language)} – ${formatNoteDate(ranking.periodEnd, i18n.language)}`
+      : "";
 
   const byRank = (rank: 1 | 2 | 3) => ranking.positions?.find((p) => p.rank === rank);
 
   return (
     <div className="card relative overflow-hidden p-4 sm:p-5">
       <div className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-[#B08D57] via-[#D4AF37] to-[#B0B7C6]" />
-      <h3 className="text-sm sm:text-base font-semibold text-navy mb-4">
+      <h3 className="text-sm sm:text-base font-semibold text-navy">
         🎉 {t("ranking.title")}
         {classLabel ? ` — ${classLabel}` : ""}
       </h3>
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-5 sm:gap-4">
-        {byRank(1) && <PodiumSpot position={byRank(1)!} />}
-        {byRank(2) && <PodiumSpot position={byRank(2)!} />}
-        {byRank(3) && <PodiumSpot position={byRank(3)!} />}
-      </div>
+      {periodLabel && <p className="text-xs text-cream-600 mt-0.5">{periodLabel}</p>}
+      {isEmpty ? (
+        <p className="text-sm text-cream-600 mt-4">{t("ranking.noneYet")}</p>
+      ) : (
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-5 sm:gap-4 mt-4">
+          {byRank(1) && <PodiumSpot position={byRank(1)!} />}
+          {byRank(2) && <PodiumSpot position={byRank(2)!} />}
+          {byRank(3) && <PodiumSpot position={byRank(3)!} />}
+        </div>
+      )}
     </div>
   );
 }

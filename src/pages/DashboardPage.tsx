@@ -546,12 +546,19 @@ export default function DashboardPage() {
       profile?.rankingPeriodStart !== undefined && profile?.rankingPeriodEnd !== undefined
         ? { start: profile.rankingPeriodStart, end: profile.rankingPeriodEnd }
         : getDefaultRankingPeriod();
-    computeAndSaveRankingsForClasses(classIds, period, true).then((results) => {
-      if (!celebratedRef.current && results.some((r) => (r.positions || []).length > 0)) {
-        celebratedRef.current = true;
-        triggerWeeklyChampionsCelebration();
-      }
-    });
+    let cancelled = false;
+    computeAndSaveRankingsForClasses(classIds, period, true)
+      .then((results) => {
+        if (cancelled) return;
+        if (!celebratedRef.current && results.some((r) => (r.positions || []).length > 0)) {
+          celebratedRef.current = true;
+          triggerWeeklyChampionsCelebration();
+        }
+      })
+      .catch((err) => console.error("Could not compute the champions boards", err));
+    return () => {
+      cancelled = true;
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [classes.map((c) => c.id).join(","), profile?.rankingPeriodStart, profile?.rankingPeriodEnd]);
 
