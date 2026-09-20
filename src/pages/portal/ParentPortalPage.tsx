@@ -273,6 +273,36 @@ function ChildPanel({ studentId, onRemoved }: { studentId: string; onRemoved: (s
 }
 
 /**
+ * Remembers (per parent account, in this browser) which removed children the
+ * "record has been removed" notice has already been shown for, so the pop-up
+ * appears exactly once per child instead of on every login. Wrapped in
+ * try/catch because storage can be unavailable (private mode, blocked
+ * cookies) — in that case we fall back to once per session, which is what
+ * the in-memory ref in ParentPortalPage already gives us.
+ */
+const REMOVAL_NOTICE_KEY = "lingotrace.removedChildNoticeSeen";
+
+function readSeenRemovalNotices(parentUid: string): string[] {
+  try {
+    const raw = window.localStorage.getItem(`${REMOVAL_NOTICE_KEY}.${parentUid}`);
+    const parsed = raw ? JSON.parse(raw) : [];
+    return Array.isArray(parsed) ? parsed.filter((id): id is string => typeof id === "string") : [];
+  } catch {
+    return [];
+  }
+}
+
+function markRemovalNoticeSeen(parentUid: string, studentId: string) {
+  try {
+    const seen = new Set(readSeenRemovalNotices(parentUid));
+    seen.add(studentId);
+    window.localStorage.setItem(`${REMOVAL_NOTICE_KEY}.${parentUid}`, JSON.stringify([...seen]));
+  } catch {
+    // Storage unavailable — the notice may show again next login; nothing else to do.
+  }
+}
+
+/**
  * Tiny standalone piece just for a tab's label (child's name), kept live so
  * a name edit reflects immediately. Also independently watches for that
  * child being removed — same undefined (still loading) vs null (confirmed
@@ -314,17 +344,24 @@ export default function ParentPortalPage() {
 
   const studentIds = (portalParent?.studentIds || []).filter((id) => !removedStudentIds.includes(id));
 
-  // Fires once per child, the moment ChildPanel confirms that student's
-  // record no longer exists (e.g. the teacher deleted it). Pops a one-time
-  // notice and drops that tab immediately, instead of leaving a tab that
-  // spins forever — the permanent fix (the teacher's deletion now detaches
-  // the parent from that student — see studentsService.deleteStudent) means
-  // it won't even show up here again after a refresh, but this covers the
-  // current session and anything already orphaned before that fix shipped.
+  // Fires once per child per session, the moment ChildPanel/ChildTabLabel
+  // confirms that student's record no longer exists (e.g. the teacher
+  // deleted it). The tab is always dropped right away instead of spinning
+  // forever, but the pop-up notice itself is shown only the very first time
+  // — after that it's remembered (per parent, in this browser) so a parent
+  // whose account still lists the deleted child isn't told again on every
+  // login. (The teacher's deletion also detaches the parent from the
+  // student — see studentsService.deleteStudent — but that can't clean up
+  // accounts orphaned before it existed, which is why this is remembered.)
   function handleChildRemoved(studentId: string) {
     if (alertedRemovalsRef.current.has(studentId)) return;
     alertedRemovalsRef.current.add(studentId);
-    window.alert(t("portal.childRemoved"));
+    const parentUid = portalParent?.uid;
+    const alreadyNotified = parentUid ? readSeenRemovalNotices(parentUid).includes(studentId) : false;
+    if (!alreadyNotified) {
+      if (parentUid) markRemovalNoticeSeen(parentUid, studentId);
+      window.alert(t("portal.childRemoved"));
+    }
     setRemovedStudentIds((prev) => [...prev, studentId]);
   }
 
