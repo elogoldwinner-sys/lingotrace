@@ -2,7 +2,13 @@ import { createContext, useContext, useEffect, useState, type ReactNode } from "
 
 export type AppTheme = "classic" | "kid";
 
-const STORAGE_KEY = "lingotrace-theme";
+/**
+ * Kid mode is the default look. The key is versioned ("-v2") so browsers that
+ * were saved as "classic" back when classic was the default (the old key was
+ * written on every first visit) start in kid mode once; after that, whatever
+ * the person picks with the Classic / Kid toggle is remembered as before.
+ */
+const STORAGE_KEY = "lingotrace-theme-v2";
 
 interface ThemeContextValue {
   theme: AppTheme;
@@ -13,9 +19,15 @@ interface ThemeContextValue {
 const ThemeContext = createContext<ThemeContextValue | undefined>(undefined);
 
 function readStoredTheme(): AppTheme {
-  if (typeof window === "undefined") return "classic";
+  if (typeof window === "undefined") return "kid";
   const stored = window.localStorage.getItem(STORAGE_KEY);
-  return stored === "kid" ? "kid" : "classic";
+  return stored === "classic" ? "classic" : "kid";
+}
+
+// Apply the saved theme before React's first paint so there is no flash of the
+// other look while the app boots.
+if (typeof document !== "undefined") {
+  document.documentElement.setAttribute("data-theme", readStoredTheme());
 }
 
 export function ThemeProvider({ children }: { children: ReactNode }) {

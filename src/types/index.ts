@@ -16,8 +16,12 @@ export interface UserProfile {
    */
   rankingPeriodStart?: number;
   rankingPeriodEnd?: number;
+  /** Which teacher illustration (and honorific) the kid-mode dashboard shows. Unset = female. */
+  gender?: TeacherGender;
   createdAt: number;
 }
+
+export type TeacherGender = "male" | "female";
 
 /**
  * A parent's portal account — links a Firebase Auth uid to one or more

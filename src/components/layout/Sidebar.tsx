@@ -2,7 +2,7 @@ import { NavLink } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import Logo from "../common/Logo";
 import { useTheme } from "../../contexts/ThemeContext";
-import { StudyMascot } from "../common/decorations";
+import sidebarOwl from "../../assets/kid-dashboard/sidebar-owl.webp";
 import {
   LayoutDashboard,
   BookOpen,
@@ -64,24 +64,24 @@ export default function Sidebar({ collapsed, mobileOpen, onToggle, onNavigate }:
       )}
 
       <aside
-        className={`fixed inset-y-0 z-40 flex flex-col bg-navy text-cream-200 transition-all duration-200 ${
-          mobileOpen ? "w-64 shadow-2xl" : "w-14"
-        } ${collapsed ? "md:w-16" : "md:w-64"} ${
-          isKid ? "rounded-r-[28px] shadow-[6px_0_24px_rgba(59,34,135,0.25)]" : ""
-        }`}
+        className={`fixed inset-y-0 z-40 flex flex-col text-cream-200 transition-all duration-200 ${
+          isKid ? "bg-[#36207C] shadow-[6px_0_24px_-8px_rgba(54,32,124,0.45)]" : "bg-navy"
+        } ${mobileOpen ? "w-64 shadow-2xl" : "w-14"} ${collapsed ? "md:w-16" : "md:w-64"}`}
       >
-        <div className="flex items-center gap-2 px-3 py-6 md:px-6">
-          <Logo size={28} className={`shrink-0 ${isKid ? "drop-shadow-[0_2px_4px_rgba(0,0,0,0.25)]" : ""}`} />
+        <div className={`flex items-center gap-2 px-3 md:px-6 ${isKid ? "py-7" : "py-6"}`}>
+          <Logo size={isKid ? 40 : 28} className={`shrink-0 ${isKid ? "drop-shadow-[0_2px_4px_rgba(0,0,0,0.25)]" : ""}`} />
           <span
-            className={`font-serif text-xl font-semibold tracking-wide truncate ${
+            className={`font-serif truncate ${
+              isKid ? "text-[1.75rem] font-bold text-white" : "text-xl font-semibold tracking-wide"
+            } ${
               mobileOpen ? "inline" : "hidden"
             } ${collapsed ? "md:hidden" : "md:inline"}`}
           >
             {t("app.name")}
           </span>
         </div>
-        <div className="h-px bg-gold/30 mx-3 md:mx-6" />
-        <nav className="flex-1 px-2 py-6 space-y-1 md:px-3 overflow-y-auto">
+        {!isKid && <div className="h-px bg-gold/30 mx-3 md:mx-6" />}
+        <nav className={`flex-1 px-2 space-y-1 md:px-3 overflow-y-auto ${isKid ? "py-2 md:px-4" : "py-6"}`}>
           {navItems.map(({ to, key, icon: Icon }) => (
             <NavLink
               key={to}
@@ -90,12 +90,12 @@ export default function Sidebar({ collapsed, mobileOpen, onToggle, onNavigate }:
               title={t(`nav.${key}`)}
               className={({ isActive }) =>
                 isKid
-                  ? `flex items-center gap-3 rounded-2xl px-3 py-2.5 text-sm font-bold transition-all ease-bouncy duration-150 ${
+                  ? `flex items-center gap-3.5 rounded-full px-4 py-3 text-base font-bold transition-all ease-bouncy duration-150 ${
                       mobileOpen ? "justify-start" : "justify-center"
                     } ${collapsed ? "md:justify-center" : "md:justify-start"} ${
                       isActive
-                        ? "bg-gold text-navy shadow-[0_3px_0_rgb(var(--color-gold-800))] scale-[1.03]"
-                        : "text-cream-200/80 hover:bg-white/10 hover:text-cream-100 hover:translate-x-0.5"
+                        ? "bg-gradient-to-b from-[#FFCB45] to-[#FFB020] text-navy-800 shadow-[0_4px_0_#C98A0B]"
+                        : "text-white/85 hover:bg-white/10 hover:text-white hover:translate-x-0.5"
                     }`
                   : `flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors ${
                       mobileOpen ? "justify-start" : "justify-center"
@@ -106,7 +106,7 @@ export default function Sidebar({ collapsed, mobileOpen, onToggle, onNavigate }:
                     }`
               }
             >
-              <Icon size={18} className="shrink-0" />
+              <Icon size={isKid ? 22 : 18} className="shrink-0" />
               <span
                 className={`truncate ${mobileOpen ? "inline" : "hidden"} ${collapsed ? "md:hidden" : "md:inline"}`}
               >
@@ -116,12 +116,14 @@ export default function Sidebar({ collapsed, mobileOpen, onToggle, onNavigate }:
           ))}
         </nav>
         {isKid && (
+          // Owl on a stack of books with purple clouds; fades into the sidebar colour at the top.
           <div
-            className={`justify-center pb-4 opacity-90 ${mobileOpen ? "flex" : "hidden"} ${
-              collapsed ? "md:hidden" : "md:flex"
-            }`}
+            aria-hidden="true"
+            className={`pointer-events-none shrink-0 ${mobileOpen ? "block" : "hidden"} ${
+              collapsed ? "md:hidden" : "md:block"
+            } [@media(max-height:719px)]:hidden`}
           >
-            <StudyMascot size={64} />
+            <img src={sidebarOwl} alt="" className="block w-full" />
           </div>
         )}
 

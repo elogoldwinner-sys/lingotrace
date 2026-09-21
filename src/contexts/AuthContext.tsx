@@ -15,7 +15,7 @@ import {
 } from "firebase/auth";
 import { collection, doc, getDoc, getDocs, query, setDoc, serverTimestamp, where } from "firebase/firestore";
 import { auth, db } from "../lib/firebase";
-import type { ParentProfile, StudentRecord, UserProfile } from "../types";
+import type { ParentProfile, StudentRecord, TeacherGender, UserProfile } from "../types";
 import { findStudentByAuthUid, setTeacherWhatsappForClasses } from "../lib/services/studentsService";
 import { getParentProfile } from "../lib/services/parentsService";
 
@@ -50,6 +50,7 @@ interface AuthContextValue {
   updateTeacherPhoto: (photoURL: string) => Promise<void>;
   updateTeacherWhatsapp: (whatsappNumber: string) => Promise<void>;
   updateTeacherRankingPeriod: (start: number, end: number) => Promise<void>;
+  updateTeacherGender: (gender: TeacherGender) => Promise<void>;
   refreshPortalRole: () => Promise<void>;
   signOut: () => Promise<void>;
 }
@@ -307,6 +308,35 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     );
   }
 
+  /**
+   * Saves which teacher illustration (male / female) the kid-mode dashboard
+   * shows. Teacher-side only, so it just lives on the teacher's own profile.
+   */
+  async function updateTeacherGender(gender: TeacherGender) {
+    const currentUser = auth.currentUser;
+    if (!currentUser) return;
+    const previous = profile?.gender;
+    // Optimistic: the dashboard picture should flip the instant the toggle is pressed.
+    setProfile((prev) =>
+      prev
+        ? { ...prev, gender }
+        : {
+            uid: currentUser.uid,
+            email: currentUser.email || "",
+            displayName: currentUser.displayName || "Teacher",
+            role: "teacher",
+            gender,
+            createdAt: Date.now(),
+          }
+    );
+    try {
+      await setDoc(doc(db, "teachers", currentUser.uid), { gender }, { merge: true });
+    } catch (err) {
+      setProfile((prev) => (prev ? { ...prev, gender: previous } : prev));
+      throw err;
+    }
+  }
+
   async function signOut() {
     await firebaseSignOut(auth);
   }
@@ -325,6 +355,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         updateTeacherPhoto,
         updateTeacherWhatsapp,
         updateTeacherRankingPeriod,
+        updateTeacherGender,
         refreshPortalRole,
         signOut,
       }}

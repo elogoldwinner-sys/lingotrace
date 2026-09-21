@@ -19,6 +19,8 @@ import AnnouncementCard from "../components/common/AnnouncementCard";
 import Modal from "../components/common/Modal";
 import RichTextEditor from "../components/common/RichTextEditor";
 import { plainTextToHtml, richHtmlToPlainText, sanitizeRichHtml } from "../lib/richText";
+import { useTheme } from "../contexts/ThemeContext";
+import KidDashboard from "../components/dashboard/KidDashboard";
 
 function StatCard({
   icon,
@@ -491,6 +493,7 @@ function AnnouncementEditor({
 export default function DashboardPage() {
   const { t } = useTranslation();
   const { user, profile } = useAuth();
+  const { theme } = useTheme();
   const [classes, setClasses] = useState<ClassRecord[]>([]);
   const [studentCounts, setStudentCounts] = useState<Record<string, number>>({});
   const [announcements, setAnnouncements] = useState<Announcement[]>([]);
@@ -572,10 +575,8 @@ export default function DashboardPage() {
     0
   );
 
-  return (
-    <div className="space-y-6">
-      <h1 className="text-2xl font-semibold text-navy">{t("dashboard.title")}</h1>
-
+  // Announcements (post / edit) and their editor dialog — shared by both looks.
+  const announcementsBlock = (
       <div className="space-y-4">
         <button
           onClick={() => openEditor(null)}
@@ -597,6 +598,44 @@ export default function DashboardPage() {
           </div>
         ))}
       </div>
+  );
+
+  const editorModal = (
+    <Modal
+      open={editorOpen}
+      onClose={() => setEditorOpen(false)}
+      title={t("announcement.title")}
+      widthClassName="max-w-2xl"
+    >
+      <AnnouncementEditor
+        announcement={editing}
+        classes={classes}
+        onClose={() => setEditorOpen(false)}
+      />
+    </Modal>
+  );
+
+  // Kid mode shows the redesigned dashboard. The data loading and the
+  // champions refresh above still run for both looks, and announcements keep
+  // working: they sit under "Recent Classes" so the design's layout is untouched.
+  if (theme === "kid") {
+    return (
+      <>
+        <KidDashboard
+          classes={classes}
+          studentCounts={studentCounts}
+          extra={announcementsBlock}
+        />
+        {editorModal}
+      </>
+    );
+  }
+
+  return (
+    <div className="space-y-6">
+      <h1 className="text-2xl font-semibold text-navy">{t("dashboard.title")}</h1>
+
+      {announcementsBlock}
 
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         <StatCard
@@ -641,18 +680,7 @@ export default function DashboardPage() {
         )}
       </div>
 
-      <Modal
-        open={editorOpen}
-        onClose={() => setEditorOpen(false)}
-        title={t("announcement.title")}
-        widthClassName="max-w-2xl"
-      >
-        <AnnouncementEditor
-          announcement={editing}
-          classes={classes}
-          onClose={() => setEditorOpen(false)}
-        />
-      </Modal>
+      {editorModal}
     </div>
   );
 }

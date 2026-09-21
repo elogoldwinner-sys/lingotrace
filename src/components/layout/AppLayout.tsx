@@ -47,8 +47,8 @@ export default function AppLayout() {
         onNavigate={() => setMobileOpen(false)}
       />
       <div
-        className={`flex flex-col min-h-screen transition-[padding] duration-200 pl-14 ${
-          desktopCollapsed ? "md:pl-16" : "md:pl-64"
+        className={`flex flex-col min-h-screen transition-[padding] duration-200 ps-14 ${
+          desktopCollapsed ? "md:ps-16" : "md:ps-64"
         }`}
       >
         <Topbar />
