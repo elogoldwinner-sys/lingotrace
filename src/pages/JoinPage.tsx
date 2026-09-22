@@ -4,6 +4,8 @@ import { useTranslation } from "react-i18next";
 import type { User } from "firebase/auth";
 import { useAuth, isDismissedPopupError } from "../contexts/AuthContext";
 import Logo from "../components/common/Logo";
+import { useTheme } from "../contexts/ThemeContext";
+import KidJoinPage, { KidJoinChildField } from "../components/home/KidJoinPage";
 import { getInvite } from "../lib/services/invitesService";
 import {
   subscribeToStudents,
@@ -23,6 +25,7 @@ export default function JoinPage() {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const { beginGoogleSignIn, refreshPortalRole } = useAuth();
+  const { theme } = useTheme();
 
   const [stage, setStage] = useState<Stage>("loading");
   const [invite, setInvite] = useState<InviteRecord | null>(null);
@@ -161,6 +164,36 @@ export default function JoinPage() {
 
   const isParent = invite?.role === "parent";
   const canContinue = !isParent || !!childStudentId;
+
+  if (theme === "kid") {
+    return (
+      <KidJoinPage
+        isParent={isParent}
+        title={isParent ? t("join.parentTitle") : t("join.studentTitle")}
+        subtitle={t("join.subTitle", { className: invite?.className })}
+        error={error || undefined}
+        onSubmit={handleGoogle}
+        submitLabel={stage === "submitting" ? t("common.loading") : t("auth.continueWithGoogle")}
+        submitting={stage === "submitting"}
+        canSubmit={canContinue}
+      >
+        <KidJoinChildField label={t("join.selectChild")} hint={t("join.selectChildHint")}>
+          <select
+            value={childStudentId}
+            onChange={(e) => setChildStudentId(e.target.value)}
+            className="w-full appearance-none rounded-2xl border-2 border-gold-200 bg-white px-4 py-3 pe-10 text-base font-bold text-navy-700 outline-none transition focus:border-gold-400"
+          >
+            <option value="">{t("join.selectChildPlaceholder")}</option>
+            {students.map((s) => (
+              <option key={s.id} value={s.id}>
+                {s.name}
+              </option>
+            ))}
+          </select>
+        </KidJoinChildField>
+      </KidJoinPage>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-cream flex items-center justify-center px-4 py-10">
