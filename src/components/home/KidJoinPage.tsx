@@ -8,7 +8,7 @@ import sceneFamily from "../../assets/kid-join/scene-family.webp";
 import sceneOwl from "../../assets/kid-join/scene-owl.webp";
 
 /** Google's four-colour "G" mark, exactly as used on the classic Join page. */
-function GoogleIcon() {
+export function GoogleIcon() {
   return (
     <svg width="20" height="20" viewBox="0 0 18 18" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
       <path fill="#4285F4" d="M17.64 9.2c0-.64-.06-1.25-.16-1.84H9v3.48h4.84a4.14 4.14 0 0 1-1.8 2.72v2.26h2.9c1.7-1.57 2.7-3.88 2.7-6.62z" />

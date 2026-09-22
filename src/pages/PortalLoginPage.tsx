@@ -4,6 +4,8 @@ import { Link, useNavigate } from "react-router-dom";
 import { ArrowLeft } from "lucide-react";
 import { useAuth, isDismissedPopupError } from "../contexts/AuthContext";
 import Logo from "../components/common/Logo";
+import { useTheme } from "../contexts/ThemeContext";
+import KidPortalLoginPage from "../components/home/KidPortalLoginPage";
 import { getParentProfile } from "../lib/services/parentsService";
 import { findStudentByAuthUid } from "../lib/services/studentsService";
 
@@ -19,6 +21,7 @@ export default function PortalLoginPage() {
   const { t } = useTranslation();
   const { beginGoogleSignIn, refreshPortalRole } = useAuth();
   const navigate = useNavigate();
+  const { theme } = useTheme();
 
   const [error, setError] = useState("");
   const [submitting, setSubmitting] = useState(false);
@@ -52,6 +55,10 @@ export default function PortalLoginPage() {
     } finally {
       setSubmitting(false);
     }
+  }
+
+  if (theme === "kid") {
+    return <KidPortalLoginPage onSignIn={handleGoogleSignIn} submitting={submitting} error={error} />;
   }
 
   return (
