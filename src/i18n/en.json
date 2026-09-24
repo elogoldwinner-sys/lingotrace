@@ -247,7 +247,8 @@
     "noAttendanceYet": "No attendance recorded yet.",
     "contactWhatsapp": "Contact via WhatsApp",
     "childRemoved": "This child's record has been removed by the teacher.",
-    "noChildrenLinked": "No children linked to your account anymore."
+    "noChildrenLinked": "No children linked to your account anymore.",
+    "familyChampions": "Champions — My Family"
   },
   "projects": {
     "title": "Projects submission",

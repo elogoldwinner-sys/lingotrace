@@ -247,7 +247,8 @@
     "noAttendanceYet": "لم يتم تسجيل أي حضور بعد.",
     "contactWhatsapp": "تواصل عبر واتساب",
     "childRemoved": "تمت إزالة سجل هذا الطالب من قبل المعلم.",
-    "noChildrenLinked": "لا يوجد أطفال مرتبطون بحسابك بعد الآن."
+    "noChildrenLinked": "لا يوجد أطفال مرتبطون بحسابك بعد الآن.",
+    "familyChampions": "الأبطال — عائلتي"
   },
   "projects": {
     "title": "تسليم المشاريع",
