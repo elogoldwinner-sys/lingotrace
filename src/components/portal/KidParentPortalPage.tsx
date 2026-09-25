@@ -1,4 +1,4 @@
-import { Globe, LogOut, Trophy } from "lucide-react";
+import { Globe, LogOut } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import Logo from "../common/Logo";
 import ThemeToggle from "../common/ThemeToggle";
@@ -12,36 +12,21 @@ import booksPlant from "../../assets/kid-parent-portal/booksplant-topleft.webp";
 import owl from "../../assets/kid-parent-portal/owl-topright.webp";
 import family from "../../assets/kid-parent-portal/family-bottomleft.webp";
 import pencils from "../../assets/kid-parent-portal/pencils-bottomright.webp";
-import trophyGold from "../../assets/kid-parent-portal/trophy-gold.webp";
-import trophySilver from "../../assets/kid-parent-portal/trophy-silver.webp";
-import trophyBronze from "../../assets/kid-parent-portal/trophy-bronze.webp";
 import type { Announcement, ClassRanking } from "../../types";
-
-const TROPHIES = [trophyGold, trophySilver, trophyBronze];
 
 /**
  * Kid-mode parent portal (post sign-in). Mirrors ParentPortalPage's classic
- * layout one-for-one in substance — same child tabs, same live child data via
+ * layout one-for-one — same child tabs, same live child data via
  * KidChildPanel, same announcements and same per-class weekly-champions
- * boards, same floating WhatsApp button — restyled to the reference design.
- *
- * The one new piece the design calls for, "Champions — My Family", has no
- * backing feature of its own: it's built here from the live name+points
- * already being tracked for every linked child (childrenSummary), ranked
- * client-side. It only renders with 2+ children, since ranking one child
- * against itself isn't meaningful.
- *
- * Announcements and the class-wide weekly-champions boards aren't part of
- * the reference image, but dropping them would remove a working feature, so
- * they're appended below the redesigned content — same approach as the kid
- * teacher dashboard.
+ * boards (WeeklyChampions, unchanged — including any board whose class
+ * happens to be named so it reads "Champions — My Family"), same floating
+ * WhatsApp button — restyled to the reference design.
  */
 export default function KidParentPortalPage({
   studentIds,
   currentStudentId,
   onSelectStudent,
   onChildRemoved,
-  childrenSummary,
   announcements,
   rankings,
   contactHref,
@@ -53,7 +38,6 @@ export default function KidParentPortalPage({
   currentStudentId: string;
   onSelectStudent: (studentId: string) => void;
   onChildRemoved: (studentId: string) => void;
-  childrenSummary: Record<string, { name: string; points: number }>;
   announcements: Announcement[];
   rankings: ClassRanking[];
   contactHref: string | null;
@@ -63,17 +47,11 @@ export default function KidParentPortalPage({
 }) {
   const { t } = useTranslation();
 
-  const champions = studentIds
-    .map((sid) => ({ sid, ...childrenSummary[sid] }))
-    .filter((c): c is { sid: string; name: string; points: number } => !!c.name)
-    .sort((a, b) => b.points - a.points)
-    .slice(0, 3);
-
   return (
     <div className="relative min-h-screen overflow-x-hidden" style={{ background: KID_SKY_BACKGROUND }}>
       {/* ───────────── scenery (decorative, fixed to the viewport corners) ───────────── */}
       <div className="pointer-events-none fixed inset-0 z-0 select-none" aria-hidden="true">
-        <img src={booksPlant} alt="" className="absolute bottom-0 left-0 hidden w-40 lg:block xl:w-48" />
+        <img src={booksPlant} alt="" className="absolute left-0 top-16 hidden w-40 lg:block xl:w-48" />
         <img src={owl} alt="" className="absolute right-0 top-16 hidden w-36 lg:block xl:w-44" />
         <img src={family} alt="" className="absolute bottom-0 left-0 hidden w-44 xl:block" />
         <img src={pencils} alt="" className="absolute bottom-24 right-0 hidden w-40 lg:block xl:w-48" />
@@ -120,27 +98,6 @@ export default function KidParentPortalPage({
             {rankings.map((r) => (
               <WeeklyChampions key={r.classId} ranking={r} classLabel={r.className} />
             ))}
-          </div>
-        )}
-
-        {/* Champions — My Family */}
-        {champions.length >= 2 && (
-          <div className="rounded-[1.75rem] border border-white bg-white/95 p-6 shadow-[0_18px_34px_-24px_rgba(90,60,200,0.45)]">
-            <div className="mb-5 flex items-center gap-2.5">
-              <Trophy size={20} className="text-gold-500" />
-              <h2 className="text-lg font-extrabold text-navy-700">{t("portal.familyChampions")}</h2>
-            </div>
-            <div className="flex flex-wrap justify-center gap-6 sm:justify-start sm:gap-10">
-              {champions.map((c, i) => (
-                <div key={c.sid} className="flex flex-col items-center gap-2">
-                  <img src={TROPHIES[i]} alt="" className="h-16 w-16" />
-                  <span className="text-sm font-extrabold text-navy-700">{c.name}</span>
-                  <span className="rounded-full bg-navy-700 px-3 py-1 text-xs font-extrabold text-white">
-                    {c.points} {t("students.points")}
-                  </span>
-                </div>
-              ))}
-            </div>
           </div>
         )}
 

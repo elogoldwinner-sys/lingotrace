@@ -345,11 +345,6 @@ export default function ParentPortalPage() {
   const [removedStudentIds, setRemovedStudentIds] = useState<string[]>([]);
   const alertedRemovalsRef = useRef<Set<string>>(new Set());
   const [whatsappByStudent, setWhatsappByStudent] = useState<Record<string, string | undefined>>({});
-  // Live name + points for every linked child (not just the active tab) —
-  // used only by kid mode's "Champions — My Family" ranking. Piggybacks on
-  // the same per-student subscription pattern as whatsappByStudent below
-  // rather than adding a second set of listeners.
-  const [childrenSummary, setChildrenSummary] = useState<Record<string, { name: string; points: number }>>({});
 
   const studentIds = (portalParent?.studentIds || []).filter((id) => !removedStudentIds.includes(id));
 
@@ -394,19 +389,11 @@ export default function ParentPortalPage() {
   useEffect(() => {
     if (studentIds.length === 0) {
       setWhatsappByStudent({});
-      setChildrenSummary({});
       return;
     }
     const unsubscribes = studentIds.map((sid) =>
       subscribeToStudent(sid, (data) => {
         setWhatsappByStudent((prev) => ({ ...prev, [sid]: data?.teacherWhatsapp }));
-        setChildrenSummary((prev) => {
-          if (!data) {
-            const { [sid]: _removed, ...rest } = prev;
-            return rest;
-          }
-          return { ...prev, [sid]: { name: data.name, points: data.points } };
-        });
       })
     );
     return () => unsubscribes.forEach((unsub) => unsub());
@@ -509,7 +496,6 @@ export default function ParentPortalPage() {
         currentStudentId={currentStudentId}
         onSelectStudent={setActiveStudentId}
         onChildRemoved={handleChildRemoved}
-        childrenSummary={childrenSummary}
         announcements={announcements}
         rankings={visibleRankings}
         contactHref={contactHref}
