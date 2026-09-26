@@ -1,17 +1,24 @@
 import { Navigate } from "react-router-dom";
-import { useAuth, type PortalRole } from "../../contexts/AuthContext";
+import { useAuth } from "../../contexts/AuthContext";
 import Spinner from "../common/Spinner";
 import type { ReactNode } from "react";
 
-/** Guards /portal/student and /portal/parent — only the matching role gets in. */
+/**
+ * Guards /portal/student and /portal/parent. Checks whether THIS account has
+ * the requested portal identity (portalParent / portalStudent) rather than a
+ * single exclusive "role" — an account can have a teacher profile and a
+ * parent/student profile at the same time, so having one doesn't disqualify
+ * it from another. Falls back to whichever identity the account does have
+ * when the requested one isn't present.
+ */
 export default function PortalRoute({
   allow,
   children,
 }: {
-  allow: PortalRole;
+  allow: "student" | "parent";
   children: ReactNode;
 }) {
-  const { user, role, loading } = useAuth();
+  const { user, profile, portalParent, portalStudent, loading } = useAuth();
 
   if (loading) {
     return (
@@ -25,10 +32,11 @@ export default function PortalRoute({
     return <Navigate to="/portal-login" replace />;
   }
 
-  if (role !== allow) {
-    if (role === "teacher") return <Navigate to="/dashboard" replace />;
-    if (role === "student") return <Navigate to="/portal/student" replace />;
-    if (role === "parent") return <Navigate to="/portal/parent" replace />;
+  const hasRequested = allow === "parent" ? !!portalParent : !!portalStudent;
+  if (!hasRequested) {
+    if (profile) return <Navigate to="/dashboard" replace />;
+    if (portalParent) return <Navigate to="/portal/parent" replace />;
+    if (portalStudent) return <Navigate to="/portal/student" replace />;
     return <Navigate to="/portal-login" replace />;
   }
 

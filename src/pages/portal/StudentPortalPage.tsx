@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
-import { LogOut, Globe, Camera } from "lucide-react";
+import { LogOut, Globe, Camera, Repeat } from "lucide-react";
 import { useAuth } from "../../contexts/AuthContext";
 import { subscribeToStudentPointsHistory } from "../../lib/services/pointsService";
 import { subscribeToStudentAttendance } from "../../lib/services/attendanceService";
@@ -30,7 +30,10 @@ const STATUS_STYLES: Record<AttendanceStatus, string> = {
 export default function StudentPortalPage() {
   const { t, i18n } = useTranslation();
   const navigate = useNavigate();
-  const { portalStudent, signOut, refreshPortalRole } = useAuth();
+  const { profile, portalStudent, signOut, refreshPortalRole } = useAuth();
+  // Same Google account may also be a teacher — offer a one-click switch
+  // instead of a separate login (see AuthContext.resolveRole).
+  const canSwitchToTeacher = !!profile;
   const { theme } = useTheme();
   const isKid = theme === "kid";
   const [pointsHistory, setPointsHistory] = useState<PointsTransaction[]>([]);
@@ -132,6 +135,16 @@ export default function StudentPortalPage() {
             <Globe size={14} />
             {i18n.language === "ar" ? "EN" : "AR"}
           </button>
+          {canSwitchToTeacher && (
+            <button
+              onClick={() => navigate("/dashboard")}
+              className="flex items-center gap-1.5 rounded-lg border border-gold/40 px-3 py-1.5 text-xs font-semibold text-navy hover:bg-gold-50"
+              title={t("nav.switchToTeacher")}
+            >
+              <Repeat size={14} />
+              {t("nav.switchToTeacher")}
+            </button>
+          )}
           <button
             onClick={handleSignOut}
             className="flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold text-navy/70 hover:bg-cream-400/60"

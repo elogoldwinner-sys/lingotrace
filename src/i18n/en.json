@@ -12,7 +12,10 @@
     "projects": "Projects submission",
     "settings": "Settings",
     "signOut": "Sign out",
-    "toggleSidebar": "Toggle menu"
+    "toggleSidebar": "Toggle menu",
+    "switchToTeacher": "Switch to Teacher Dashboard",
+    "switchToParentPortal": "Switch to Parent Portal",
+    "switchToStudentPortal": "Switch to Student Portal"
   },
   "auth": {
     "continueWithGoogle": "Continue with Google",

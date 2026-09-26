@@ -1,4 +1,4 @@
-import { Globe, LogOut } from "lucide-react";
+import { Globe, LogOut, Repeat } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import Logo from "../common/Logo";
 import ThemeToggle from "../common/ThemeToggle";
@@ -33,6 +33,8 @@ export default function KidParentPortalPage({
   language,
   onToggleLanguage,
   onSignOut,
+  canSwitchToTeacher,
+  onSwitchToTeacher,
 }: {
   studentIds: string[];
   currentStudentId: string;
@@ -44,6 +46,9 @@ export default function KidParentPortalPage({
   language: string;
   onToggleLanguage: () => void;
   onSignOut: () => void;
+  /** True when this same Google account also has a teacher profile. */
+  canSwitchToTeacher?: boolean;
+  onSwitchToTeacher?: () => void;
 }) {
   const { t } = useTranslation();
 
@@ -77,6 +82,16 @@ export default function KidParentPortalPage({
             <Globe size={14} />
             {language === "ar" ? "EN" : "AR"}
           </button>
+          {canSwitchToTeacher && (
+            <button
+              type="button"
+              onClick={onSwitchToTeacher}
+              className="flex items-center gap-1.5 rounded-full border-2 border-navy-100 px-3 py-1.5 text-xs font-extrabold text-navy-700 transition hover:bg-navy-50 sm:px-3.5"
+            >
+              <Repeat size={14} />
+              <span className="hidden sm:inline">{t("nav.switchToTeacher")}</span>
+            </button>
+          )}
           <button
             type="button"
             onClick={onSignOut}

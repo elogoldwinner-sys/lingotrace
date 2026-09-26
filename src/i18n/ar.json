@@ -12,7 +12,10 @@
     "projects": "تسليم المشاريع",
     "settings": "الإعدادات",
     "signOut": "تسجيل الخروج",
-    "toggleSidebar": "تبديل القائمة"
+    "toggleSidebar": "تبديل القائمة",
+    "switchToTeacher": "التبديل إلى لوحة المعلم",
+    "switchToParentPortal": "التبديل إلى بوابة ولي الأمر",
+    "switchToStudentPortal": "التبديل إلى بوابة الطالب"
   },
   "auth": {
     "continueWithGoogle": "المتابعة باستخدام جوجل",

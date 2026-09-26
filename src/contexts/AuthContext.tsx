@@ -105,41 +105,37 @@ export function AuthProvider({ children }: { children: ReactNode }) {
    */
   const resolveTokenRef = useRef(0);
 
-  /** Resolves which role a signed-in user has: teacher, student, or parent. */
+  /**
+   * Resolves every portal identity a signed-in Google account holds.
+   *
+   * A single account (uid) can simultaneously have a `teachers/{uid}`
+   * profile AND a parent profile AND/OR a student record — e.g. a teacher
+   * who also joined a class as a parent with the same Google account. All
+   * three are looked up in parallel and kept independently in state rather
+   * than short-circuiting on the first match, so nothing here decides "the"
+   * role for the account — each portal simply checks whether its own
+   * identity (profile / portalParent / portalStudent) exists, and a person
+   * with more than one can switch between portals instead of being locked
+   * into whichever happened to resolve first.
+   *
+   * `role` is kept only as a legacy convenience label (teacher > parent >
+   * student) for any older code that reads it — it is no longer used to
+   * gate access anywhere in the app.
+   */
   async function resolveRole(firebaseUser: User) {
     const token = ++resolveTokenRef.current;
-    const teacherSnap = await getDoc(doc(db, "teachers", firebaseUser.uid));
+    const [teacherSnap, parentProfile, student] = await Promise.all([
+      getDoc(doc(db, "teachers", firebaseUser.uid)),
+      getParentProfile(firebaseUser.uid),
+      findStudentByAuthUid(firebaseUser.uid),
+    ]);
     if (token !== resolveTokenRef.current) return;
-    if (teacherSnap.exists()) {
-      setProfile(teacherSnap.data() as UserProfile);
-      setRole("teacher");
-      setPortalStudent(null);
-      setPortalParent(null);
-      return;
-    }
-    setProfile(null);
 
-    const parentProfile = await getParentProfile(firebaseUser.uid);
-    if (token !== resolveTokenRef.current) return;
-    if (parentProfile) {
-      setRole("parent");
-      setPortalParent(parentProfile);
-      setPortalStudent(null);
-      return;
-    }
-
-    const student = await findStudentByAuthUid(firebaseUser.uid);
-    if (token !== resolveTokenRef.current) return;
-    if (student) {
-      setRole("student");
-      setPortalStudent(student);
-      setPortalParent(null);
-      return;
-    }
-
-    setRole(null);
-    setPortalStudent(null);
-    setPortalParent(null);
+    const teacherProfile = teacherSnap.exists() ? (teacherSnap.data() as UserProfile) : null;
+    setProfile(teacherProfile);
+    setPortalParent(parentProfile);
+    setPortalStudent(student);
+    setRole(teacherProfile ? "teacher" : parentProfile ? "parent" : student ? "student" : null);
   }
 
   useEffect(() => {
@@ -165,16 +161,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }
 
+  /**
+   * Creates the `teachers/{uid}` profile on first teacher sign-in. Deliberately
+   * does NOT check for (or block on) an existing parent/student profile on
+   * this uid — an account can hold a teacher profile alongside a parent or
+   * student one at the same time; see resolveRole above.
+   */
   async function ensureTeacherAccount(firebaseUser: User) {
-    const [existingParent, existingStudent] = await Promise.all([
-      getParentProfile(firebaseUser.uid),
-      findStudentByAuthUid(firebaseUser.uid),
-    ]);
-    if (existingParent || existingStudent) {
-      await firebaseSignOut(auth);
-      throw new Error("account-is-not-a-teacher");
-    }
-
     const profileRef = doc(db, "teachers", firebaseUser.uid);
     const snapshot = await getDoc(profileRef);
 
@@ -204,11 +197,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
    * separate sign-up flow — the first time a Google account signs in, a
    * matching `teachers/{uid}` Firestore profile is created automatically
    * (using the name/photo Google provides); on every later sign-in the
-   * existing profile is just loaded.
-   *
-   * Guarded so an account that's already registered as a student or parent
-   * portal account can never also become a teacher just by visiting the
-   * teacher login page.
+   * existing profile is just loaded. An account that already has a parent
+   * or student portal profile can freely become a teacher too — see
+   * ensureTeacherAccount/resolveRole above.
    */
   async function signInTeacherWithGoogle() {
     const result = await signInWithPopup(auth, googleProvider);

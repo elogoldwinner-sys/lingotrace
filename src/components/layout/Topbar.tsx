@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
-import { LogOut, Globe, Camera, MessageCircle, Trophy, ChevronDown, Mars, Venus } from "lucide-react";
+import { LogOut, Globe, Camera, MessageCircle, Trophy, ChevronDown, Mars, Venus, Repeat } from "lucide-react";
 import { useAuth } from "../../contexts/AuthContext";
 import { uploadToCloudinary } from "../../lib/cloudinary";
 import { getDefaultRankingPeriod } from "../../lib/services/classRankingsService";
@@ -32,6 +32,8 @@ export default function Topbar() {
   const isKid = theme === "kid";
   const {
     profile,
+    portalParent,
+    portalStudent,
     signOut,
     updateTeacherPhoto,
     updateTeacherWhatsapp,
@@ -39,6 +41,13 @@ export default function Topbar() {
     updateTeacherGender,
   } = useAuth();
   const navigate = useNavigate();
+  // This same Google account may ALSO have a parent or student portal
+  // profile (e.g. a teacher who joined a class as a parent too) — when it
+  // does, offer a one-click switch instead of forcing a separate login.
+  const otherPortalPath = portalParent ? "/portal/parent" : portalStudent ? "/portal/student" : null;
+  const otherPortalLabel = portalParent
+    ? t("nav.switchToParentPortal")
+    : t("nav.switchToStudentPortal");
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [uploading, setUploading] = useState(false);
 
@@ -256,6 +265,20 @@ export default function Topbar() {
                       <Camera size={16} />
                       {t("auth.changePhoto")}
                     </button>
+                    {otherPortalPath && (
+                      <button
+                        type="button"
+                        role="menuitem"
+                        onClick={() => {
+                          setMenuOpen(false);
+                          navigate(otherPortalPath);
+                        }}
+                        className="flex w-full items-center gap-2 rounded-xl px-3 py-2.5 text-sm font-bold text-navy-700 hover:bg-navy-50"
+                      >
+                        <Repeat size={16} />
+                        {otherPortalLabel}
+                      </button>
+                    )}
                     <button
                       type="button"
                       role="menuitem"
@@ -340,6 +363,17 @@ export default function Topbar() {
                 <Camera size={14} className="text-cream-100" />
               </span>
             </button>
+
+            {otherPortalPath && (
+              <button
+                onClick={() => navigate(otherPortalPath)}
+                className="flex items-center gap-1.5 rounded-lg border border-gold/40 px-3 py-1.5 text-xs font-semibold text-navy hover:bg-gold-50"
+                title={otherPortalLabel}
+              >
+                <Repeat size={14} />
+                {otherPortalLabel}
+              </button>
+            )}
 
             <button
               onClick={handleSignOut}

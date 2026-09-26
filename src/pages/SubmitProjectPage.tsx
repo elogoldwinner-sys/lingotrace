@@ -14,7 +14,7 @@ type Stage = "loading" | "invalid";
 export default function SubmitProjectPage() {
   const { projectId } = useParams<{ projectId: string }>();
   const { t } = useTranslation();
-  const { user, role, portalStudent, loading: authLoading, beginGoogleSignIn, refreshPortalRole, signOut } =
+  const { user, portalStudent, loading: authLoading, beginGoogleSignIn, refreshPortalRole, signOut } =
     useAuth();
 
   const [stage, setStage] = useState<Stage>("loading");
@@ -43,7 +43,7 @@ export default function SubmitProjectPage() {
   }, [projectId]);
 
   const isMatchingStudent =
-    role === "student" && !!portalStudent && !!project && portalStudent.classId === project.classId;
+    !!portalStudent && !!project && portalStudent.classId === project.classId;
 
   useEffect(() => {
     if (!isMatchingStudent || !project || !portalStudent) return;
@@ -129,7 +129,7 @@ export default function SubmitProjectPage() {
     );
   }
 
-  if (role !== "student" || !portalStudent) {
+  if (!portalStudent) {
     return (
       <CenteredCard>
         <h1 className="text-xl font-semibold text-navy mb-2">{t("submit.notStudentError")}</h1>
