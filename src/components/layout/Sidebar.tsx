@@ -11,6 +11,7 @@ import {
   NotebookPen,
   ClipboardList,
   FolderCheck,
+  GraduationCap,
   ChevronsLeft,
   ChevronsRight,
 } from "lucide-react";
@@ -23,6 +24,7 @@ const navItems = [
   { to: "/sessions", key: "sessions", icon: ClipboardList },
   { to: "/notes", key: "notes", icon: NotebookPen },
   { to: "/projects", key: "projects", icon: FolderCheck },
+  { to: "/linked-activities", key: "linkedActivities", icon: GraduationCap },
 ];
 
 interface SidebarProps {

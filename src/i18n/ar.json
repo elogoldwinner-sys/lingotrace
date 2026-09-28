@@ -10,6 +10,7 @@
     "sessions": "الجلسات",
     "notes": "الملاحظات",
     "projects": "تسليم المشاريع",
+    "linkedActivities": "الامتحانات والألعاب",
     "settings": "الإعدادات",
     "signOut": "تسجيل الخروج",
     "toggleSidebar": "تبديل القائمة",
@@ -282,6 +283,23 @@
       "delete": "حذف ذلك"
     },
     "permissionError": "تعذّر {{action}} — قد لا تسمح قواعد Firestore بذلك بعد. تأكد من نشر القواعد الخاصة بمجموعتي projects وsubmissions في وحدة تحكم Firebase."
+  },
+  "linked": {
+    "title": "الامتحانات والألعاب",
+    "assign": "تعيين",
+    "tabGatway": "امتحانات GATway",
+    "tabPlay": "ألعاب Play",
+    "activityTitle": "العنوان",
+    "examLink": "رابط امتحان GATway",
+    "examLinkHint": "الصق رابط مشاركة الامتحان من منصة GATway.",
+    "playLink": "رابط لعبة Play",
+    "playLinkHint": "الصق رابط مجموعة المحتوى من LingoBite Play — سيرى الطلاب قائمة اختيار الألعاب الخاصة بها.",
+    "noAssignments": "لا يوجد شيء معيّن لهذا الصف بعد.",
+    "showResults": "عرض النتائج",
+    "hideResults": "إخفاء النتائج",
+    "takeExam": "بدء الامتحان",
+    "playGame": "العب اللعبة",
+    "scoreLabel": "الدرجة: {{score}}%"
   },
   "submit": {
     "signInTitle": "سجّل الدخول لتسليم مشروعك",

@@ -10,6 +10,7 @@
     "sessions": "Sessions",
     "notes": "Notes",
     "projects": "Projects submission",
+    "linkedActivities": "Exams & Games",
     "settings": "Settings",
     "signOut": "Sign out",
     "toggleSidebar": "Toggle menu",
@@ -282,6 +283,23 @@
       "delete": "delete that"
     },
     "permissionError": "Couldn't {{action}} — your Firestore rules may not allow it yet. Make sure the rules covering the projects and submissions collections have been published in the Firebase console."
+  },
+  "linked": {
+    "title": "Exams & Games",
+    "assign": "Assign",
+    "tabGatway": "GATway Exams",
+    "tabPlay": "Play Games",
+    "activityTitle": "Title",
+    "examLink": "GATway exam link",
+    "examLinkHint": "Paste the exam's share link from GATway.",
+    "playLink": "Play game link",
+    "playLinkHint": "Paste the content set's link from LingoBite Play — students will see the game picker for it.",
+    "noAssignments": "Nothing assigned to this class yet.",
+    "showResults": "Show results",
+    "hideResults": "Hide results",
+    "takeExam": "Take exam",
+    "playGame": "Play game",
+    "scoreLabel": "Score: {{score}}%"
   },
   "submit": {
     "signInTitle": "Sign in to submit your project",

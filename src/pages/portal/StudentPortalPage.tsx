@@ -10,8 +10,21 @@ import { uploadToCloudinary } from "../../lib/cloudinary";
 import { getBadgeDefinition } from "../../lib/services/badgesService";
 import { subscribeToAnnouncements, isAnnouncementVisibleTo } from "../../lib/services/announcementsService";
 import { subscribeToClassRanking, getClassRankingOnce } from "../../lib/services/classRankingsService";
+import {
+  subscribeToClassAssignments,
+  buildLinkedActivityUrl,
+  subscribeToLinkedResult,
+} from "../../lib/services/linkedActivityService";
 import { triggerWeeklyChampionsCelebration } from "../../lib/confetti";
-import type { PointsTransaction, AttendanceRecord, AttendanceStatus, Announcement, ClassRanking } from "../../types";
+import type {
+  PointsTransaction,
+  AttendanceRecord,
+  AttendanceStatus,
+  Announcement,
+  ClassRanking,
+  LinkedAssignment,
+  LinkedResult,
+} from "../../types";
 import Spinner from "../../components/common/Spinner";
 import Logo from "../../components/common/Logo";
 import AnnouncementCard from "../../components/common/AnnouncementCard";
@@ -27,6 +40,36 @@ const STATUS_STYLES: Record<AttendanceStatus, string> = {
   excused: "bg-navy-100 text-navy",
 };
 
+/** One assigned exam's card for this student — a "Take exam" link, or the score once it's in. */
+function LinkedActivityCard({ assignment, studentId }: { assignment: LinkedAssignment; studentId: string }) {
+  const { t } = useTranslation();
+  const [result, setResult] = useState<LinkedResult | null>(null);
+
+  useEffect(() => {
+    return subscribeToLinkedResult(assignment.id, studentId, setResult);
+  }, [assignment.id, studentId]);
+
+  return (
+    <div className="flex items-center justify-between rounded-lg border border-cream-400 bg-cream-100 px-4 py-3">
+      <span className="font-semibold text-navy">{assignment.title}</span>
+      {result ? (
+        <span className="rounded-full bg-teal-100 px-3 py-1 text-sm font-bold text-teal-700">
+          {t("linked.scoreLabel", { score: result.score })}
+        </span>
+      ) : (
+        <a
+          href={buildLinkedActivityUrl(assignment, studentId)}
+          target="_blank"
+          rel="noreferrer"
+          className="rounded-lg bg-navy px-4 py-1.5 text-sm font-semibold text-cream-100 hover:bg-navy-700"
+        >
+          {t(assignment.source === "gatway" ? "linked.takeExam" : "linked.playGame")}
+        </a>
+      )}
+    </div>
+  );
+}
+
 export default function StudentPortalPage() {
   const { t, i18n } = useTranslation();
   const navigate = useNavigate();
@@ -40,6 +83,7 @@ export default function StudentPortalPage() {
   const [attendance, setAttendance] = useState<AttendanceRecord[]>([]);
   const [allAnnouncements, setAllAnnouncements] = useState<Announcement[]>([]);
   const [ranking, setRanking] = useState<ClassRanking | null>(null);
+  const [linkedAssignments, setLinkedAssignments] = useState<LinkedAssignment[]>([]);
   const [loading, setLoading] = useState(true);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
@@ -72,6 +116,14 @@ export default function StudentPortalPage() {
     if (!portalStudent?.classId) return;
     const unsub = subscribeToClassRanking(portalStudent.classId, setRanking);
     return unsub;
+  }, [portalStudent?.classId]);
+
+  useEffect(() => {
+    if (!portalStudent?.classId) {
+      setLinkedAssignments([]);
+      return;
+    }
+    return subscribeToClassAssignments(portalStudent.classId, setLinkedAssignments);
   }, [portalStudent?.classId]);
 
   // Celebrate once per portal visit (every login) if this student's class
@@ -208,6 +260,17 @@ export default function StudentPortalPage() {
             <span className="text-sm text-cream-600">{t("students.points")}</span>
           </div>
         </div>
+
+        {linkedAssignments.length > 0 && (
+          <div className="card p-6">
+            <h2 className="mb-3 text-lg font-semibold text-navy">{t("linked.title")}</h2>
+            <div className="flex flex-col gap-2">
+              {linkedAssignments.map((a) => (
+                <LinkedActivityCard key={a.id} assignment={a} studentId={portalStudent.id} />
+              ))}
+            </div>
+          </div>
+        )}
 
         <div className="card p-6">
           <h2 className="text-lg font-semibold text-navy mb-4">{t("students.badges")}</h2>

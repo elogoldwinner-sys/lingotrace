@@ -13,6 +13,7 @@ import AttendancePage from "./pages/AttendancePage";
 import SessionsPage from "./pages/SessionsPage";
 import NotesPage from "./pages/NotesPage";
 import ProjectsPage from "./pages/ProjectsPage";
+import LinkedActivitiesPage from "./pages/LinkedActivitiesPage";
 import JoinPage from "./pages/JoinPage";
 import SubmitProjectPage from "./pages/SubmitProjectPage";
 import StudentPortalPage from "./pages/portal/StudentPortalPage";
@@ -62,6 +63,7 @@ export default function App() {
             <Route path="/sessions" element={<SessionsPage />} />
             <Route path="/notes" element={<NotesPage />} />
             <Route path="/projects" element={<ProjectsPage />} />
+            <Route path="/linked-activities" element={<LinkedActivitiesPage />} />
           </Route>
 
           <Route path="*" element={<Navigate to="/" replace />} />

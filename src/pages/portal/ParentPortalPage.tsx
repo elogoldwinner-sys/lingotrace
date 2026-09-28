@@ -12,6 +12,11 @@ import { subscribeToVisibleParentNotes } from "../../lib/services/notesService";
 import { getBadgeDefinition } from "../../lib/services/badgesService";
 import { subscribeToAnnouncements, isAnnouncementVisibleTo } from "../../lib/services/announcementsService";
 import { getClassRankingOnce, subscribeToClassRanking } from "../../lib/services/classRankingsService";
+import {
+  subscribeToClassAssignments,
+  buildLinkedActivityUrl,
+  subscribeToLinkedResult,
+} from "../../lib/services/linkedActivityService";
 import { triggerWeeklyChampionsCelebration } from "../../lib/confetti";
 import { formatNoteDate } from "../../lib/timestamps";
 import { whatsappLink } from "../../lib/whatsapp";
@@ -29,6 +34,8 @@ import type {
   StudentRecord,
   Announcement,
   ClassRanking,
+  LinkedAssignment,
+  LinkedResult,
 } from "../../types";
 import Spinner from "../../components/common/Spinner";
 
@@ -38,6 +45,36 @@ const STATUS_STYLES: Record<AttendanceStatus, string> = {
   late: "bg-gold-100 text-gold-700",
   excused: "bg-navy-100 text-navy",
 };
+
+/** One assigned exam/game's card for this child — a "Take exam"/"Play game" link, or the score once it's in. */
+function LinkedActivityCard({ assignment, studentId }: { assignment: LinkedAssignment; studentId: string }) {
+  const { t } = useTranslation();
+  const [result, setResult] = useState<LinkedResult | null>(null);
+
+  useEffect(() => {
+    return subscribeToLinkedResult(assignment.id, studentId, setResult);
+  }, [assignment.id, studentId]);
+
+  return (
+    <div className="flex items-center justify-between rounded-lg border border-cream-400 bg-cream-100 px-4 py-3">
+      <span className="font-semibold text-navy">{assignment.title}</span>
+      {result ? (
+        <span className="rounded-full bg-teal-100 px-3 py-1 text-sm font-bold text-teal-700">
+          {t("linked.scoreLabel", { score: result.score })}
+        </span>
+      ) : (
+        <a
+          href={buildLinkedActivityUrl(assignment, studentId)}
+          target="_blank"
+          rel="noreferrer"
+          className="rounded-lg bg-navy px-4 py-1.5 text-sm font-semibold text-cream-100 hover:bg-navy-700"
+        >
+          {t(assignment.source === "gatway" ? "linked.takeExam" : "linked.playGame")}
+        </a>
+      )}
+    </div>
+  );
+}
 
 /**
  * Live view of ONE child, used for whichever tab (studentId) is currently
@@ -57,6 +94,7 @@ function ChildPanel({ studentId, onRemoved }: { studentId: string; onRemoved: (s
   const [pointsHistory, setPointsHistory] = useState<PointsTransaction[]>([]);
   const [attendance, setAttendance] = useState<AttendanceRecord[]>([]);
   const [notes, setNotes] = useState<NoteRecord[]>([]);
+  const [linkedAssignments, setLinkedAssignments] = useState<LinkedAssignment[]>([]);
   const [loading, setLoading] = useState(true);
   const [pointsPage, setPointsPage] = useState(0);
 
@@ -83,6 +121,14 @@ function ChildPanel({ studentId, onRemoved }: { studentId: string; onRemoved: (s
       onRemoved(studentId);
     }
   }, [loading, child, studentId, onRemoved]);
+
+  useEffect(() => {
+    if (!child) {
+      setLinkedAssignments([]);
+      return;
+    }
+    return subscribeToClassAssignments(child.classId, setLinkedAssignments);
+  }, [child]);
 
   // "Legend" a parent asked for: totals per point reason across the child's
   // whole history (not just the current page), so strengths (top, green)
@@ -136,6 +182,17 @@ function ChildPanel({ studentId, onRemoved }: { studentId: string; onRemoved: (s
           </div>
         </div>
       </div>
+
+      {linkedAssignments.length > 0 && (
+        <div className="card p-6">
+          <h2 className="mb-3 text-lg font-semibold text-navy">{t("linked.title")}</h2>
+          <div className="flex flex-col gap-2">
+            {linkedAssignments.map((a) => (
+              <LinkedActivityCard key={a.id} assignment={a} studentId={studentId} />
+            ))}
+          </div>
+        </div>
+      )}
 
       <div className="card p-6">
         <h2 className="text-lg font-semibold text-navy mb-4">{t("students.badges")}</h2>

@@ -273,6 +273,35 @@ export interface Announcement {
   updatedAt: number;
 }
 
+/**
+ * A linked activity (a GATway exam or a LingoBite Play content set) a
+ * teacher assigned to a class by pasting its share/game link — shown as a
+ * button in that class's parent/student portals. No account linking is
+ * involved: the button opens `url` with a `?ref=` token unique to (this
+ * assignment, that student), and the source app reports the score back
+ * into `linkedResults/{ref}` once the student finishes.
+ */
+export interface LinkedAssignment {
+  id: string;
+  classId: string;
+  teacherId: string;
+  title: string;
+  /** The GATway exam share link, or the Play content-set link (picker mode). */
+  url: string;
+  source: "gatway" | "play";
+  createdAt: number;
+}
+
+/** Written by GATway's or Play's own backend (never by a LingoTrace client) once a guest attempt is scored. */
+export interface LinkedResult {
+  /** Doc id === the ref token, e.g. "{assignmentId}_{studentId}". */
+  id: string;
+  source: "gatway" | "play";
+  title: string;
+  score: number;
+  completedAt: number;
+}
+
 /** One student's placement in a class ranking for a given reporting period. */
 export interface RankingEntry {
   studentId: string;
