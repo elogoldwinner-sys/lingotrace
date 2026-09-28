@@ -127,7 +127,9 @@ function ChildPanel({ studentId, onRemoved }: { studentId: string; onRemoved: (s
       setLinkedAssignments([]);
       return;
     }
-    return subscribeToClassAssignments(child.classId, setLinkedAssignments);
+    return subscribeToClassAssignments(child.classId, setLinkedAssignments, (error) => {
+      console.error("Failed to load linked assignments for", child.classId, error);
+    });
   }, [child]);
 
   // "Legend" a parent asked for: totals per point reason across the child's

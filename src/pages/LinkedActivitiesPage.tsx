@@ -76,10 +76,17 @@ export default function LinkedActivitiesPage() {
       return;
     }
     setLoading(true);
-    const unsubAssignments = subscribeToClassAssignments(selectedClassId, (data) => {
-      setAssignments(data.filter((a) => a.source === source));
-      setLoading(false);
-    });
+    const unsubAssignments = subscribeToClassAssignments(
+      selectedClassId,
+      (data) => {
+        setAssignments(data.filter((a) => a.source === source));
+        setLoading(false);
+      },
+      (error) => {
+        console.error("Failed to load linked assignments for", selectedClassId, error);
+        setLoading(false);
+      }
+    );
     const unsubStudents = subscribeToStudents(selectedClassId, setStudents);
     return () => {
       unsubAssignments();

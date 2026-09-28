@@ -123,7 +123,9 @@ export default function StudentPortalPage() {
       setLinkedAssignments([]);
       return;
     }
-    return subscribeToClassAssignments(portalStudent.classId, setLinkedAssignments);
+    return subscribeToClassAssignments(portalStudent.classId, setLinkedAssignments, (error) => {
+      console.error("Failed to load linked assignments for", portalStudent.classId, error);
+    });
   }, [portalStudent?.classId]);
 
   // Celebrate once per portal visit (every login) if this student's class
