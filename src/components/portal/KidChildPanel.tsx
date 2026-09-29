@@ -1,15 +1,28 @@
 import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { ShieldCheck, NotebookPen, Star, CalendarDays, User } from "lucide-react";
+import { ShieldCheck, NotebookPen, Star, CalendarDays, User, GraduationCap } from "lucide-react";
 import { subscribeToStudent } from "../../lib/services/studentsService";
 import { subscribeToStudentPointsHistory } from "../../lib/services/pointsService";
 import { subscribeToStudentAttendance } from "../../lib/services/attendanceService";
 import { subscribeToVisibleParentNotes } from "../../lib/services/notesService";
 import { getBadgeDefinition } from "../../lib/services/badgesService";
+import {
+  subscribeToClassAssignments,
+  buildLinkedActivityUrl,
+  subscribeToLinkedResult,
+} from "../../lib/services/linkedActivityService";
 import { formatNoteDate } from "../../lib/timestamps";
 import RichText from "../common/RichText";
 import { Star as StarDecor } from "../home/KidHomeArt";
-import type { PointsTransaction, AttendanceRecord, AttendanceStatus, NoteRecord, StudentRecord } from "../../types";
+import type {
+  PointsTransaction,
+  AttendanceRecord,
+  AttendanceStatus,
+  NoteRecord,
+  StudentRecord,
+  LinkedAssignment,
+  LinkedResult,
+} from "../../types";
 import Spinner from "../common/Spinner";
 
 const STATUS_STYLES: Record<AttendanceStatus, string> = {
@@ -26,6 +39,39 @@ function CardHeader({ icon, title }: { icon: React.ReactNode; title: string }) {
       <span className="flex h-8 w-8 items-center justify-center rounded-full bg-navy-50 text-navy-600">{icon}</span>
       <h2 className="text-lg font-extrabold text-navy-700">{title}</h2>
       <StarDecor className="pointer-events-none absolute -top-1 end-0 h-4 w-4 opacity-40" />
+    </div>
+  );
+}
+
+/**
+ * One assigned exam/game's kid-mode card — a "Take exam"/"Play game" link,
+ * or the score once it's in. Mirrors ParentPortalPage's LinkedActivityCard.
+ */
+function KidLinkedActivityCard({ assignment, studentId }: { assignment: LinkedAssignment; studentId: string }) {
+  const { t } = useTranslation();
+  const [result, setResult] = useState<LinkedResult | null>(null);
+
+  useEffect(() => {
+    return subscribeToLinkedResult(assignment.id, studentId, setResult);
+  }, [assignment.id, studentId]);
+
+  return (
+    <div className="flex items-center justify-between rounded-2xl border border-gold-200 bg-gold-50 px-4 py-3">
+      <span className="text-sm font-bold text-navy-700">{assignment.title}</span>
+      {result ? (
+        <span className="rounded-full bg-teal-100 px-3 py-1 text-xs font-extrabold text-teal-700">
+          {t("linked.scoreLabel", { score: result.score })}
+        </span>
+      ) : (
+        <a
+          href={buildLinkedActivityUrl(assignment, studentId)}
+          target="_blank"
+          rel="noreferrer"
+          className="rounded-full bg-navy-600 px-4 py-1.5 text-xs font-extrabold text-white hover:bg-navy-700"
+        >
+          {t(assignment.source === "gatway" ? "linked.takeExam" : "linked.playGame")}
+        </a>
+      )}
     </div>
   );
 }
@@ -49,6 +95,7 @@ export default function KidChildPanel({
   const [pointsHistory, setPointsHistory] = useState<PointsTransaction[]>([]);
   const [attendance, setAttendance] = useState<AttendanceRecord[]>([]);
   const [notes, setNotes] = useState<NoteRecord[]>([]);
+  const [linkedAssignments, setLinkedAssignments] = useState<LinkedAssignment[]>([]);
   const [loading, setLoading] = useState(true);
   const [pointsPage, setPointsPage] = useState(0);
 
@@ -69,6 +116,16 @@ export default function KidChildPanel({
       unsubNotes();
     };
   }, [studentId]);
+
+  useEffect(() => {
+    if (!child) {
+      setLinkedAssignments([]);
+      return;
+    }
+    return subscribeToClassAssignments(child.classId, setLinkedAssignments, (error) => {
+      console.error("Failed to load linked assignments for", child.classId, error);
+    });
+  }, [child]);
 
   useEffect(() => {
     if (!loading && !child) onRemoved(studentId);
@@ -124,6 +181,18 @@ export default function KidChildPanel({
         </div>
         <StarDecor className="pointer-events-none absolute end-5 top-5 h-5 w-5 opacity-60" />
       </div>
+
+      {/* Exams & Games */}
+      {linkedAssignments.length > 0 && (
+        <div className={cardCls}>
+          <CardHeader icon={<GraduationCap size={18} />} title={t("linked.title")} />
+          <div className="flex flex-col gap-2.5">
+            {linkedAssignments.map((a) => (
+              <KidLinkedActivityCard key={a.id} assignment={a} studentId={studentId} />
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Badges */}
       <div className={cardCls}>
