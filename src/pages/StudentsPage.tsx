@@ -16,7 +16,9 @@ import {
   X,
   UserX,
   Pencil,
+  FileSpreadsheet,
 } from "lucide-react";
+import { deleteField } from "firebase/firestore";
 import { useAuth } from "../contexts/AuthContext";
 import { subscribeToClasses } from "../lib/services/classesService";
 import {
@@ -51,12 +53,15 @@ import type {
   NoteRecord,
   SessionRecord,
   ClassRanking,
+  StudentGroup,
 } from "../types";
+import { STUDENT_GROUPS } from "../types";
 import Modal from "../components/common/Modal";
 import EmptyState from "../components/common/EmptyState";
 import Spinner from "../components/common/Spinner";
 import ClassSelector from "../components/common/ClassSelector";
 import WeeklyChampions from "../components/common/WeeklyChampions";
+import PointsReportModal from "../components/common/PointsReportModal";
 import RichText from "../components/common/RichText";
 import { reasonsForAmount, POINTS_REASON_ICONS, POSITIVE_POINTS_REASONS } from "../lib/pointsReasons";
 
@@ -98,6 +103,7 @@ export default function StudentsPage() {
   // Performance detail panel
   const [detailStudent, setDetailStudent] = useState<StudentRecord | null>(null);
   const [detailPoints, setDetailPoints] = useState<PointsTransaction[]>([]);
+  const [reportModalOpen, setReportModalOpen] = useState(false);
   const [detailAttendance, setDetailAttendance] = useState<AttendanceRecord[]>([]);
   const [detailNotes, setDetailNotes] = useState<NoteRecord[]>([]);
   const [detailSessions, setDetailSessions] = useState<SessionRecord[]>([]);
@@ -269,6 +275,12 @@ export default function StudentsPage() {
 
   function selectAll() {
     setSelectedIds(new Set(students.map((s) => s.id)));
+  }
+
+  /** Puts a student in group A–E, or clears it when the student's current group is tapped again. */
+  async function handleSetGroup(student: StudentRecord, group: StudentGroup) {
+    const next = student.group === group ? deleteField() : group;
+    await updateStudent(student.id, { group: next as unknown as StudentGroup });
   }
 
   async function handleDeleteSelected() {
@@ -531,6 +543,10 @@ export default function StudentsPage() {
             <Upload size={16} />
             {t("students.bulkImport")}
           </button>
+          <button onClick={() => setReportModalOpen(true)} className="btn-secondary text-sm py-2 px-3">
+            <FileSpreadsheet size={16} />
+            {t("pointsReport.button")}
+          </button>
         </div>
       </div>
 
@@ -669,10 +685,35 @@ export default function StudentsPage() {
                   })}
                 </div>
               )}
+
+              <div className="flex items-center gap-1.5" onClick={(e) => e.stopPropagation()}>
+                <span className="text-xs text-cream-600 me-1">{t("students.group")}</span>
+                {STUDENT_GROUPS.map((g) => (
+                  <button
+                    key={g}
+                    onClick={() => handleSetGroup(s, g)}
+                    title={s.group === g ? t("students.groupClear") : t("students.groupSet", { group: g })}
+                    className={`h-7 w-7 rounded-full border text-xs font-bold transition ${
+                      s.group === g
+                        ? "border-gold bg-gold text-white"
+                        : "border-cream-400 bg-white text-navy/60 hover:border-gold/60 hover:text-navy"
+                    }`}
+                  >
+                    {g}
+                  </button>
+                ))}
+              </div>
             </div>
           ))}
         </div>
       )}
+
+      <PointsReportModal
+        open={reportModalOpen}
+        onClose={() => setReportModalOpen(false)}
+        classes={classes}
+        defaultClassId={selectedClassId}
+      />
 
       <Modal
         open={!!pointsModalStudent}

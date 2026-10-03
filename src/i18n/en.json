@@ -119,7 +119,10 @@
     "confirmRemoveParentAccess": "Remove {{name}}'s parent from their portal account? They'll lose access to this student's points, badges, attendance and notes immediately, and can only see it again if you send them a new invite link.",
     "removeParentAccessUnavailable": "Linked before this feature — can't be removed here",
     "removeParentAccessUnavailableHint": "This parent joined before this feature was added, so there's no record of which portal account to remove. Ask them to stop using the portal, or contact support.",
-    "editName": "Edit name"
+    "editName": "Edit name",
+    "group": "Group",
+    "groupSet": "Put in group {{group}}",
+    "groupClear": "Remove from group"
   },
   "attendance": {
     "title": "Attendance",
@@ -169,7 +172,9 @@
     "generate": "Generate sessions",
     "attendanceHint": "Attendance is recorded on the Attendance page. Absent/excused students are shown greyed out here and can't be given points or notes.",
     "weekSessionCount": "{{count}} session(s)",
-    "weekLabel": "Week {{number}} ({{range}})"
+    "weekLabel": "Week {{number}} ({{range}})",
+    "pickRoundProgress": "Random pick round: {{picked}} of {{total}} picked — nobody repeats until everyone has had a turn.",
+    "pickRoundReset": "Start over"
   },
   "notes": {
     "title": "Notes",
@@ -299,7 +304,11 @@
     "hideResults": "Hide results",
     "takeExam": "Take exam",
     "playGame": "Play game",
-    "scoreLabel": "Score: {{score}}%"
+    "scoreLabel": "Score: {{score}}%",
+    "addMarks": "Add {{points}} marks",
+    "addMarkError": "Couldn't add the marks — check that the new Firestore rule has been published.",
+    "markAdded": "{{points}} marks already added to this student",
+    "markAddedShort": "Added"
   },
   "submit": {
     "signInTitle": "Sign in to submit your project",
@@ -414,5 +423,52 @@
     "classicMode": "Classic mode",
     "switchToKid": "Switch to Kid Mode",
     "switchToClassic": "Switch to Classic Mode"
+  },
+  "numberedHeads": {
+    "title": "Numbered Heads Together",
+    "button": "Group random pick",
+    "noGroups": "No students are in a group yet. Mark students as A–E on the Students page first.",
+    "groupLabel": "Group {{group}}",
+    "cardAlt": "Card number {{number}}",
+    "prompt": "Choose a group, then draw a card.",
+    "progress": "{{count}} of 4 numbers drawn this round",
+    "roundComplete": "All 4 numbers drawn — the next draw starts a new round.",
+    "draw": "Draw a card",
+    "drawNewRound": "New round — draw a card",
+    "reset": "Reset"
+  },
+  "pointsReport": {
+    "button": "Points report",
+    "title": "Points report",
+    "intro": "Download the points you awarded or deducted as a file that opens in Excel.",
+    "from": "From",
+    "to": "To",
+    "classLabel": "Class",
+    "allClasses": "All classes",
+    "kindLabel": "Type",
+    "kindBoth": "Both",
+    "kindPositive": "Additions only",
+    "kindNegative": "Deductions only",
+    "reasonsLabel": "Reasons",
+    "selectAll": "Select all",
+    "clearAll": "Clear all",
+    "export": "Download report",
+    "badRange": "Choose a valid date range (the start date must be on or before the end date).",
+    "noReasons": "Select at least one reason.",
+    "empty": "No points match these filters.",
+    "done": "Report downloaded ({{count}} entries).",
+    "error": "Couldn't build the report. Please try again.",
+    "colDate": "Date",
+    "colClass": "Class",
+    "colStudent": "Student",
+    "colGroup": "Group",
+    "colPoints": "Points",
+    "colType": "Type",
+    "colReason": "Reason",
+    "colDetail": "Detail",
+    "typePositive": "Addition",
+    "typeNegative": "Deduction",
+    "total": "Total",
+    "unknownStudent": "(deleted student)"
   }
 }

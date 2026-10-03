@@ -63,6 +63,10 @@ export interface ClassRecord {
   createdAt: number;
 }
 
+/** Teaching groups a teacher can sort students into from the Students page. */
+export type StudentGroup = "A" | "B" | "C" | "D" | "E";
+export const STUDENT_GROUPS: StudentGroup[] = ["A", "B", "C", "D", "E"];
+
 export interface StudentRecord {
   id: string;
   /** Comes directly from the student's Google account displayName at join time. */
@@ -88,6 +92,8 @@ export interface StudentRecord {
   teacherWhatsapp?: string;
   /** Firebase Auth uid of the student's own portal account, once claimed via an invite link. */
   authUid?: string;
+  /** Teaching group (A–E) chosen by the teacher on the Students page; unset = no group. */
+  group?: StudentGroup;
   createdAt: number;
 }
 
@@ -300,6 +306,26 @@ export interface LinkedResult {
   title: string;
   score: number;
   completedAt: number;
+}
+
+/**
+ * Marks that a teacher has already turned into points for one student's
+ * result on one linked exam/game. Doc id === the linked result's id
+ * (`${assignmentId}_${studentId}`), so a mark can only ever be added once
+ * — the "Add marks" button disappears as soon as this doc exists. Written
+ * only by the LingoTrace teacher client; never touches `linkedResults`
+ * (which GATway/Play own).
+ */
+export interface LinkedMarkAward {
+  id: string;
+  assignmentId: string;
+  studentId: string;
+  classId: string;
+  /** Points actually granted (score ÷ 10, rounded). */
+  points: number;
+  score: number;
+  awardedBy: string;
+  createdAt: number;
 }
 
 /** One student's placement in a class ranking for a given reporting period. */

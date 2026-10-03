@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { startOfWeek, addDays, format as formatDate, parseISO } from "date-fns";
-import { Plus, Minus, Trash2, Shuffle, ChevronDown, X, Layers, NotebookPen } from "lucide-react";
+import { Plus, Minus, Trash2, Shuffle, ChevronDown, X, Layers, NotebookPen, Users } from "lucide-react";
 import { useAuth } from "../contexts/AuthContext";
 import { subscribeToClasses } from "../lib/services/classesService";
 import { subscribeToStudents } from "../lib/services/studentsService";
@@ -30,6 +30,7 @@ import Modal from "../components/common/Modal";
 import EmptyState from "../components/common/EmptyState";
 import Spinner from "../components/common/Spinner";
 import ClassSelector from "../components/common/ClassSelector";
+import NumberedHeadsModal from "../components/common/NumberedHeadsModal";
 import { reasonsForAmount, POINTS_REASON_ICONS, POSITIVE_POINTS_REASONS } from "../lib/pointsReasons";
 
 const STATUS_STYLES: Record<AttendanceStatus, string> = {
@@ -83,6 +84,12 @@ export default function SessionsPage() {
   const [highlightedId, setHighlightedId] = useState<string | null>(null);
   const [pickNotice, setPickNotice] = useState("");
   const pickIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  // Random pick works in rounds: nobody is picked twice until every eligible student has had a turn.
+  const pickedIdsRef = useRef<Set<string>>(new Set());
+  const lastPickedIdRef = useRef<string | null>(null);
+  // Mirrors pickedIdsRef.size so the "x of y picked" hint re-renders.
+  const [pickedCount, setPickedCount] = useState(0);
+  const [groupPickOpen, setGroupPickOpen] = useState(false);
 
   // Active session (the one currently expanded to apply session procedures)
   const [activeSessionId, setActiveSessionId] = useState<string | null>(null);
@@ -134,6 +141,13 @@ export default function SessionsPage() {
     );
     return unsubscribe;
   }, [selectedClassId]);
+
+  // A new session (or class) starts a fresh random-pick round.
+  useEffect(() => {
+    pickedIdsRef.current = new Set();
+    lastPickedIdRef.current = null;
+    setPickedCount(0);
+  }, [activeSessionId, selectedClassId]);
 
   useEffect(() => {
     if (!activeSessionId) {
@@ -224,6 +238,13 @@ export default function SessionsPage() {
     setNoteModalStudent(student);
   }
 
+  function resetRandomPickRound() {
+    pickedIdsRef.current = new Set();
+    lastPickedIdRef.current = null;
+    setPickedCount(0);
+    setPickNotice("");
+  }
+
   function handleRandomPick() {
     if (isPicking) return;
     const eligible = students.filter((st) => {
@@ -235,6 +256,19 @@ export default function SessionsPage() {
       return;
     }
     setPickNotice("");
+
+    // Only students who haven't had a turn this round are in the draw. Once
+    // everyone has been picked, a new round starts — and its first pick
+    // can't be the student who just finished the previous round.
+    let pool = eligible.filter((st) => !pickedIdsRef.current.has(st.id));
+    if (pool.length === 0) {
+      pickedIdsRef.current = new Set();
+      pool = eligible;
+      if (eligible.length > 1 && lastPickedIdRef.current) {
+        pool = eligible.filter((st) => st.id !== lastPickedIdRef.current);
+      }
+    }
+    const winner = pool[Math.floor(Math.random() * pool.length)];
     setIsPicking(true);
 
     const durationMs = 1800;
@@ -242,13 +276,16 @@ export default function SessionsPage() {
     let elapsed = 0;
 
     pickIntervalRef.current = setInterval(() => {
+      // The spinning highlight is just for show; the winner was already decided above.
       const randomIndex = Math.floor(Math.random() * eligible.length);
       setHighlightedId(eligible[randomIndex].id);
       elapsed += tickMs;
 
       if (elapsed >= durationMs) {
         if (pickIntervalRef.current) clearInterval(pickIntervalRef.current);
-        const winner = eligible[Math.floor(Math.random() * eligible.length)];
+        pickedIdsRef.current.add(winner.id);
+        lastPickedIdRef.current = winner.id;
+        setPickedCount(pickedIdsRef.current.size);
         setHighlightedId(winner.id);
         setIsPicking(false);
         setTimeout(() => openPointsModal(winner), 450);
@@ -423,6 +460,13 @@ export default function SessionsPage() {
                                   {isPicking ? t("sessions.picking") : t("sessions.randomPick")}
                                 </button>
                                 <button
+                                  onClick={() => setGroupPickOpen(true)}
+                                  className="btn-secondary py-1.5 px-3 text-sm"
+                                >
+                                  <Users size={16} />
+                                  {t("numberedHeads.button")}
+                                </button>
+                                <button
                                   onClick={() => setActiveSessionId(null)}
                                   className="h-8 w-8 flex items-center justify-center rounded-full text-cream-600 hover:bg-cream-300"
                                 >
@@ -436,6 +480,20 @@ export default function SessionsPage() {
                             )}
                             <p className="text-xs text-cream-600 -mt-2">{t("sessions.attendanceHint")}</p>
                             <p className="text-xs text-cream-600 -mt-2">{t("sessions.randomPickHint")}</p>
+                            {pickedCount > 0 && (
+                              <p className="text-xs text-cream-600 -mt-2">
+                                {t("sessions.pickRoundProgress", {
+                                  picked: students.filter((st) => pickedIdsRef.current.has(st.id)).length,
+                                  total: students.filter((st) => {
+                                    const status = sessionAttendanceByStudent.get(st.id)?.status;
+                                    return status && RANDOM_PICK_ELIGIBLE_STATUSES.includes(status);
+                                  }).length,
+                                })}{" "}
+                                <button onClick={resetRandomPickRound} className="font-semibold text-gold hover:underline">
+                                  {t("sessions.pickRoundReset")}
+                                </button>
+                              </p>
+                            )}
 
                             <div className="space-y-2">
                               {students.map((st) => {
@@ -526,6 +584,13 @@ export default function SessionsPage() {
           })}
         </div>
       )}
+
+      <NumberedHeadsModal
+        key={selectedClassId}
+        open={groupPickOpen}
+        onClose={() => setGroupPickOpen(false)}
+        students={students}
+      />
 
       <Modal open={modalOpen} onClose={() => setModalOpen(false)} title={t("sessions.newSession")}>
         <form onSubmit={handleCreate} className="space-y-4">

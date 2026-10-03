@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Plus, Trash2, ExternalLink } from "lucide-react";
+import { Plus, Trash2, ExternalLink, Award, Check } from "lucide-react";
 import { useAuth } from "../contexts/AuthContext";
 import { subscribeToClasses } from "../lib/services/classesService";
 import { subscribeToStudents } from "../lib/services/studentsService";
@@ -9,8 +9,11 @@ import {
   createLinkedAssignment,
   deleteLinkedAssignment,
   subscribeToLinkedResult,
+  subscribeToMarkAward,
+  addMarkForResult,
+  marksForScore,
 } from "../lib/services/linkedActivityService";
-import type { ClassRecord, LinkedAssignment, StudentRecord, LinkedResult } from "../types";
+import type { ClassRecord, LinkedAssignment, StudentRecord, LinkedResult, LinkedMarkAward } from "../types";
 import Modal from "../components/common/Modal";
 import EmptyState from "../components/common/EmptyState";
 import Spinner from "../components/common/Spinner";
@@ -19,21 +22,87 @@ import ClassSelector from "../components/common/ClassSelector";
 type Source = "gatway" | "play";
 
 /** One row of a class's roster, showing that student's score for one assignment once it's in. */
-function StudentResultRow({ student, assignment }: { student: StudentRecord; assignment: LinkedAssignment }) {
+function StudentResultRow({
+  student,
+  assignment,
+  teacherId,
+}: {
+  student: StudentRecord;
+  assignment: LinkedAssignment;
+  teacherId: string;
+}) {
+  const { t } = useTranslation();
   const [result, setResult] = useState<LinkedResult | null>(null);
+  const [award, setAward] = useState<LinkedMarkAward | null>(null);
+  // null until the first answer arrives, so the button never flashes for a mark that was already added.
+  const [awardLoaded, setAwardLoaded] = useState(false);
+  const [adding, setAdding] = useState(false);
+  const [error, setError] = useState("");
 
   useEffect(() => {
     return subscribeToLinkedResult(assignment.id, student.id, setResult);
   }, [assignment.id, student.id]);
 
+  useEffect(() => {
+    return subscribeToMarkAward(assignment.id, student.id, (a) => {
+      setAward(a);
+      setAwardLoaded(true);
+    });
+  }, [assignment.id, student.id]);
+
+  async function handleAddMark() {
+    if (!result || adding) return;
+    setAdding(true);
+    setError("");
+    try {
+      await addMarkForResult({
+        assignment,
+        studentId: student.id,
+        score: result.score,
+        title: assignment.title,
+        awardedBy: teacherId,
+      });
+    } catch (err) {
+      if (!(err instanceof Error && err.message === "already-added")) {
+        setError(t("linked.addMarkError"));
+      }
+    } finally {
+      setAdding(false);
+    }
+  }
+
   return (
-    <div className="flex items-center justify-between rounded-lg border border-cream-400 px-3 py-2 text-sm">
+    <div className="flex items-center justify-between gap-3 rounded-lg border border-cream-400 px-3 py-2 text-sm">
       <span className="text-navy">{student.name}</span>
-      {result ? (
-        <span className="font-semibold text-teal-700">{result.score}%</span>
-      ) : (
-        <span className="text-navy/40">—</span>
-      )}
+      <div className="flex items-center gap-3">
+        {error && <span className="text-xs text-red-600">{error}</span>}
+        {result && awardLoaded && !award && (
+          <button
+            onClick={handleAddMark}
+            disabled={adding}
+            className="btn-gold py-1 px-2.5 text-xs disabled:opacity-60"
+          >
+            <Award size={13} />
+            {adding
+              ? t("common.loading")
+              : t("linked.addMarks", { points: marksForScore(result.score) })}
+          </button>
+        )}
+        {award && (
+          <span
+            className="inline-flex items-center gap-1 text-xs text-navy/50"
+            title={t("linked.markAdded", { points: award.points })}
+          >
+            <Check size={13} />
+            {t("linked.markAddedShort")}
+          </span>
+        )}
+        {result ? (
+          <span className="font-semibold text-teal-700">{result.score}%</span>
+        ) : (
+          <span className="text-navy/40">—</span>
+        )}
+      </div>
     </div>
   );
 }
@@ -187,7 +256,7 @@ export default function LinkedActivitiesPage() {
               {expandedId === a.id && (
                 <div className="mt-3 flex flex-col gap-1.5 border-t border-cream-300 pt-3">
                   {students.map((s) => (
-                    <StudentResultRow key={s.id} student={s} assignment={a} />
+                    <StudentResultRow key={s.id} student={s} assignment={a} teacherId={user?.uid || ""} />
                   ))}
                 </div>
               )}
