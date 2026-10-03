@@ -64,8 +64,8 @@ export interface ClassRecord {
 }
 
 /** Teaching groups a teacher can sort students into from the Students page. */
-export type StudentGroup = "A" | "B" | "C" | "D" | "E";
-export const STUDENT_GROUPS: StudentGroup[] = ["A", "B", "C", "D", "E"];
+export type StudentGroup = "A" | "B" | "C" | "D" | "E" | "F" | "G";
+export const STUDENT_GROUPS: StudentGroup[] = ["A", "B", "C", "D", "E", "F", "G"];
 
 export interface StudentRecord {
   id: string;
