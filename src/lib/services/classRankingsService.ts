@@ -31,8 +31,42 @@ const DEFAULT_PERIOD_MS = 7 * 24 * 60 * 60 * 1000;
  * picked their own start/end date range yet via the trophy icon.
  */
 export function getDefaultRankingPeriod(): RankingPeriod {
-  const end = Date.now();
-  return { start: end - DEFAULT_PERIOD_MS, end };
+  // Aligned to whole local days (the 7 days up to the end of today) so the
+  // period id stays identical all day — that is what lets the cached board be
+  // reused instead of re-reading every student and points entry on each visit.
+  const startOfToday = new Date();
+  startOfToday.setHours(0, 0, 0, 0);
+  const end = startOfToday.getTime() + 24 * 60 * 60 * 1000 - 1;
+  return { start: end + 1 - DEFAULT_PERIOD_MS, end };
+}
+
+const STALE_KEY = "lingotrace.rankingStale";
+
+function readStale(): Set<string> {
+  try {
+    return new Set<string>(JSON.parse(localStorage.getItem(STALE_KEY) || "[]"));
+  } catch {
+    return new Set();
+  }
+}
+
+function writeStale(set: Set<string>) {
+  try {
+    localStorage.setItem(STALE_KEY, JSON.stringify([...set]));
+  } catch {
+    /* storage unavailable — worst case the board refreshes a bit late */
+  }
+}
+
+/**
+ * Flags a class's saved board as out of date. Called whenever points change,
+ * so the next board load recomputes it once; otherwise a cached board for the
+ * same period is reused (a single cheap read).
+ */
+export function markRankingStale(classId: string) {
+  const set = readStale();
+  set.add(classId);
+  writeStale(set);
 }
 
 function periodId(period: RankingPeriod): string {
@@ -100,8 +134,9 @@ const latestRequest = new Map<string, number>();
  * podium fresh from just that window.
  *
  * Unless `force` is set, a repeat call for a range that's already saved is a
- * cheap no-op read. The teacher's own screens always pass `force` so a
- * change of date range (or points awarded mid-period) shows up immediately.
+ * cheap single read. It recomputes when the date range changes, or when points
+ * were awarded in this class since the last save (see markRankingStale), so
+ * the teacher still sees fresh results without a full re-read on every visit.
  *
  * The returned ranking is always the freshly computed one, even if saving it
  * fails — a failed save is logged but never hides the result from the
@@ -118,7 +153,8 @@ export async function computeAndSaveRankingForPeriod(
   const token = (latestRequest.get(classId) ?? 0) + 1;
   latestRequest.set(classId, token);
 
-  if (!force) {
+  const wasStale = readStale().has(classId);
+  if (!force && !wasStale) {
     const existing = await getDoc(rankingRef(classId));
     if (existing.exists() && (existing.data() as ClassRanking).periodId === id) {
       return existing.data() as ClassRanking;
@@ -185,6 +221,11 @@ export async function computeAndSaveRankingForPeriod(
   if (latestRequest.get(classId) === token) {
     try {
       await setDoc(rankingRef(classId), ranking);
+      if (wasStale) {
+        const set = readStale();
+        set.delete(classId);
+        writeStale(set);
+      }
     } catch (err) {
       console.error("Could not save the champions board for", classId, err);
     }

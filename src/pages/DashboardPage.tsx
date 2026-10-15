@@ -555,7 +555,7 @@ export default function DashboardPage() {
         ? { start: profile.rankingPeriodStart, end: profile.rankingPeriodEnd }
         : getDefaultRankingPeriod();
     let cancelled = false;
-    computeAndSaveRankingsForClasses(classIds, period, true)
+    computeAndSaveRankingsForClasses(classIds, period)
       .then((results) => {
         if (cancelled) return;
         if (!celebratedRef.current && results.some((r) => (r.positions || []).length > 0)) {

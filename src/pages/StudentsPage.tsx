@@ -203,7 +203,7 @@ export default function StudentsPage() {
         : getDefaultRankingPeriod();
 
     let cancelled = false;
-    computeAndSaveRankingForPeriod(selectedClassId, period, true)
+    computeAndSaveRankingForPeriod(selectedClassId, period)
       .then((result) => {
         if (cancelled) return;
         setRanking(result);

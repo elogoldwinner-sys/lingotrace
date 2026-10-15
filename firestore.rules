@@ -205,5 +205,26 @@ service cloud.firestore {
           request.resource.data.diff(resource.data).affectedKeys().hasOnly(["link", "note", "submittedAt"]));
       allow delete: if ownsClass(resource.data.classId);
     }
+
+    // ---- Linked activities (GATway exams / LingoBite Play games) ----
+    // NOTE: if your live rules already contain blocks for linkedAssignments
+    // and linkedResults (they must, or the Exams & Games page wouldn't load),
+    // keep those exactly as they are in the console and only add the
+    // linkedMarkAwards block below.
+
+    // Marks a teacher has already turned into points ("Add 10 marks").
+    // Doc id = `${assignmentId}_${studentId}`. The client first reads the doc
+    // inside a transaction to see whether it exists, so `read` must also
+    // succeed when the doc does not exist yet (resource == null). The claim is
+    // deleted again if awarding the points fails, hence `delete`.
+    match /linkedMarkAwards/{awardId} {
+      allow read: if isSignedIn() &&
+        (resource == null || resource.data.awardedBy == request.auth.uid);
+      allow create: if isSignedIn() &&
+        request.resource.data.awardedBy == request.auth.uid &&
+        ownsClass(request.resource.data.classId);
+      allow delete: if isSignedIn() && resource.data.awardedBy == request.auth.uid;
+      allow update: if false;
+    }
   }
 }

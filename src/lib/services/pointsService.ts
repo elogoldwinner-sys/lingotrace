@@ -4,6 +4,7 @@ import { createFirestoreService } from "../firestoreService";
 import type { PointsTransaction, PointsReason } from "../../types";
 import { evaluateBadgesForStudent } from "./badgesService";
 import { toMillis } from "../timestamps";
+import { markRankingStale } from "./classRankingsService";
 
 const service = createFirestoreService<PointsTransaction>("pointsTransactions");
 
@@ -58,6 +59,8 @@ export async function awardPoints(data: {
       createdAt: serverTimestamp(),
     });
   });
+
+  markRankingStale(data.classId);
 
   // Self-healing re-evaluation: check if the new total unlocks any badges.
   await evaluateBadgesForStudent(data.studentId, newTotal);
