@@ -103,7 +103,9 @@
     "sharedBy": "الصف أنشأه {{owner}}",
     "syncStudents": "مزامنة الطلاب",
     "syncDone": "تمت إضافة {{count}} طالب جديد من الصف الرئيسي.",
-    "syncNone": "كل شيء محدّث."
+    "syncNone": "كل شيء محدّث.",
+    "removeTeacher": "إزالة المعلم",
+    "removeTeacherConfirm": "هل تريد إزالة {{teacher}} من مادة {{subject}}؟ سيفقد الوصول إلى صف هذه المادة وسجلات طلابها. لا يمكن التراجع عن ذلك."
   },
   "students": {
     "title": "الطلاب",

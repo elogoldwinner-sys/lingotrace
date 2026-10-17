@@ -87,11 +87,11 @@ service cloud.firestore {
 
     // A teacher manages the classes they run. Subject classes: the classroom
     // teacher (`ownerId`) creates one for a co-teacher's Gmail with
-    // `teacherId == ""`, can see it, and can withdraw it while it is still
-    // unclaimed. The invited co-teacher claims it on first sign-in by setting
+    // `teacherId == ""`, can see it, and can remove it at any time (removing
+    // the teacher). The invited co-teacher claims it on first sign-in by setting
     // `teacherId` to their own uid (nothing else may change in that update);
-    // from then on it is theirs alone — the owner can no longer touch it or
-    // the students/points in it.
+    // from then on the owner can only remove the subject as a whole; they
+    // cannot read or edit its students/points.
     match /classes/{classId} {
       allow read: if isSignedIn() && (
         resource.data.teacherId == request.auth.uid ||
@@ -106,7 +106,7 @@ service cloud.firestore {
       );
       allow delete: if isSignedIn() && (
         resource.data.teacherId == request.auth.uid ||
-        (resource.data.teacherId == '' && resource.data.get('ownerId', '') == request.auth.uid)
+        resource.data.get('ownerId', '') == request.auth.uid
       );
       allow create: if isSignedIn() && (
         request.resource.data.teacherId == request.auth.uid ||

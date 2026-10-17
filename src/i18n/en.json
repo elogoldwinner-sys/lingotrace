@@ -103,7 +103,9 @@
     "sharedBy": "Class created by {{owner}}",
     "syncStudents": "Sync students",
     "syncDone": "{{count}} new student(s) added from the main class.",
-    "syncNone": "Already up to date."
+    "syncNone": "Already up to date.",
+    "removeTeacher": "Remove teacher",
+    "removeTeacherConfirm": "Remove {{teacher}} from {{subject}}? They will lose access to this subject class and its students' records. This can't be undone."
   },
   "students": {
     "title": "Students",

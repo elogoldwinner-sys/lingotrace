@@ -240,20 +240,23 @@ export default function ClassesPage() {
                       <span className="min-w-0 truncate">
                         <span className="font-semibold">{g.subject}</span> · {g.teacherEmail}
                       </span>
-                      {g.teacherId ? (
-                        <span className="pill bg-green-100 text-green-700 shrink-0">{t("classes.active")}</span>
-                      ) : (
-                        <span className="flex items-center gap-1.5 shrink-0">
-                          <span className="pill bg-gold-50 text-gold">{t("classes.pending")}</span>
-                          <button
-                            onClick={() => deleteClass(g.id)}
-                            className="text-cream-600 hover:text-red-600"
-                            title={t("classes.removePending")}
-                          >
-                            <Trash2 size={13} />
-                          </button>
+                      <span className="flex items-center gap-1.5 shrink-0">
+                        <span className={g.teacherId ? "pill bg-green-100 text-green-700" : "pill bg-gold-50 text-gold"}>
+                          {g.teacherId ? t("classes.active") : t("classes.pending")}
                         </span>
-                      )}
+                        <button
+                          onClick={() => {
+                            if (!g.teacherId || window.confirm(t("classes.removeTeacherConfirm", { teacher: g.teacherEmail, subject: g.subject }))) {
+                              deleteClass(g.id).catch(() => setInviteError(t("classes.addTeacherError")));
+                            }
+                          }}
+                          className="text-cream-600 hover:text-red-600"
+                          title={t("classes.removeTeacher")}
+                        >
+                          <Trash2 size={13} />
+                        </button>
+                      </span>
+                    
                     </div>
                   ))}
                 </div>
