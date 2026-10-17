@@ -108,14 +108,6 @@ export default function KidParentPortalPage({
           <AnnouncementCard key={a.id} announcement={a} />
         ))}
 
-        {rankings.length > 0 && (
-          <div className="space-y-4">
-            {rankings.map((r) => (
-              <WeeklyChampions key={r.classId} ranking={r} classLabel={r.className} />
-            ))}
-          </div>
-        )}
-
         <ChildSwitcher
           studentIds={studentIds}
           currentStudentId={currentStudentId}
@@ -123,6 +115,14 @@ export default function KidParentPortalPage({
           onRemoved={onChildRemoved}
           variant="kid"
         />
+
+        {rankings.length > 0 && (
+          <div className="space-y-4">
+            {rankings.map((r) => (
+              <WeeklyChampions key={r.classId} ranking={r} classLabel={r.className} />
+            ))}
+          </div>
+        )}
 
         {currentStudentId ? (
           <KidChildPanel key={currentStudentId} studentId={currentStudentId} onRemoved={onChildRemoved} />

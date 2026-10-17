@@ -408,6 +408,8 @@ export default function ParentPortalPage() {
   const [activeStudentId, setActiveStudentId] = useState("");
   const [allAnnouncements, setAllAnnouncements] = useState<Announcement[]>([]);
   const [ownClassIds, setOwnClassIds] = useState<string[]>([]);
+  // Which class each linked student record belongs to — lets the champions board follow the selected subject tab.
+  const [classByStudent, setClassByStudent] = useState<Record<string, string>>({});
   const [ownRankings, setOwnRankings] = useState<Record<string, ClassRanking>>({});
   const [removedStudentIds, setRemovedStudentIds] = useState<string[]>([]);
   const alertedRemovalsRef = useRef<Set<string>>(new Set());
@@ -481,6 +483,12 @@ export default function ParentPortalPage() {
         new Set(children.filter((c): c is StudentRecord => !!c).map((c) => c.classId))
       );
       if (cancelled) return;
+      const byStudent: Record<string, string> = {};
+      studentIds.forEach((sid, i) => {
+        const child = children[i];
+        if (child) byStudent[sid] = child.classId;
+      });
+      setClassByStudent(byStudent);
       setOwnClassIds(classIds);
       const rankings = await Promise.all(classIds.map((cid) => getClassRankingOnce(cid)));
       if (!cancelled && rankings.some((r) => r && (r.positions || []).length > 0)) {
@@ -552,9 +560,9 @@ export default function ParentPortalPage() {
     whatsappByStudent[currentStudentId] || studentIds.map((sid) => whatsappByStudent[sid]).find(Boolean);
   const contactHref = contactNumber ? whatsappLink(contactNumber) : null;
 
-  const visibleRankings = Object.values(ownRankings)
-    .filter((r) => (r.positions || []).length > 0)
-    .sort((a, b) => (a.className || "").localeCompare(b.className || ""));
+  // The champions board of the class the selected tab (child + subject) belongs to.
+  const currentRanking = ownRankings[classByStudent[currentStudentId]];
+  const visibleRankings = currentRanking && (currentRanking.positions || []).length > 0 ? [currentRanking] : [];
 
   if (theme === "kid") {
     return (
@@ -616,17 +624,6 @@ export default function ParentPortalPage() {
           <AnnouncementCard key={a.id} announcement={a} />
         ))}
 
-        {Object.values(ownRankings).filter((r) => (r.positions || []).length > 0).length > 0 && (
-          <div className="space-y-4">
-            {Object.values(ownRankings)
-              .filter((r) => (r.positions || []).length > 0)
-              .sort((a, b) => (a.className || "").localeCompare(b.className || ""))
-              .map((r) => (
-                <WeeklyChampions key={r.classId} ranking={r} classLabel={r.className} />
-              ))}
-          </div>
-        )}
-
         <ChildSwitcher
           studentIds={studentIds}
           currentStudentId={currentStudentId}
@@ -634,6 +631,10 @@ export default function ParentPortalPage() {
           onRemoved={handleChildRemoved}
           variant="classic"
         />
+
+        {visibleRankings.map((r) => (
+          <WeeklyChampions key={r.classId} ranking={r} classLabel={r.className} />
+        ))}
 
         {currentStudentId ? (
           <ChildPanel key={currentStudentId} studentId={currentStudentId} onRemoved={handleChildRemoved} />
