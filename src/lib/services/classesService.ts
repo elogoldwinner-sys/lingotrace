@@ -1,4 +1,4 @@
-import { collection, doc, getDocs, query, runTransaction, where } from "firebase/firestore";
+import { collection, doc, getDoc, getDocs, query, runTransaction, where, writeBatch } from "firebase/firestore";
 import { db } from "../firebase";
 import { createFirestoreService } from "../firestoreService";
 import { createStudentsBulk } from "./studentsService";
@@ -105,7 +105,11 @@ export async function addSubjectTeacher(data: {
 }
 
 /** Copies the main class's students into a subject class as brand-new records (zero points, no portal links). Skips names the subject class already has. */
-async function copyStudentsIntoSubject(parentClassId: string, subjectClassId: string) {
+async function copyStudentsIntoSubject(parentClassId: string, subjectClassId: string, subject: string, teacherUid: string) {
+  // The subject teacher's WhatsApp number (from their own profile) so parents get the contact button.
+  const teacherSnap = await getDoc(doc(db, "teachers", teacherUid));
+  const teacherWhatsapp = (teacherSnap.data()?.whatsappNumber as string | undefined) || undefined;
+
   const [mainSnap, subjectSnap] = await Promise.all([
     getDocs(query(collection(db, "students"), where("classId", "==", parentClassId))),
     getDocs(query(collection(db, "students"), where("classId", "==", subjectClassId))),
@@ -113,18 +117,35 @@ async function copyStudentsIntoSubject(parentClassId: string, subjectClassId: st
   const existing = new Set(
     subjectSnap.docs.map((d) => String((d.data() as StudentRecord).name).trim().toLowerCase())
   );
+  // Backfill the subject label (and WhatsApp) on subject students copied before these existed.
+  const stale = subjectSnap.docs.filter((d) => {
+    const s = d.data() as StudentRecord;
+    return s.subject !== subject || (teacherWhatsapp && !s.teacherWhatsapp);
+  });
+  for (let i = 0; i < stale.length; i += 400) {
+    const batch = writeBatch(db);
+    stale.slice(i, i + 400).forEach((d) =>
+      batch.update(d.ref, { subject, ...(teacherWhatsapp ? { teacherWhatsapp } : {}) })
+    );
+    await batch.commit();
+  }
   const rows = mainSnap.docs
     .map((d) => d.data() as StudentRecord)
     .filter((s) => !existing.has(String(s.name).trim().toLowerCase()))
     .map((s) => ({ name: s.name, parentName: s.parentName, parentEmail: s.parentEmail }));
-  if (rows.length > 0) await createStudentsBulk(subjectClassId, rows);
+  if (rows.length > 0) await createStudentsBulk(subjectClassId, rows.map((r) => ({ ...r, subject, teacherWhatsapp })));
   return rows.length;
 }
 
 /** Re-syncs a subject class with its main class (adds students who joined the main class later). Returns how many were added. */
 export async function syncSubjectStudents(subjectClass: ClassRecord) {
-  if (!subjectClass.parentClassId) return 0;
-  return copyStudentsIntoSubject(subjectClass.parentClassId, subjectClass.id);
+  if (!subjectClass.parentClassId || !subjectClass.teacherId) return 0;
+  return copyStudentsIntoSubject(
+    subjectClass.parentClassId,
+    subjectClass.id,
+    subjectClass.subject || "",
+    subjectClass.teacherId
+  );
 }
 
 /**
@@ -162,7 +183,7 @@ export async function claimPendingSubjects(uid: string, email: string | null) {
     const parentClassId = (d.data() as ClassRecord).parentClassId;
     if (parentClassId) {
       try {
-        await copyStudentsIntoSubject(parentClassId, d.id);
+        await copyStudentsIntoSubject(parentClassId, d.id, (d.data() as ClassRecord).subject || "", uid);
       } catch (err) {
         console.error("Couldn't copy students into subject class", err);
       }

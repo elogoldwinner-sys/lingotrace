@@ -173,6 +173,7 @@ export default function KidChildPanel({
               {t("portal.parentWelcome")}
             </p>
             <h1 className="font-serif text-2xl font-extrabold text-navy-700">{child.name}</h1>
+            {child.subject && <p className="text-sm font-extrabold text-gold-600">{child.subject}</p>}
             <div className="mt-2 flex items-baseline gap-2">
               <span className="text-3xl font-extrabold text-gold-500">{child.points}</span>
               <span className="text-sm font-semibold text-cream-600">{t("students.points")}</span>

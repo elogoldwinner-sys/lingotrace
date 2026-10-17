@@ -177,6 +177,7 @@ function ChildPanel({ studentId, onRemoved }: { studentId: string; onRemoved: (s
       <div className="card p-6">
         <p className="label-eyebrow mb-1">{t("portal.parentWelcome")}</p>
         <h1 className="text-2xl font-semibold text-navy">{child.name}</h1>
+        {child.subject && <p className="text-sm font-semibold text-gold">{child.subject}</p>}
         <div className="mt-4 flex flex-wrap items-center gap-4">
           <div className="flex items-center gap-3">
             <span className="text-3xl font-bold text-gold">{child.points}</span>
@@ -389,7 +390,7 @@ export function ChildTabLabel({
     if (child === null) onRemoved(studentId);
   }, [child, studentId, onRemoved]);
   if (child === null) return null;
-  return <>{child?.name || "…"}</>;
+  return <>{child ? (child.subject ? `${child.name} · ${child.subject}` : child.name) : "…"}</>;
 }
 
 export default function ParentPortalPage() {

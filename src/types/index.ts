@@ -107,6 +107,8 @@ export interface StudentRecord {
   teacherWhatsapp?: string;
   /** Firebase Auth uid of the student's own portal account, once claimed via an invite link. */
   authUid?: string;
+  /** Subject name, set on students in a subject class (copied from the class so parents — who can't read class docs — can tell the records apart). */
+  subject?: string;
   /** Teaching group (A–E) chosen by the teacher on the Students page; unset = no group. */
   group?: StudentGroup;
   createdAt: number;

@@ -117,7 +117,7 @@ export async function createStudentManual(data: {
  */
 export async function createStudentsBulk(
   classId: string,
-  rows: { name: string; parentName?: string; parentEmail?: string }[]
+  rows: { name: string; parentName?: string; parentEmail?: string; subject?: string; teacherWhatsapp?: string }[]
 ) {
   return service.createMany(
     rows.map(
@@ -127,6 +127,8 @@ export async function createStudentsBulk(
           classId,
           parentName: row.parentName || undefined,
           parentEmail: row.parentEmail || undefined,
+          subject: row.subject || undefined,
+          teacherWhatsapp: row.teacherWhatsapp || undefined,
           points: 0,
           badgeIds: [],
         }) as Omit<StudentRecord, "id" | "createdAt">
