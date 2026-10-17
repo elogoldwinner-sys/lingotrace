@@ -53,7 +53,7 @@ export default function KidParentPortalPage({
   const { t } = useTranslation();
 
   return (
-    <div className="relative min-h-screen overflow-x-hidden" style={{ background: KID_SKY_BACKGROUND }}>
+    <div className="relative min-h-screen overflow-x-clip" style={{ background: KID_SKY_BACKGROUND }}>
       {/* ───────────── scenery (decorative, fixed to the viewport corners) ───────────── */}
       <div className="pointer-events-none fixed inset-0 z-0 select-none" aria-hidden="true">
         <img src={booksPlant} alt="" className="absolute left-0 top-16 hidden w-40 lg:block xl:w-48" />
@@ -66,8 +66,9 @@ export default function KidParentPortalPage({
         <Star className="absolute right-[6%] top-[40%] hidden w-5 xl:block" />
       </div>
 
-      {/* ───────────── header ───────────── */}
-      <header className="sticky top-0 z-20 flex items-center justify-between gap-3 bg-white/90 px-4 py-3 shadow-[0_2px_12px_-6px_rgba(90,60,200,0.35)] backdrop-blur sm:px-6">
+      {/* ───────────── header + child/subject selector: one sticky block with an opaque backdrop, so the scenery never shows through it ───────────── */}
+      <div className="sticky top-0 z-30">
+      <header className="flex items-center justify-between gap-3 bg-white/95 px-4 py-3 shadow-[0_2px_12px_-6px_rgba(90,60,200,0.35)] backdrop-blur sm:px-6">
         <div className="flex items-center gap-2">
           <Logo size={32} />
           <span className="font-serif text-lg font-extrabold text-navy-700 sm:text-xl">{t("app.name")}</span>
@@ -102,19 +103,20 @@ export default function KidParentPortalPage({
           </button>
         </div>
       </header>
+      <ChildSwitcher
+        studentIds={studentIds}
+        currentStudentId={currentStudentId}
+        onSelect={onSelectStudent}
+        onRemoved={onChildRemoved}
+        variant="kid"
+        bar
+      />
+      </div>
 
       <main className="relative z-10 mx-auto max-w-2xl space-y-5 px-4 py-6 sm:px-6 sm:py-8">
         {announcements.map((a) => (
           <AnnouncementCard key={a.id} announcement={a} />
         ))}
-
-        <ChildSwitcher
-          studentIds={studentIds}
-          currentStudentId={currentStudentId}
-          onSelect={onSelectStudent}
-          onRemoved={onChildRemoved}
-          variant="kid"
-        />
 
         {rankings.length > 0 && (
           <div className="space-y-4">

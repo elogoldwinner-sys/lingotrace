@@ -585,7 +585,8 @@ export default function ParentPortalPage() {
 
   return (
     <div className="min-h-screen bg-cream">
-      <header className="flex items-center justify-between border-b border-cream-400 bg-cream-100/90 px-6 py-4">
+      <div className="sticky top-0 z-30">
+      <header className="flex items-center justify-between border-b border-cream-400 bg-cream-100/95 px-6 py-4 backdrop-blur">
         <div className="flex items-center gap-2">
           <Logo size={28} />
           <span className="font-serif text-xl font-semibold text-navy">{t("app.name")}</span>
@@ -618,19 +619,20 @@ export default function ParentPortalPage() {
           </button>
         </div>
       </header>
+      <ChildSwitcher
+        studentIds={studentIds}
+        currentStudentId={currentStudentId}
+        onSelect={setActiveStudentId}
+        onRemoved={handleChildRemoved}
+        variant="classic"
+        bar
+      />
+      </div>
 
       <main className="max-w-3xl mx-auto px-4 py-8 space-y-6">
         {announcements.map((a) => (
           <AnnouncementCard key={a.id} announcement={a} />
         ))}
-
-        <ChildSwitcher
-          studentIds={studentIds}
-          currentStudentId={currentStudentId}
-          onSelect={setActiveStudentId}
-          onRemoved={handleChildRemoved}
-          variant="classic"
-        />
 
         {visibleRankings.map((r) => (
           <WeeklyChampions key={r.classId} ranking={r} classLabel={r.className} />

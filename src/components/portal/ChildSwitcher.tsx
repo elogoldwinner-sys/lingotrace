@@ -29,12 +29,15 @@ export default function ChildSwitcher({
   onSelect,
   onRemoved,
   variant,
+  bar = false,
 }: {
   studentIds: string[];
   currentStudentId: string;
   onSelect: (studentId: string) => void;
   onRemoved: (studentId: string) => void;
   variant: Variant;
+  /** Wrap in a full-width, opaque bar (for use inside a sticky header) instead of a bare block. */
+  bar?: boolean;
 }) {
   const { t } = useTranslation();
   const [records, setRecords] = useState<Record<string, StudentRecord>>({});
@@ -103,7 +106,7 @@ export default function ChildSwitcher({
           active ? "bg-navy text-cream-100" : "bg-cream-200 text-navy/70 hover:bg-cream-300"
         }`;
 
-  return (
+  const content = (
     <div className="space-y-2">
       {groups.length > 1 && (
         <div className="flex gap-2 overflow-x-auto pb-1">
@@ -137,6 +140,19 @@ export default function ChildSwitcher({
           ))}
         </div>
       )}
+    </div>
+  );
+
+  if (!bar) return content;
+  return (
+    <div
+      className={
+        variant === "kid"
+          ? "border-t border-navy-100/60 bg-white/95 shadow-[0_6px_12px_-8px_rgba(90,60,200,0.35)] backdrop-blur"
+          : "border-b border-cream-400 bg-cream-100/95 backdrop-blur"
+      }
+    >
+      <div className={`mx-auto px-4 py-2 ${variant === "kid" ? "max-w-2xl sm:px-6" : "max-w-3xl"}`}>{content}</div>
     </div>
   );
 }
