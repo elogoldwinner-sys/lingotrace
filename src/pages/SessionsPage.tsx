@@ -590,6 +590,7 @@ export default function SessionsPage() {
         open={groupPickOpen}
         onClose={() => setGroupPickOpen(false)}
         students={students}
+        teacherId={user?.uid || ""}
       />
 
       <Modal open={modalOpen} onClose={() => setModalOpen(false)} title={t("sessions.newSession")}>

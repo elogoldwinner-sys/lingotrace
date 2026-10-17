@@ -57,9 +57,24 @@ export interface ClassRecord {
   id: string;
   name: string;
   description?: string;
+  /** Auth uid of the teacher who runs this class. Empty ("") on a subject that was added for a co-teacher who hasn't signed in yet. */
   teacherId: string;
   color?: string;
   studentIds: string[];
+  /**
+   * Subject classes: the classroom teacher (owner of the main class) can add
+   * other teachers by Gmail. Each one gets their own ClassRecord for the same
+   * students — separate student records, points, attendance, sessions — so
+   * every other page works on it exactly like a normal class.
+   */
+  subject?: string;
+  /** The main class this subject belongs to. */
+  parentClassId?: string;
+  /** Auth uid of the classroom teacher who added this subject teacher. */
+  ownerId?: string;
+  ownerName?: string;
+  /** Lower-cased Gmail the co-teacher signs in with; claimed on their first sign-in. */
+  teacherEmail?: string;
   createdAt: number;
 }
 

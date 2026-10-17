@@ -18,6 +18,7 @@ import { auth, db } from "../lib/firebase";
 import type { ParentProfile, StudentRecord, TeacherGender, UserProfile } from "../types";
 import { findStudentByAuthUid, setTeacherWhatsappForClasses } from "../lib/services/studentsService";
 import { getParentProfile } from "../lib/services/parentsService";
+import { claimPendingSubjects } from "../lib/services/classesService";
 
 export type PortalRole = "teacher" | "student" | "parent" | null;
 
@@ -136,6 +137,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setPortalParent(parentProfile);
     setPortalStudent(student);
     setRole(teacherProfile ? "teacher" : parentProfile ? "parent" : student ? "student" : null);
+
+    // A teacher added as a subject co-teacher (by Gmail) gets their class the first time they sign in.
+    if (teacherProfile) {
+      claimPendingSubjects(firebaseUser.uid, firebaseUser.email).catch((err) =>
+        console.error("Couldn't claim subject classes", err)
+      );
+    }
   }
 
   useEffect(() => {

@@ -77,10 +77,44 @@ service cloud.firestore {
       allow update, delete: if false;
     }
 
-    // A teacher can only manage classes they own
+    // True when the signed-in Google account's (verified) email is the one a
+    // subject class was created for.
+    function isInvitedCoTeacher(data) {
+      return isSignedIn() &&
+        request.auth.token.email_verified == true &&
+        data.get('teacherEmail', '') == request.auth.token.email.lower();
+    }
+
+    // A teacher manages the classes they run. Subject classes: the classroom
+    // teacher (`ownerId`) creates one for a co-teacher's Gmail with
+    // `teacherId == ""`, can see it, and can withdraw it while it is still
+    // unclaimed. The invited co-teacher claims it on first sign-in by setting
+    // `teacherId` to their own uid (nothing else may change in that update);
+    // from then on it is theirs alone — the owner can no longer touch it or
+    // the students/points in it.
     match /classes/{classId} {
-      allow read, update, delete: if isSignedIn() && resource.data.teacherId == request.auth.uid;
-      allow create: if isSignedIn() && request.resource.data.teacherId == request.auth.uid;
+      allow read: if isSignedIn() && (
+        resource.data.teacherId == request.auth.uid ||
+        resource.data.get('ownerId', '') == request.auth.uid ||
+        (resource.data.teacherId == '' && isInvitedCoTeacher(resource.data))
+      );
+      allow update: if isSignedIn() && (
+        resource.data.teacherId == request.auth.uid ||
+        (resource.data.teacherId == '' && isInvitedCoTeacher(resource.data) &&
+          request.resource.data.diff(resource.data).affectedKeys().hasOnly(["teacherId"]) &&
+          request.resource.data.teacherId == request.auth.uid)
+      );
+      allow delete: if isSignedIn() && (
+        resource.data.teacherId == request.auth.uid ||
+        (resource.data.teacherId == '' && resource.data.get('ownerId', '') == request.auth.uid)
+      );
+      allow create: if isSignedIn() && (
+        request.resource.data.teacherId == request.auth.uid ||
+        (request.resource.data.teacherId == '' &&
+          request.resource.data.ownerId == request.auth.uid &&
+          request.resource.data.teacherEmail is string &&
+          ownsClass(request.resource.data.parentClassId))
+      );
     }
 
     // Students belong to a class. The teacher who owns the class has full
