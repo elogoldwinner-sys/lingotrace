@@ -6,6 +6,16 @@ import type { StudentRecord } from "../../types";
 
 const service = createFirestoreService<StudentRecord>("students");
 
+/** The subject name of a class (if its teacher set one), so new students carry it for the parent portal. */
+async function getClassSubject(classId: string): Promise<string | undefined> {
+  try {
+    const snap = await getDoc(doc(db, "classes", classId));
+    return (snap.data()?.subject as string | undefined) || undefined;
+  } catch {
+    return undefined;
+  }
+}
+
 export function subscribeToStudents(
   classId: string,
   onData: (students: StudentRecord[]) => void,
@@ -104,6 +114,7 @@ export async function createStudentManual(data: {
   return service.create({
     name: data.name,
     classId: data.classId,
+    subject: await getClassSubject(data.classId),
     parentName: data.parentName || undefined,
     parentEmail: data.parentEmail || undefined,
     points: 0,
@@ -119,6 +130,7 @@ export async function createStudentsBulk(
   classId: string,
   rows: { name: string; parentName?: string; parentEmail?: string; subject?: string; teacherWhatsapp?: string }[]
 ) {
+  const classSubject = await getClassSubject(classId);
   return service.createMany(
     rows.map(
       (row) =>
@@ -127,7 +139,7 @@ export async function createStudentsBulk(
           classId,
           parentName: row.parentName || undefined,
           parentEmail: row.parentEmail || undefined,
-          subject: row.subject || undefined,
+          subject: row.subject || classSubject,
           teacherWhatsapp: row.teacherWhatsapp || undefined,
           points: 0,
           badgeIds: [],

@@ -105,7 +105,12 @@
     "syncDone": "تمت إضافة {{count}} طالب جديد من الصف الرئيسي.",
     "syncNone": "كل شيء محدّث.",
     "removeTeacher": "إزالة المعلم",
-    "removeTeacherConfirm": "هل تريد إزالة {{teacher}} من مادة {{subject}}؟ سيفقد الوصول إلى صف هذه المادة وسجلات طلابها. لا يمكن التراجع عن ذلك."
+    "removeTeacherConfirm": "هل تريد إزالة {{teacher}} من مادة {{subject}}؟ سيفقد الوصول إلى صف هذه المادة وسجلات طلابها. لا يمكن التراجع عن ذلك.",
+    "subjectOptional": "المادة (اختياري)",
+    "setSubject": "تحديد المادة",
+    "editSubject": "تعديل المادة",
+    "subjectTitle": "مادة الصف",
+    "subjectHelp": "تظهر لأولياء الأمور بجانب أسماء طلابك ليميزوا مادتك عن مواد المعلمين الآخرين."
   },
   "students": {
     "title": "الطلاب",
@@ -276,7 +281,9 @@
     "noAttendanceYet": "لم يتم تسجيل أي حضور بعد.",
     "contactWhatsapp": "تواصل عبر واتساب",
     "childRemoved": "تمت إزالة سجل هذا الطالب من قبل المعلم.",
-    "noChildrenLinked": "لا يوجد أطفال مرتبطون بحسابك بعد الآن."
+    "noChildrenLinked": "لا يوجد أطفال مرتبطون بحسابك بعد الآن.",
+    "subjectsLabel": "المواد",
+    "generalSubject": "عام"
   },
   "projects": {
     "title": "تسليم المشاريع",

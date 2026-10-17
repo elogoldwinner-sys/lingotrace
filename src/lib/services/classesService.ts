@@ -1,4 +1,4 @@
-import { collection, doc, getDoc, getDocs, query, runTransaction, where, writeBatch } from "firebase/firestore";
+import { collection, doc, getDoc, getDocs, query, runTransaction, updateDoc, where, writeBatch, deleteField } from "firebase/firestore";
 import { db } from "../firebase";
 import { createFirestoreService } from "../firestoreService";
 import { createStudentsBulk } from "./studentsService";
@@ -62,12 +62,25 @@ export async function createClass(data: {
   description?: string;
   teacherId: string;
   color?: string;
+  subject?: string;
 }) {
   return service.create({ ...data, studentIds: [] } as Omit<ClassRecord, "id" | "createdAt">);
 }
 
 export async function updateClass(id: string, data: Partial<ClassRecord>) {
   return service.update(id, data);
+}
+
+/** Sets (or clears) the subject name of a class and stamps it on the class's students, so parents see it in their portal. */
+export async function setClassSubject(classId: string, subject: string) {
+  const value = subject.trim();
+  await updateDoc(doc(db, "classes", classId), { subject: value || deleteField() });
+  const snap = await getDocs(query(collection(db, "students"), where("classId", "==", classId)));
+  for (let i = 0; i < snap.docs.length; i += 400) {
+    const batch = writeBatch(db);
+    snap.docs.slice(i, i + 400).forEach((d) => batch.update(d.ref, { subject: value || deleteField() }));
+    await batch.commit();
+  }
 }
 
 export async function deleteClass(id: string) {

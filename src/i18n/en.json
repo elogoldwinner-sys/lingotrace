@@ -105,7 +105,12 @@
     "syncDone": "{{count}} new student(s) added from the main class.",
     "syncNone": "Already up to date.",
     "removeTeacher": "Remove teacher",
-    "removeTeacherConfirm": "Remove {{teacher}} from {{subject}}? They will lose access to this subject class and its students' records. This can't be undone."
+    "removeTeacherConfirm": "Remove {{teacher}} from {{subject}}? They will lose access to this subject class and its students' records. This can't be undone.",
+    "subjectOptional": "Subject (optional)",
+    "setSubject": "Set subject",
+    "editSubject": "Edit subject",
+    "subjectTitle": "Class subject",
+    "subjectHelp": "Shown to parents next to your students' names, so they can tell your subject apart from other teachers'."
   },
   "students": {
     "title": "Students",
@@ -276,7 +281,9 @@
     "noAttendanceYet": "No attendance recorded yet.",
     "contactWhatsapp": "Contact via WhatsApp",
     "childRemoved": "This child's record has been removed by the teacher.",
-    "noChildrenLinked": "No children linked to your account anymore."
+    "noChildrenLinked": "No children linked to your account anymore.",
+    "subjectsLabel": "Subjects",
+    "generalSubject": "General"
   },
   "projects": {
     "title": "Projects submission",

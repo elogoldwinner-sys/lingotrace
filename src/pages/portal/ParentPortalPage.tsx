@@ -5,6 +5,7 @@ import { LogOut, Globe, Repeat } from "lucide-react";
 import { useAuth } from "../../contexts/AuthContext";
 import { useTheme } from "../../contexts/ThemeContext";
 import KidParentPortalPage from "../../components/portal/KidParentPortalPage";
+import ChildSwitcher from "../../components/portal/ChildSwitcher";
 import { subscribeToStudent, getStudentOnce } from "../../lib/services/studentsService";
 import { subscribeToStudentPointsHistory } from "../../lib/services/pointsService";
 import { subscribeToStudentAttendance } from "../../lib/services/attendanceService";
@@ -626,23 +627,13 @@ export default function ParentPortalPage() {
           </div>
         )}
 
-        {studentIds.length > 1 && (
-          <div className="flex flex-wrap gap-2">
-            {studentIds.map((sid) => (
-              <button
-                key={sid}
-                onClick={() => setActiveStudentId(sid)}
-                className={`rounded-lg border px-4 py-2 text-sm font-semibold transition ${
-                  currentStudentId === sid
-                    ? "border-gold bg-gold-50 text-navy"
-                    : "border-cream-300 bg-white text-cream-600 hover:border-gold/50"
-                }`}
-              >
-                <ChildTabLabel studentId={sid} onRemoved={handleChildRemoved} />
-              </button>
-            ))}
-          </div>
-        )}
+        <ChildSwitcher
+          studentIds={studentIds}
+          currentStudentId={currentStudentId}
+          onSelect={setActiveStudentId}
+          onRemoved={handleChildRemoved}
+          variant="classic"
+        />
 
         {currentStudentId ? (
           <ChildPanel key={currentStudentId} studentId={currentStudentId} onRemoved={handleChildRemoved} />

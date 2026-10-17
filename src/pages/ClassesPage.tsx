@@ -1,12 +1,13 @@
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Link } from "react-router-dom";
-import { Plus, Trash2, Link2, Check, UserPlus, RefreshCw } from "lucide-react";
+import { Plus, Trash2, Link2, Check, UserPlus, RefreshCw, Pencil } from "lucide-react";
 import { useAuth } from "../contexts/AuthContext";
 import {
   subscribeToClassesAndSubjects,
   createClass,
   deleteClass,
+  setClassSubject,
   addSubjectTeacher,
   syncSubjectStudents,
   claimPendingSubjects,
@@ -28,6 +29,9 @@ export default function ClassesPage() {
   const [modalOpen, setModalOpen] = useState(false);
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
+  const [newSubject, setNewSubject] = useState("");
+  const [subjectEdit, setSubjectEdit] = useState<ClassRecord | null>(null);
+  const [subjectEditValue, setSubjectEditValue] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [copiedKey, setCopiedKey] = useState("");
   const [inviteError, setInviteError] = useState("");
@@ -123,13 +127,29 @@ export default function ClassesPage() {
     }
   }
 
+  async function handleSaveSubject(e: React.FormEvent) {
+    e.preventDefault();
+    if (!subjectEdit) return;
+    setSubmitting(true);
+    try {
+      await setClassSubject(subjectEdit.id, subjectEditValue);
+      setSubjectEdit(null);
+    } catch {
+      setInviteError(t("classes.addTeacherError"));
+      setSubjectEdit(null);
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
   async function handleCreate(e: React.FormEvent) {
     e.preventDefault();
     if (!user) return;
     setSubmitting(true);
     try {
-      await createClass({ name, description, teacherId: user.uid });
+      await createClass({ name, description, teacherId: user.uid, subject: newSubject.trim() || undefined });
       setName("");
+      setNewSubject("");
       setDescription("");
       setModalOpen(false);
     } finally {
@@ -192,10 +212,27 @@ export default function ClassesPage() {
                   {c.description && (
                     <p className="text-sm text-cream-600 mt-1">{c.description}</p>
                   )}
-                  {c.subject && (
-                    <p className="text-xs text-cream-600 mt-1">
-                      {t("classes.subjectBadge", { subject: c.subject })}
-                      {isSubjectOfOther && c.ownerName ? ` · ${t("classes.sharedBy", { owner: c.ownerName })}` : ""}
+                  {(c.subject || !c.parentClassId) && (
+                    <p className="text-xs text-cream-600 mt-1 flex items-center gap-1.5">
+                      {c.subject && (
+                        <span>
+                          {t("classes.subjectBadge", { subject: c.subject })}
+                          {isSubjectOfOther && c.ownerName ? ` · ${t("classes.sharedBy", { owner: c.ownerName })}` : ""}
+                        </span>
+                      )}
+                      {!c.parentClassId && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setSubjectEdit(c);
+                            setSubjectEditValue(c.subject || "");
+                          }}
+                          className="inline-flex items-center gap-1 text-gold hover:underline"
+                        >
+                          <Pencil size={11} />
+                          {c.subject ? t("classes.editSubject") : t("classes.setSubject")}
+                        </button>
+                      )}
                     </p>
                   )}
                 </div>
@@ -279,6 +316,15 @@ export default function ClassesPage() {
             />
           </div>
           <div>
+            <label className="label-eyebrow block mb-1.5">{t("classes.subjectOptional")}</label>
+            <input
+              value={newSubject}
+              onChange={(e) => setNewSubject(e.target.value)}
+              placeholder={t("classes.subjectPlaceholder")}
+              className="input-field"
+            />
+          </div>
+          <div>
             <label className="label-eyebrow block mb-1.5">{t("classes.description")}</label>
             <textarea
               value={description}
@@ -297,6 +343,30 @@ export default function ClassesPage() {
           </div>
         </form>
       </Modal>
+      <Modal open={!!subjectEdit} onClose={() => setSubjectEdit(null)} title={t("classes.subjectTitle")}>
+        <form onSubmit={handleSaveSubject} className="space-y-4">
+          <p className="text-sm text-cream-600">{subjectEdit?.name}</p>
+          <div>
+            <label className="label-eyebrow block mb-1.5">{t("classes.subjectName")}</label>
+            <input
+              value={subjectEditValue}
+              onChange={(e) => setSubjectEditValue(e.target.value)}
+              placeholder={t("classes.subjectPlaceholder")}
+              className="input-field"
+            />
+            <p className="text-xs text-cream-600 mt-1.5">{t("classes.subjectHelp")}</p>
+          </div>
+          <div className="flex justify-end gap-2">
+            <button type="button" onClick={() => setSubjectEdit(null)} className="btn-secondary">
+              {t("common.cancel")}
+            </button>
+            <button type="submit" disabled={submitting} className="btn-primary">
+              {t("common.save")}
+            </button>
+          </div>
+        </form>
+      </Modal>
+
       <Modal
         open={!!teacherForClass}
         onClose={() => setTeacherForClass(null)}

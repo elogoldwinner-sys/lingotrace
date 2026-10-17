@@ -5,7 +5,7 @@ import ThemeToggle from "../common/ThemeToggle";
 import AnnouncementCard from "../common/AnnouncementCard";
 import WeeklyChampions from "../common/WeeklyChampions";
 import whatsappIcon from "../../assets/whatsapp-icon.png";
-import { ChildTabLabel } from "../../pages/portal/ParentPortalPage";
+import ChildSwitcher from "./ChildSwitcher";
 import KidChildPanel from "./KidChildPanel";
 import { KID_SKY_BACKGROUND, Star } from "../home/KidHomeArt";
 import booksPlant from "../../assets/kid-parent-portal/booksplant-topleft.webp";
@@ -116,24 +116,13 @@ export default function KidParentPortalPage({
           </div>
         )}
 
-        {/* Child tabs */}
-        {studentIds.length > 1 && (
-          <div className="flex flex-wrap gap-2">
-            {studentIds.map((sid) => (
-              <button
-                key={sid}
-                onClick={() => onSelectStudent(sid)}
-                className={`rounded-full border-2 px-4 py-2 text-sm font-extrabold transition ${
-                  currentStudentId === sid
-                    ? "border-gold-300 bg-gold-50 text-navy-700"
-                    : "border-navy-100 bg-white/80 text-navy-500 hover:border-gold-200"
-                }`}
-              >
-                <ChildTabLabel studentId={sid} onRemoved={onChildRemoved} />
-              </button>
-            ))}
-          </div>
-        )}
+        <ChildSwitcher
+          studentIds={studentIds}
+          currentStudentId={currentStudentId}
+          onSelect={onSelectStudent}
+          onRemoved={onChildRemoved}
+          variant="kid"
+        />
 
         {currentStudentId ? (
           <KidChildPanel key={currentStudentId} studentId={currentStudentId} onRemoved={onChildRemoved} />
