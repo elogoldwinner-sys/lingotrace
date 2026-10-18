@@ -13,6 +13,8 @@ import {
 } from "../../lib/services/linkedActivityService";
 import { formatNoteDate } from "../../lib/timestamps";
 import RichText from "../common/RichText";
+import CertificatesSection from "./CertificatesSection";
+import { useAwardedAssignmentIds } from "../../lib/hooks/useLinkedAwards";
 import { Star as StarDecor } from "../home/KidHomeArt";
 import type {
   PointsTransaction,
@@ -127,6 +129,13 @@ export default function KidChildPanel({
     });
   }, [child]);
 
+  // Exams/games whose mark was already added to the points are hidden here (the points stay in the record).
+  const { awardedIds, ready: awardsReady } = useAwardedAssignmentIds(
+    linkedAssignments.map((a) => a.id),
+    studentId
+  );
+  const visibleAssignments = awardsReady ? linkedAssignments.filter((a) => !awardedIds.has(a.id)) : [];
+
   useEffect(() => {
     if (!loading && !child) onRemoved(studentId);
   }, [loading, child, studentId, onRemoved]);
@@ -183,12 +192,15 @@ export default function KidChildPanel({
         <StarDecor className="pointer-events-none absolute end-5 top-5 h-5 w-5 opacity-60" />
       </div>
 
+      {/* Certificates */}
+      <CertificatesSection studentId={studentId} kid />
+
       {/* Exams & Games */}
-      {linkedAssignments.length > 0 && (
+      {visibleAssignments.length > 0 && (
         <div className={cardCls}>
           <CardHeader icon={<GraduationCap size={18} />} title={t("linked.title")} />
           <div className="flex flex-col gap-2.5">
-            {linkedAssignments.map((a) => (
+            {visibleAssignments.map((a) => (
               <KidLinkedActivityCard key={a.id} assignment={a} studentId={studentId} />
             ))}
           </div>

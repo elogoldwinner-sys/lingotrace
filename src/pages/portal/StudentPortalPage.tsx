@@ -25,6 +25,8 @@ import type {
   LinkedAssignment,
   LinkedResult,
 } from "../../types";
+import CertificatesSection from "../../components/portal/CertificatesSection";
+import { useAwardedAssignmentIds } from "../../lib/hooks/useLinkedAwards";
 import Spinner from "../../components/common/Spinner";
 import Logo from "../../components/common/Logo";
 import AnnouncementCard from "../../components/common/AnnouncementCard";
@@ -127,6 +129,13 @@ export default function StudentPortalPage() {
       console.error("Failed to load linked assignments for", portalStudent.classId, error);
     });
   }, [portalStudent?.classId]);
+
+  // Exams/games whose mark was already added to the points are hidden here (the points stay in the record).
+  const { awardedIds, ready: awardsReady } = useAwardedAssignmentIds(
+    linkedAssignments.map((a) => a.id),
+    portalStudent?.id ?? ""
+  );
+  const visibleAssignments = awardsReady ? linkedAssignments.filter((a) => !awardedIds.has(a.id)) : [];
 
   // Celebrate once per portal visit (every login) if this student's class
   // currently has a weekly board.
@@ -263,11 +272,13 @@ export default function StudentPortalPage() {
           </div>
         </div>
 
-        {linkedAssignments.length > 0 && (
+        <CertificatesSection studentId={portalStudent.id} kid={isKid} />
+
+        {visibleAssignments.length > 0 && (
           <div className="card p-6">
             <h2 className="mb-3 text-lg font-semibold text-navy">{t("linked.title")}</h2>
             <div className="flex flex-col gap-2">
-              {linkedAssignments.map((a) => (
+              {visibleAssignments.map((a) => (
                 <LinkedActivityCard key={a.id} assignment={a} studentId={portalStudent.id} />
               ))}
             </div>

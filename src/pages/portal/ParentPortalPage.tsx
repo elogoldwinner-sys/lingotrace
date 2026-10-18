@@ -27,6 +27,8 @@ import ThemeToggle from "../../components/common/ThemeToggle";
 import AnnouncementCard from "../../components/common/AnnouncementCard";
 import WeeklyChampions from "../../components/common/WeeklyChampions";
 import RichText from "../../components/common/RichText";
+import CertificatesSection from "../../components/portal/CertificatesSection";
+import { useAwardedAssignmentIds } from "../../lib/hooks/useLinkedAwards";
 import type {
   PointsTransaction,
   AttendanceRecord,
@@ -133,6 +135,13 @@ function ChildPanel({ studentId, onRemoved }: { studentId: string; onRemoved: (s
     });
   }, [child]);
 
+  // Exams/games whose mark was already added to the points are hidden here (the points stay in the record).
+  const { awardedIds, ready: awardsReady } = useAwardedAssignmentIds(
+    linkedAssignments.map((a) => a.id),
+    studentId
+  );
+  const visibleAssignments = awardsReady ? linkedAssignments.filter((a) => !awardedIds.has(a.id)) : [];
+
   // "Legend" a parent asked for: totals per point reason across the child's
   // whole history (not just the current page), so strengths (top, green)
   // and weak spots (bottom, red) are visible at a glance instead of having
@@ -187,11 +196,13 @@ function ChildPanel({ studentId, onRemoved }: { studentId: string; onRemoved: (s
         </div>
       </div>
 
-      {linkedAssignments.length > 0 && (
+      <CertificatesSection studentId={studentId} />
+
+      {visibleAssignments.length > 0 && (
         <div className="card p-6">
           <h2 className="mb-3 text-lg font-semibold text-navy">{t("linked.title")}</h2>
           <div className="flex flex-col gap-2">
-            {linkedAssignments.map((a) => (
+            {visibleAssignments.map((a) => (
               <LinkedActivityCard key={a.id} assignment={a} studentId={studentId} />
             ))}
           </div>

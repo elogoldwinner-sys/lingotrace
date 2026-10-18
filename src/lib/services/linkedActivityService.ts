@@ -2,6 +2,7 @@ import { deleteDoc, doc, getDoc, onSnapshot, runTransaction, serverTimestamp } f
 import { db } from "../firebase";
 import { createFirestoreService } from "../firestoreService";
 import { awardPoints } from "./pointsService";
+import { toMillis } from "../timestamps";
 import type { LinkedAssignment, LinkedResult, LinkedMarkAward } from "../../types";
 
 const service = createFirestoreService<LinkedAssignment>("linkedAssignments");
@@ -32,12 +33,25 @@ export async function deleteLinkedAssignment(id: string) {
   return service.remove(id);
 }
 
+/**
+ * Newest first. A link that was only just added has no server timestamp yet
+ * (reads back as pending), so it counts as "now" and sits at the very top.
+ */
+function newestFirst(items: LinkedAssignment[]): LinkedAssignment[] {
+  const key = (a: LinkedAssignment) => {
+    const ms = toMillis(a.createdAt);
+    return ms === 0 ? Number.MAX_SAFE_INTEGER : ms;
+  };
+  return [...items].sort((a, b) => key(b) - key(a) || a.id.localeCompare(b.id));
+}
+
+/** Every consumer (teacher page, parent portal, student portal) gets the class's links newest-first. */
 export function subscribeToClassAssignments(
   classId: string,
   onData: (assignments: LinkedAssignment[]) => void,
   onError?: (error: Error) => void
 ) {
-  return service.subscribe([service.where("classId", "==", classId)], onData, onError);
+  return service.subscribe([service.where("classId", "==", classId)], (items) => onData(newestFirst(items)), onError);
 }
 
 /** Live-subscribes to whether a specific (assignment, student) pair has a result yet. */
@@ -47,9 +61,13 @@ export function subscribeToLinkedResult(
   onData: (result: LinkedResult | null) => void
 ) {
   const ref = doc(db, "linkedResults", buildLinkedRef(assignmentId, studentId));
-  return onSnapshot(ref, (snap) => {
-    onData(snap.exists() ? ({ id: snap.id, ...snap.data() } as LinkedResult) : null);
-  });
+  return onSnapshot(
+    ref,
+    (snap) => {
+      onData(snap.exists() ? ({ id: snap.id, ...snap.data() } as LinkedResult) : null);
+    },
+    () => onData(null)
+  );
 }
 
 /** One-off fetch, used when composing a parent report or similar non-realtime views. */

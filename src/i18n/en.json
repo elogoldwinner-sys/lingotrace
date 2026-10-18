@@ -335,7 +335,11 @@
     "addMarks": "Add {{points}} marks",
     "addMarkError": "Couldn't add the marks — check that the new Firestore rule has been published.",
     "markAdded": "{{points}} marks already added to this student",
-    "markAddedShort": "Added"
+    "markAddedShort": "Added",
+    "addedOn": "Added {{date}}",
+    "progress": "{{done}} finished · {{pending}} not yet",
+    "allMarked": "All marks have been added.",
+    "markedHidden": "{{count}} already marked (hidden)"
   },
   "submit": {
     "signInTitle": "Sign in to submit your project",
@@ -505,5 +509,27 @@
     "typeNegative": "Deduction",
     "total": "Total",
     "unknownStudent": "(deleted student)"
+  },
+  "certificate": {
+    "button": "Certificate",
+    "modalTitle": "Certificate of Appreciation",
+    "recipients": "Awarded to ({{count}})",
+    "reasonLabel": "Reason for awarding the certificate",
+    "reasonPlaceholder": "e.g. For outstanding effort and kindness to classmates this month.",
+    "autoFill": "The name, total points, badges and class position are filled in automatically.",
+    "sendToPortal": "Send to parent portal",
+    "downloadPdf": "Download PDF",
+    "issued": "Certificate sent to {{count}} parent portal(s).",
+    "issueError": "Couldn't send the certificate — check that the new Firestore rules have been published.",
+    "downloaded": "Downloaded {{count}} certificate(s).",
+    "downloadError": "Couldn't create the certificate PDF. Please try again.",
+    "preparing": "Preparing {{done}} of {{total}}…",
+    "zipName": "Certificates - {{className}}",
+    "recentlyIssued": "Already sent to a portal",
+    "confirmRemove": "Remove this certificate from the parent's portal?",
+    "removeFromPortal": "Remove from portal",
+    "portalTitle": "Certificates",
+    "name": "Certificate of Appreciation",
+    "download": "Download PDF"
   }
 }

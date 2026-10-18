@@ -335,7 +335,11 @@
     "addMarks": "إضافة {{points}} درجات",
     "addMarkError": "تعذّرت إضافة الدرجات — تأكد من نشر قاعدة Firestore الجديدة.",
     "markAdded": "تمت إضافة {{points}} درجات لهذا الطالب",
-    "markAddedShort": "تمت الإضافة"
+    "markAddedShort": "تمت الإضافة",
+    "addedOn": "أُضيف في {{date}}",
+    "progress": "أنهى {{done}} · لم ينهِ بعد {{pending}}",
+    "allMarked": "تمت إضافة جميع الدرجات.",
+    "markedHidden": "{{count}} تمت إضافة درجاتهم (مخفية)"
   },
   "submit": {
     "signInTitle": "سجّل الدخول لتسليم مشروعك",
@@ -505,5 +509,27 @@
     "typeNegative": "خصم",
     "total": "المجموع",
     "unknownStudent": "(طالب محذوف)"
+  },
+  "certificate": {
+    "button": "شهادة",
+    "modalTitle": "شهادة تقدير",
+    "recipients": "تُمنح إلى ({{count}})",
+    "reasonLabel": "سبب منح الشهادة",
+    "reasonPlaceholder": "مثال: لجهدها المتميز ولطفها مع زملائها هذا الشهر.",
+    "autoFill": "يتم تعبئة الاسم ومجموع النقاط والأوسمة وترتيب الطالب في الصف تلقائيًا.",
+    "sendToPortal": "إرسال إلى بوابة ولي الأمر",
+    "downloadPdf": "تنزيل PDF",
+    "issued": "تم إرسال الشهادة إلى {{count}} من بوابات أولياء الأمور.",
+    "issueError": "تعذّر إرسال الشهادة — تأكد من نشر قواعد Firestore الجديدة.",
+    "downloaded": "تم تنزيل {{count}} شهادة.",
+    "downloadError": "تعذّر إنشاء ملف الشهادة. حاول مرة أخرى.",
+    "preparing": "جارٍ تجهيز {{done}} من {{total}}…",
+    "zipName": "الشهادات - {{className}}",
+    "recentlyIssued": "أُرسلت سابقًا إلى البوابة",
+    "confirmRemove": "هل تريد إزالة هذه الشهادة من بوابة ولي الأمر؟",
+    "removeFromPortal": "إزالة من البوابة",
+    "portalTitle": "الشهادات",
+    "name": "شهادة تقدير",
+    "download": "تنزيل PDF"
   }
 }

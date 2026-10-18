@@ -393,3 +393,26 @@ export interface ClassRanking {
   positions: RankingPosition[];
   computedAt: number;
 }
+
+/**
+ * An electronic "Certificate of Appreciation" a teacher issued to one student.
+ * Shown in that student's parent/student portal, where it can be downloaded as a
+ * PDF. The stats are a snapshot taken when it was issued, so the certificate
+ * never changes afterwards.
+ */
+export interface CertificateRecord {
+  id: string;
+  studentId: string;
+  classId: string;
+  studentName: string;
+  reason: string;
+  /** The student's total points on the platform when issued. */
+  points: number;
+  /** Position in the class since the start of the school year (1 = top); null if it couldn't be worked out. */
+  rank: number | null;
+  classSize: number | null;
+  badgeIds: string[];
+  /** Auth uid of the issuing teacher. */
+  issuedBy: string;
+  createdAt: number;
+}

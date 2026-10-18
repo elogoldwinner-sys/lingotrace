@@ -62,6 +62,7 @@ import Spinner from "../components/common/Spinner";
 import ClassSelector from "../components/common/ClassSelector";
 import WeeklyChampions from "../components/common/WeeklyChampions";
 import PointsReportModal from "../components/common/PointsReportModal";
+import CertificateModal from "../components/common/CertificateModal";
 import RichText from "../components/common/RichText";
 import { reasonsForAmount, POINTS_REASON_ICONS, POSITIVE_POINTS_REASONS } from "../lib/pointsReasons";
 
@@ -132,6 +133,7 @@ export default function StudentsPage() {
   const [selectMode, setSelectMode] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [bulkDeleting, setBulkDeleting] = useState(false);
+  const [certificateOpen, setCertificateOpen] = useState(false);
 
   // Reset (class-wide or single student)
   const [resettingClass, setResettingClass] = useState(false);
@@ -577,6 +579,14 @@ export default function StudentsPage() {
               <span className="text-sm text-cream-600">
                 {t("students.selectedCount", { count: selectedIds.size })}
               </span>
+              <button
+                onClick={() => setCertificateOpen(true)}
+                disabled={selectedIds.size === 0}
+                className="inline-flex items-center gap-1.5 rounded-lg bg-gold px-3 py-2 text-sm font-semibold text-white transition-colors hover:bg-gold-600 disabled:opacity-50"
+              >
+                <Award size={14} />
+                {t("certificate.button")}
+              </button>
               <button
                 onClick={handleDeleteSelected}
                 disabled={selectedIds.size === 0 || bulkDeleting}
@@ -1166,6 +1176,16 @@ export default function StudentsPage() {
           )}
         </div>
       </Modal>
+
+      <CertificateModal
+        open={certificateOpen}
+        onClose={() => setCertificateOpen(false)}
+        selected={students.filter((s) => selectedIds.has(s.id))}
+        roster={students}
+        classId={selectedClassId}
+        className={classes.find((c) => c.id === selectedClassId)?.name || ""}
+        teacherId={user?.uid || ""}
+      />
     </div>
   );
 }
