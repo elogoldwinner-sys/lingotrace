@@ -7,6 +7,7 @@ import { uploadToCloudinary } from "../../lib/cloudinary";
 import { getDefaultRankingPeriod } from "../../lib/services/classRankingsService";
 import Modal from "../common/Modal";
 import ThemeToggle from "../common/ThemeToggle";
+import SchoolLogo from "./SchoolLogo";
 import { useTheme } from "../../contexts/ThemeContext";
 import type { TeacherGender } from "../../types";
 
@@ -164,6 +165,7 @@ export default function Topbar() {
         <>
           <header className="sticky top-0 z-20 flex flex-wrap items-center justify-between gap-x-4 gap-y-3 border-b border-navy-100/70 bg-white/85 px-4 py-3 shadow-[0_8px_24px_-16px_rgba(90,60,200,0.5)] backdrop-blur md:px-8">
             <div className="flex min-w-0 items-center gap-3">
+              <SchoolLogo size={52} />
               <span className="text-[2.2rem] leading-none" aria-hidden="true">
                 👋
               </span>
@@ -297,9 +299,10 @@ export default function Topbar() {
         </>
       ) : (
         <header className="sticky top-0 z-10 flex items-center justify-between border-b border-cream-400 bg-cream-100/90 backdrop-blur px-6 py-4">
-          <div>
+          <div className="flex min-w-0 items-center gap-3">
+            <SchoolLogo size={42} />
             {profile && (
-              <p className="text-sm text-cream-600">
+              <p className="truncate text-sm text-cream-600">
                 {t("dashboard.welcome", { name: profile.displayName })}
               </p>
             )}

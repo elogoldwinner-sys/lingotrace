@@ -17,6 +17,8 @@ import {
   UserX,
   Pencil,
   FileSpreadsheet,
+  BarChart3,
+  LineChart,
 } from "lucide-react";
 import { deleteField } from "firebase/firestore";
 import { useAuth } from "../contexts/AuthContext";
@@ -62,6 +64,8 @@ import Spinner from "../components/common/Spinner";
 import ClassSelector from "../components/common/ClassSelector";
 import WeeklyChampions from "../components/common/WeeklyChampions";
 import PointsReportModal from "../components/common/PointsReportModal";
+import StudentReportModal from "../components/reports/StudentReportModal";
+import ClassStatsModal from "../components/reports/ClassStatsModal";
 import CertificateModal from "../components/common/CertificateModal";
 import RichText from "../components/common/RichText";
 import { reasonsForAmount, POINTS_REASON_ICONS, POSITIVE_POINTS_REASONS } from "../lib/pointsReasons";
@@ -105,6 +109,9 @@ export default function StudentsPage() {
   const [detailStudent, setDetailStudent] = useState<StudentRecord | null>(null);
   const [detailPoints, setDetailPoints] = useState<PointsTransaction[]>([]);
   const [reportModalOpen, setReportModalOpen] = useState(false);
+  // Printable student report (points gained/lost + graphs) and class statistics
+  const [studentReportTarget, setStudentReportTarget] = useState<StudentRecord | null>(null);
+  const [classStatsOpen, setClassStatsOpen] = useState(false);
   const [detailAttendance, setDetailAttendance] = useState<AttendanceRecord[]>([]);
   const [detailNotes, setDetailNotes] = useState<NoteRecord[]>([]);
   const [detailSessions, setDetailSessions] = useState<SessionRecord[]>([]);
@@ -549,6 +556,14 @@ export default function StudentsPage() {
             <FileSpreadsheet size={16} />
             {t("pointsReport.button")}
           </button>
+          <button
+            onClick={() => setClassStatsOpen(true)}
+            className="btn-secondary text-sm py-2 px-3"
+            disabled={!selectedClassId}
+          >
+            <BarChart3 size={16} />
+            {t("reports.classStats")}
+          </button>
         </div>
       </div>
 
@@ -678,6 +693,17 @@ export default function StudentsPage() {
                 </button>
               </div>
 
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setStudentReportTarget(s);
+                }}
+                className="btn-secondary py-1.5 px-3 text-xs self-start"
+              >
+                <LineChart size={14} />
+                {t("reports.studentReport")}
+              </button>
+
               {s.badgeIds?.length > 0 && (
                 <div className="flex flex-wrap gap-1.5">
                   {s.badgeIds.map((badgeId) => {
@@ -717,6 +743,19 @@ export default function StudentsPage() {
           ))}
         </div>
       )}
+
+      <StudentReportModal
+        open={!!studentReportTarget}
+        onClose={() => setStudentReportTarget(null)}
+        student={studentReportTarget}
+        className={classes.find((c) => c.id === studentReportTarget?.classId)?.name || ""}
+      />
+      <ClassStatsModal
+        open={classStatsOpen}
+        onClose={() => setClassStatsOpen(false)}
+        classes={classes}
+        defaultClassId={selectedClassId}
+      />
 
       <PointsReportModal
         open={reportModalOpen}
@@ -908,6 +947,14 @@ export default function StudentsPage() {
                   );
                 })}
               </div>
+              <div className="flex flex-wrap items-center gap-3">
+              <button
+                onClick={() => setStudentReportTarget(detailStudent)}
+                className="btn-secondary py-1.5 px-3 text-sm"
+              >
+                <LineChart size={14} />
+                {t("reports.studentReport")}
+              </button>
               <button
                 onClick={handleResetStudent}
                 disabled={resettingStudent}
@@ -920,6 +967,7 @@ export default function StudentsPage() {
                     ? t("students.resetDone")
                     : t("students.resetStudent")}
               </button>
+              </div>
             </div>
 
             {(detailStudent.parentName || detailStudent.parentEmail) && (

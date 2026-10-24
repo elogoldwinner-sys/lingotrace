@@ -6,6 +6,8 @@ export interface UserProfile {
   displayName: string;
   role: UserRole;
   photoURL?: string;
+  /** School logo (Cloudinary URL) shown in a circular frame in the teacher header and on printed reports. */
+  schoolLogoURL?: string;
   /** Teacher's WhatsApp contact number (with country code), shown to parents in the parent portal. */
   whatsappNumber?: string;
   /**

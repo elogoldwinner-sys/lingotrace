@@ -311,3 +311,75 @@
 [data-theme="kid"] .rich-editor-box {
   @apply border-2 rounded-xl;
 }
+
+/* ───────────── Printable reports (student report / class statistics) ─────────────
+   Report sheets use fixed light colours on purpose so they read the same in
+   every theme and on paper. While printing, everything on the page except
+   the .lt-print-root copy of the open report is hidden. */
+.lt-print-root {
+  display: none;
+}
+
+.lt-report {
+  background: #fff;
+  color: #111827;
+  font-size: 13px;
+  line-height: 1.45;
+  padding: 20px;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+}
+.lt-report h1 { font-size: 20px; font-weight: 700; margin: 0; color: #1e3a8a; }
+.lt-report h2 {
+  font-size: 14px;
+  font-weight: 700;
+  margin: 20px 0 8px;
+  padding-bottom: 4px;
+  border-bottom: 1px solid #e5e7eb;
+  color: #1f2937;
+}
+.lt-report-head {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding-bottom: 12px;
+  margin-bottom: 12px;
+  border-bottom: 2px solid #1e3a8a;
+}
+.lt-report-logo {
+  width: 64px;
+  height: 64px;
+  flex-shrink: 0;
+  border-radius: 9999px;
+  object-fit: cover;
+  border: 2px solid #c9a227;
+}
+.lt-report-meta { color: #4b5563; font-size: 12px; }
+.lt-report-meta b { color: #111827; }
+.lt-cards { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-top: 10px; }
+.lt-stat { border: 1px solid #e5e7eb; border-radius: 8px; padding: 8px 10px; background: #f9fafb; }
+.lt-stat span { display: block; font-size: 11px; color: #6b7280; }
+.lt-stat b { display: block; font-size: 21px; line-height: 1.2; }
+.lt-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+.lt-table th, .lt-table td { border-bottom: 1px solid #e5e7eb; padding: 5px 6px; text-align: start; vertical-align: top; }
+.lt-table th { background: #f3f4f6; font-weight: 600; }
+.lt-table td.num, .lt-table th.num { text-align: end; white-space: nowrap; }
+.lt-pos { color: #15803d; font-weight: 600; }
+.lt-neg { color: #dc2626; font-weight: 600; }
+.lt-foot { margin-top: 14px; font-size: 11px; color: #6b7280; }
+
+@media screen and (max-width: 520px) {
+  .lt-cards { grid-template-columns: repeat(2, 1fr); }
+}
+
+@media print {
+  @page { size: A4; margin: 12mm; }
+  html, body { background: #fff !important; }
+  body > *:not(.lt-print-root) { display: none !important; }
+  .lt-print-root { display: block !important; }
+  .lt-report { border: 0; border-radius: 0; padding: 0; }
+  * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  .lt-avoid { break-inside: avoid; }
+  .lt-table thead { display: table-header-group; }
+  .lt-table tr { break-inside: avoid; }
+}

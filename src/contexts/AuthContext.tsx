@@ -13,7 +13,7 @@ import {
   signOut as firebaseSignOut,
   type User,
 } from "firebase/auth";
-import { collection, doc, getDoc, getDocs, query, setDoc, serverTimestamp, where } from "firebase/firestore";
+import { collection, deleteField, doc, getDoc, getDocs, query, setDoc, serverTimestamp, where } from "firebase/firestore";
 import { auth, db } from "../lib/firebase";
 import type { ParentProfile, StudentRecord, TeacherGender, UserProfile } from "../types";
 import { findStudentByAuthUid, setTeacherWhatsappForClasses } from "../lib/services/studentsService";
@@ -49,6 +49,8 @@ interface AuthContextValue {
   /** Join/portal-login via a Google popup — does NOT create a teacher profile. Resolves with the signed-in user. */
   beginGoogleSignIn: () => Promise<User>;
   updateTeacherPhoto: (photoURL: string) => Promise<void>;
+  /** Saves (or, with null, removes) the school logo shown in the teacher header and on printed reports. */
+  updateTeacherSchoolLogo: (schoolLogoURL: string | null) => Promise<void>;
   updateTeacherWhatsapp: (whatsappNumber: string) => Promise<void>;
   updateTeacherRankingPeriod: (start: number, end: number) => Promise<void>;
   updateTeacherGender: (gender: TeacherGender) => Promise<void>;
@@ -336,6 +338,23 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }
 
+  async function updateTeacherSchoolLogo(schoolLogoURL: string | null) {
+    const currentUser = auth.currentUser;
+    if (!currentUser) return;
+    await setDoc(
+      doc(db, "teachers", currentUser.uid),
+      { schoolLogoURL: schoolLogoURL ?? deleteField() },
+      { merge: true }
+    );
+    setProfile((prev) => {
+      if (!prev) return prev;
+      const next = { ...prev };
+      if (schoolLogoURL) next.schoolLogoURL = schoolLogoURL;
+      else delete next.schoolLogoURL;
+      return next;
+    });
+  }
+
   async function signOut() {
     await firebaseSignOut(auth);
   }
@@ -352,6 +371,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         signInTeacherWithGoogle,
         beginGoogleSignIn,
         updateTeacherPhoto,
+        updateTeacherSchoolLogo,
         updateTeacherWhatsapp,
         updateTeacherRankingPeriod,
         updateTeacherGender,
