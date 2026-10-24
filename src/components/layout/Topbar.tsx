@@ -163,8 +163,8 @@ export default function Topbar() {
     <>
       {isKid ? (
         <>
-          <header className="sticky top-0 z-20 flex flex-wrap items-center justify-between gap-x-4 gap-y-3 border-b border-navy-100/70 bg-white/85 px-4 py-3 shadow-[0_8px_24px_-16px_rgba(90,60,200,0.5)] backdrop-blur md:px-8">
-            <div className="flex min-w-0 items-center gap-3">
+          <header className="sticky top-0 z-20 flex flex-wrap items-center justify-between gap-x-3 gap-y-3 border-b border-navy-100/70 bg-white/85 px-4 py-3 shadow-[0_8px_24px_-16px_rgba(90,60,200,0.5)] backdrop-blur md:px-8">
+            <div className="flex min-w-0 flex-1 items-center gap-3">
               <SchoolLogo size={52} />
               <span className="text-[2.2rem] leading-none" aria-hidden="true">
                 👋
@@ -173,7 +173,8 @@ export default function Topbar() {
                 {profile && (
                   <p className="truncate font-serif text-xl font-bold leading-tight text-navy-700 md:text-2xl">
                     {t("dashboard.welcomeKid", {
-                      name: `${t(gender === "male" ? "dashboard.titleMr" : "dashboard.titleMs")} ${familyName(profile.displayName)}`,
+                      // U+200E keeps the "!" after an Arabic name on the correct side in an English sentence.
+                      name: `${t(gender === "male" ? "dashboard.titleMr" : "dashboard.titleMs")} ${familyName(profile.displayName)}\u200E`,
                     })}
                   </p>
                 )}
@@ -181,7 +182,7 @@ export default function Topbar() {
               </div>
             </div>
 
-            <div className="flex flex-wrap items-center justify-end gap-2">
+            <div className="flex shrink-0 flex-wrap items-center justify-end gap-2 lg:flex-nowrap">
               <ThemeToggle variant="header" />
 
               <button onClick={toggleLanguage} className={KID_PILL} title={t("common.language")}>

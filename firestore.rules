@@ -160,11 +160,22 @@ service cloud.firestore {
       allow create: if isSignedIn() && request.resource.data.authorId == request.auth.uid;
     }
 
+    // True when the signed-in teacher is the classroom teacher (`ownerId`) who
+    // added the subject class `classId` for a co-teacher. Read-only: lets the
+    // classroom teacher compare points across subjects (Class statistics →
+    // "Across subjects"). Only reads are granted — the co-teacher alone can
+    // still create, edit or delete their own points.
+    function isSubjectOwner(classId) {
+      return isSignedIn() &&
+        get(/databases/$(database)/documents/classes/$(classId)).data.get('ownerId', '') == request.auth.uid;
+    }
+
     // Points transactions are owned by the teacher who awarded them. The
     // student they're about, or that student's parent, may also read them.
     match /pointsTransactions/{txnId} {
       allow read: if (isSignedIn() && resource.data.awardedBy == request.auth.uid) ||
-        isLinkedStudent(resource.data.studentId) || isLinkedParent(resource.data.studentId);
+        isLinkedStudent(resource.data.studentId) || isLinkedParent(resource.data.studentId) ||
+        isSubjectOwner(resource.data.classId);
       allow update, delete: if isSignedIn() && resource.data.awardedBy == request.auth.uid;
       allow create: if isSignedIn() && request.resource.data.awardedBy == request.auth.uid;
     }

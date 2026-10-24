@@ -19,6 +19,7 @@ import {
   FileSpreadsheet,
   BarChart3,
   LineChart,
+  Scale,
 } from "lucide-react";
 import { deleteField } from "firebase/firestore";
 import { useAuth } from "../contexts/AuthContext";
@@ -65,7 +66,7 @@ import ClassSelector from "../components/common/ClassSelector";
 import WeeklyChampions from "../components/common/WeeklyChampions";
 import PointsReportModal from "../components/common/PointsReportModal";
 import StudentReportModal from "../components/reports/StudentReportModal";
-import ClassStatsModal from "../components/reports/ClassStatsModal";
+import ClassStatsModal, { type StatsTab } from "../components/reports/ClassStatsModal";
 import CertificateModal from "../components/common/CertificateModal";
 import RichText from "../components/common/RichText";
 import { reasonsForAmount, POINTS_REASON_ICONS, POSITIVE_POINTS_REASONS } from "../lib/pointsReasons";
@@ -112,6 +113,7 @@ export default function StudentsPage() {
   // Printable student report (points gained/lost + graphs) and class statistics
   const [studentReportTarget, setStudentReportTarget] = useState<StudentRecord | null>(null);
   const [classStatsOpen, setClassStatsOpen] = useState(false);
+  const [classStatsTab, setClassStatsTab] = useState<StatsTab>("students");
   const [detailAttendance, setDetailAttendance] = useState<AttendanceRecord[]>([]);
   const [detailNotes, setDetailNotes] = useState<NoteRecord[]>([]);
   const [detailSessions, setDetailSessions] = useState<SessionRecord[]>([]);
@@ -557,12 +559,26 @@ export default function StudentsPage() {
             {t("pointsReport.button")}
           </button>
           <button
-            onClick={() => setClassStatsOpen(true)}
+            onClick={() => {
+              setClassStatsTab("students");
+              setClassStatsOpen(true);
+            }}
             className="btn-secondary text-sm py-2 px-3"
             disabled={!selectedClassId}
           >
             <BarChart3 size={16} />
             {t("reports.classStats")}
+          </button>
+          <button
+            onClick={() => {
+              setClassStatsTab("classes");
+              setClassStatsOpen(true);
+            }}
+            className="btn-secondary text-sm py-2 px-3"
+            disabled={!selectedClassId}
+          >
+            <Scale size={16} />
+            {t("reports.compareButton")}
           </button>
         </div>
       </div>
@@ -755,6 +771,7 @@ export default function StudentsPage() {
         onClose={() => setClassStatsOpen(false)}
         classes={classes}
         defaultClassId={selectedClassId}
+        initialTab={classStatsTab}
       />
 
       <PointsReportModal

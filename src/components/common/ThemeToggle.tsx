@@ -43,7 +43,9 @@ export default function ThemeToggle({
       className={`flex items-center transition-all ${look} ${className}`}
     >
       {isKid ? <GraduationCap size={iconSize} /> : <Sparkles size={iconSize} />}
-      {isKid ? t("theme.classicMode") : t("theme.kidMode")}
+      <span className={variant === "header" ? "hidden 2xl:inline" : undefined}>
+        {isKid ? t("theme.classicMode") : t("theme.kidMode")}
+      </span>
     </button>
   );
 }

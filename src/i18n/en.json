@@ -589,6 +589,23 @@
       "day": "per day",
       "week": "per week",
       "month": "per month"
-    }
+    },
+    "tabStudents": "Students of this class",
+    "tabClasses": "Compare classes",
+    "tabSubjects": "Across subjects",
+    "compareButton": "Compare classes",
+    "pickClasses": "Classes to compare (tap to include or leave out)",
+    "pickTwoClasses": "Select at least two classes above to compare them.",
+    "classesReportTitle": "Class Comparison Report",
+    "subjectsReportTitle": "Subjects Comparison Report",
+    "mainSubject": "Main class",
+    "subject": "Subject",
+    "subjectsCompared": "This class compared across subjects",
+    "studentAcrossSubjects": "One student across subjects",
+    "allStudentsOption": "— Choose a student (optional) —",
+    "matrixTitle": "Net points of every student in each subject",
+    "sum": "Total",
+    "totalsOnlyNote": "Showing each student's current total points only (entire period). Subject teachers' dated point history is not readable yet — publish the updated Firestore rules to unlock dates and gained/lost.",
+    "notJoined": "{{count}} subject teacher(s) haven't signed in yet, so their subject is not included."
   }
 }
