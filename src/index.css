@@ -130,8 +130,8 @@
     overflow-x: clip;
   }
 
+  /* (Not svg: icons must keep their own size inside flex buttons such as the sidebar rail.) */
   img,
-  svg,
   video,
   canvas {
     max-width: 100%;
