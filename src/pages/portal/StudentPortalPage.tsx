@@ -1,12 +1,16 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
 import { LogOut, Globe, Camera, Repeat } from "lucide-react";
+import { collection, getDocs, query, where } from "firebase/firestore";
+import { db } from "../../lib/firebase";
+import StudentAvatar, { rankOf } from "../../components/avatars/StudentAvatar";
+import AvatarPickerModal from "../../components/avatars/AvatarPickerModal";
+import { avatarPool, takenKeys } from "../../lib/avatars";
 import { useAuth } from "../../contexts/AuthContext";
 import { subscribeToStudentPointsHistory } from "../../lib/services/pointsService";
 import { subscribeToStudentAttendance } from "../../lib/services/attendanceService";
 import { updateStudent } from "../../lib/services/studentsService";
-import { uploadToCloudinary } from "../../lib/cloudinary";
 import { getBadgeDefinition } from "../../lib/services/badgesService";
 import { subscribeToAnnouncements, isAnnouncementVisibleTo } from "../../lib/services/announcementsService";
 import { subscribeToClassRanking, getClassRankingOnce } from "../../lib/services/classRankingsService";
@@ -24,6 +28,7 @@ import type {
   ClassRanking,
   LinkedAssignment,
   LinkedResult,
+  StudentRecord,
 } from "../../types";
 import CertificatesSection from "../../components/portal/CertificatesSection";
 import { useAwardedAssignmentIds } from "../../lib/hooks/useLinkedAwards";
@@ -87,8 +92,8 @@ export default function StudentPortalPage() {
   const [ranking, setRanking] = useState<ClassRanking | null>(null);
   const [linkedAssignments, setLinkedAssignments] = useState<LinkedAssignment[]>([]);
   const [loading, setLoading] = useState(true);
-  const fileInputRef = useRef<HTMLInputElement>(null);
-  const [uploadingPhoto, setUploadingPhoto] = useState(false);
+  const [avatarOpen, setAvatarOpen] = useState(false);
+  const [classmates, setClassmates] = useState<{ photoURL?: string }[]>([]);
 
   useEffect(() => {
     const unsubscribe = subscribeToAnnouncements(setAllAnnouncements, console.error);
@@ -159,18 +164,19 @@ export default function StudentPortalPage() {
     i18n.changeLanguage(i18n.language === "ar" ? "en" : "ar");
   }
 
-  async function handlePhotoSelected(e: React.ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0];
-    e.target.value = "";
-    if (!file || !portalStudent) return;
-    setUploadingPhoto(true);
-    try {
-      const result = await uploadToCloudinary(file, "lingotrace/students");
-      await updateStudent(portalStudent.id, { photoURL: result.secure_url });
-      await refreshPortalRole();
-    } finally {
-      setUploadingPhoto(false);
-    }
+  /** Reads the classmates' current pictures, so the gallery can grey out the ones already taken. */
+  async function openAvatarPicker() {
+    if (!portalStudent) return;
+    const snap = await getDocs(query(collection(db, "students"), where("classId", "==", portalStudent.classId)));
+    setClassmates(snap.docs.filter((d) => d.id !== portalStudent.id).map((d) => ({ photoURL: (d.data() as StudentRecord).photoURL })));
+    setAvatarOpen(true);
+  }
+
+  // One time only: the rules also refuse a second change once `avatarPicked` is set.
+  async function handleAvatarChosen(url: string) {
+    if (!portalStudent) return;
+    await updateStudent(portalStudent.id, { photoURL: url, avatarPicked: true });
+    await refreshPortalRole();
   }
 
   if (!portalStudent) {
@@ -232,35 +238,24 @@ export default function StudentPortalPage() {
 
         <div className="card p-6">
           <div className="flex items-center gap-4">
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept="image/*"
-              className="hidden"
-              onChange={handlePhotoSelected}
-            />
-            <button
-              type="button"
-              onClick={() => fileInputRef.current?.click()}
-              disabled={uploadingPhoto}
-              title={t("auth.changePhoto")}
-              className="relative h-16 w-16 shrink-0 rounded-full group disabled:opacity-60"
-            >
-              {portalStudent.photoURL ? (
-                <img
-                  src={portalStudent.photoURL}
-                  alt={portalStudent.name}
-                  className="h-16 w-16 rounded-full object-cover border border-gold/40"
-                />
-              ) : (
-                <div className="h-16 w-16 rounded-full bg-navy text-cream-100 flex items-center justify-center text-xl font-semibold">
-                  {portalStudent.name[0]?.toUpperCase()}
-                </div>
-              )}
-              <span className="absolute inset-0 flex items-center justify-center rounded-full bg-navy/50 opacity-0 group-hover:opacity-100 transition">
-                <Camera size={18} className="text-cream-100" />
-              </span>
-            </button>
+            {portalStudent.avatarGender && !portalStudent.avatarPicked ? (
+              <button
+                type="button"
+                onClick={openAvatarPicker}
+                title={t("avatars.studentChoose")}
+                className="group relative shrink-0 rounded-full"
+              >
+                <StudentAvatar photoURL={portalStudent.photoURL} name={portalStudent.name} size={68} rank={rankOf(ranking, portalStudent.id)} />
+                <span className="absolute inset-0 flex items-center justify-center rounded-full bg-navy/50 opacity-0 transition group-hover:opacity-100">
+                  <Camera size={18} className="text-cream-100" />
+                </span>
+                <span className="absolute -bottom-1 start-1/2 -translate-x-1/2 whitespace-nowrap rounded-full bg-gold px-2 py-0.5 text-[10px] font-bold text-white shadow rtl:translate-x-1/2">
+                  {t("avatars.studentChooseShort")}
+                </span>
+              </button>
+            ) : (
+              <StudentAvatar photoURL={portalStudent.photoURL} name={portalStudent.name} size={68} rank={rankOf(ranking, portalStudent.id)} />
+            )}
             <div>
               <p className="label-eyebrow mb-1">{t("portal.welcome")}</p>
               <h1 className="text-2xl font-semibold text-navy">{portalStudent.name}</h1>
@@ -271,6 +266,19 @@ export default function StudentPortalPage() {
             <span className="text-sm text-cream-600">{t("students.points")}</span>
           </div>
         </div>
+
+        {portalStudent.avatarGender && !portalStudent.avatarPicked && (
+          <AvatarPickerModal
+            open={avatarOpen}
+            onClose={() => setAvatarOpen(false)}
+            title={t("avatars.studentChoose")}
+            pool={avatarPool(portalStudent.avatarGender)}
+            taken={takenKeys(classmates)}
+            currentUrl={portalStudent.photoURL}
+            onConfirm={handleAvatarChosen}
+            warning={t("avatars.studentWarning")}
+          />
+        )}
 
         <CertificatesSection studentId={portalStudent.id} kid={isKid} />
 

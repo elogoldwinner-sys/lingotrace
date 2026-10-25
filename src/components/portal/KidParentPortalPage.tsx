@@ -127,7 +127,7 @@ export default function KidParentPortalPage({
         )}
 
         {currentStudentId ? (
-          <KidChildPanel key={currentStudentId} studentId={currentStudentId} onRemoved={onChildRemoved} />
+          <KidChildPanel key={currentStudentId} studentId={currentStudentId} onRemoved={onChildRemoved} rankings={rankings} />
         ) : (
           <div className="rounded-[1.75rem] border border-white bg-white/95 p-6 text-center text-sm font-semibold text-cream-600 shadow-[0_18px_34px_-24px_rgba(90,60,200,0.45)]">
             {t("portal.noChildrenLinked")}

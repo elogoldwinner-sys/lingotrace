@@ -20,13 +20,16 @@ import {
   BarChart3,
   LineChart,
   Scale,
+  Shuffle,
 } from "lucide-react";
 import { deleteField } from "firebase/firestore";
 import { useAuth } from "../contexts/AuthContext";
-import { subscribeToClasses } from "../lib/services/classesService";
+import { subscribeToClasses, updateClass } from "../lib/services/classesService";
 import {
   subscribeToStudents,
   applySchoolLogoToStudents,
+  applyAvatarGenderToStudents,
+  assignAvatars,
   deleteStudent,
   deleteManyStudents,
   createStudentManual,
@@ -66,6 +69,10 @@ import Spinner from "../components/common/Spinner";
 import ClassSelector from "../components/common/ClassSelector";
 import WeeklyChampions from "../components/common/WeeklyChampions";
 import PointsReportModal from "../components/common/PointsReportModal";
+import StudentAvatar, { rankOf } from "../components/avatars/StudentAvatar";
+import AvatarPickerModal from "../components/avatars/AvatarPickerModal";
+import ClassTypeCard from "../components/avatars/ClassTypeCard";
+import { avatarPool, shuffled, takenKeys } from "../lib/avatars";
 import StudentReportModal from "../components/reports/StudentReportModal";
 import ClassStatsModal, { type StatsTab } from "../components/reports/ClassStatsModal";
 import CertificateModal from "../components/common/CertificateModal";
@@ -113,9 +120,21 @@ export default function StudentsPage() {
   const [reportModalOpen, setReportModalOpen] = useState(false);
   // Printable student report (points gained/lost + graphs) and class statistics
   const healedLogoRef = useRef(new Set<string>());
+  const [avatarPickerOpen, setAvatarPickerOpen] = useState(false);
+  const [savingType, setSavingType] = useState(false);
+  const [randomizing, setRandomizing] = useState(false);
+  const currentClass = classes.find((c) => c.id === selectedClassId);
+  const classGender = currentClass?.avatarGender;
   const [studentReportTarget, setStudentReportTarget] = useState<StudentRecord | null>(null);
   const [classStatsOpen, setClassStatsOpen] = useState(false);
   const [classStatsTab, setClassStatsTab] = useState<StatsTab>("students");
+
+  // Keep each student's copy of the class's avatar collection type up to date (the student portal needs it).
+  useEffect(() => {
+    if (!classGender || students.length === 0) return;
+    if (students.every((s) => s.avatarGender === classGender)) return;
+    applyAvatarGenderToStudents(students, classGender).catch((err) => console.error("Avatar type copy failed", err));
+  }, [students, classGender]);
 
   // Students added or joined after the logo was uploaded get it copied on as soon as the teacher sees them.
   useEffect(() => {
@@ -441,6 +460,33 @@ export default function StudentsPage() {
     }
   }
 
+  async function handleSaveClassType(gender: "boys" | "girls" | "mixed") {
+    if (!selectedClassId) return;
+    setSavingType(true);
+    try {
+      await updateClass(selectedClassId, { avatarGender: gender });
+      await applyAvatarGenderToStudents(students, gender);
+    } finally {
+      setSavingType(false);
+    }
+  }
+
+  async function handleRandomAvatars() {
+    if (!classGender || students.length === 0) return;
+    const pool = shuffled(avatarPool(classGender));
+    if (!window.confirm(t("avatars.randomConfirm", { count: students.length, max: pool.length }))) return;
+    setRandomizing(true);
+    try {
+      const chosen = students.slice(0, pool.length);
+      await assignAvatars(chosen.map((s, i) => ({ id: s.id, photoURL: pool[i] })));
+      if (students.length > pool.length) {
+        window.alert(t("avatars.randomPartial", { count: students.length - pool.length, max: pool.length }));
+      }
+    } finally {
+      setRandomizing(false);
+    }
+  }
+
   async function handleResetClass() {
     if (!selectedClassId || students.length === 0) return;
     const className = classes.find((c) => c.id === selectedClassId)?.name || "";
@@ -592,6 +638,15 @@ export default function StudentsPage() {
             <Scale size={16} />
             {t("reports.compareButton")}
           </button>
+          <button
+            onClick={handleRandomAvatars}
+            className="btn-secondary text-sm py-2 px-3 disabled:opacity-50"
+            disabled={!classGender || students.length === 0 || randomizing}
+            title={classGender ? undefined : t("avatars.setTypeFirst")}
+          >
+            <Shuffle size={16} />
+            {t("avatars.randomButton")}
+          </button>
         </div>
       </div>
 
@@ -603,6 +658,16 @@ export default function StudentsPage() {
         teacherView
       />
       {rankingError && <p className="text-sm text-red-600">{t("ranking.error")}</p>}
+
+      {currentClass && !classGender && (
+        <div className="card space-y-3 border-2 border-gold/60 p-4">
+          <div>
+            <h3 className="font-semibold text-navy">{t("avatars.bannerTitle")}</h3>
+            <p className="text-sm text-cream-600">{t("avatars.bannerText")}</p>
+          </div>
+          <ClassTypeCard onSave={handleSaveClassType} saving={savingType} />
+        </div>
+      )}
 
       {students.length > 0 && (
         <div className="flex flex-wrap items-center justify-between gap-3 border-b border-cream-400/70 pb-3">
@@ -672,17 +737,7 @@ export default function StudentsPage() {
                     {selectedIds.has(s.id) ? <CheckSquare size={20} /> : <Square size={20} />}
                   </span>
                 )}
-                {s.photoURL ? (
-                  <img
-                    src={s.photoURL}
-                    alt={s.name}
-                    className="h-12 w-12 rounded-full object-cover border border-gold/40"
-                  />
-                ) : (
-                  <div className="h-12 w-12 rounded-full bg-navy text-cream-100 flex items-center justify-center font-semibold">
-                    {s.name[0]?.toUpperCase()}
-                  </div>
-                )}
+                <StudentAvatar photoURL={s.photoURL} name={s.name} size={52} rank={rankOf(ranking, s.id)} />
                 <div className="flex-1">
                   <p className="font-semibold text-navy">{s.name}</p>
                   {s.parentName && (
@@ -772,6 +827,30 @@ export default function StudentsPage() {
         </div>
       )}
 
+      {detailStudent && classGender && (
+        <AvatarPickerModal
+          open={avatarPickerOpen}
+          onClose={() => setAvatarPickerOpen(false)}
+          title={`${t("avatars.chooseAvatar")} — ${detailStudent.name}`}
+          pool={avatarPool(classGender)}
+          taken={takenKeys(students.filter((x) => x.id !== detailStudent.id))}
+          currentUrl={detailStudent.photoURL}
+          onConfirm={async (url) => {
+            await updateStudent(detailStudent.id, { photoURL: url });
+          }}
+          extra={
+            <button
+              type="button"
+              onClick={() => detailPhotoInputRef.current?.click()}
+              disabled={uploadingPhoto}
+              className="btn-secondary text-sm"
+            >
+              <Upload size={14} />
+              {uploadingPhoto ? t("common.loading") : t("avatars.uploadInstead")}
+            </button>
+          }
+        />
+      )}
       <StudentReportModal
         open={!!studentReportTarget}
         onClose={() => setStudentReportTarget(null)}
@@ -935,33 +1014,19 @@ export default function StudentsPage() {
                 />
                 <button
                   type="button"
-                  onClick={() => detailPhotoInputRef.current?.click()}
-                  disabled={uploadingPhoto}
-                  title={t("auth.changePhoto")}
-                  className="relative h-12 w-12 shrink-0 rounded-full group disabled:opacity-60"
+                  onClick={() => (classGender ? setAvatarPickerOpen(true) : window.alert(t("avatars.setTypeFirst")))}
+                  title={t("avatars.chooseAvatar")}
+                  className="relative shrink-0 rounded-full group"
                 >
-                  {detailStudent.photoURL ? (
-                    <img
-                      src={detailStudent.photoURL}
-                      alt={detailStudent.name}
-                      className="h-12 w-12 rounded-full object-cover border border-gold/40"
-                    />
-                  ) : (
-                    <div className="h-12 w-12 rounded-full bg-navy text-cream-100 flex items-center justify-center font-semibold">
-                      {detailStudent.name[0]?.toUpperCase()}
-                    </div>
-                  )}
-                  <div
-                    className={`absolute inset-0 flex items-center justify-center rounded-full bg-navy/60 transition-opacity ${
-                      uploadingPhoto ? "opacity-100" : "opacity-0 group-hover:opacity-100"
-                    }`}
-                  >
-                    {uploadingPhoto ? (
-                      <div className="h-4 w-4 animate-spin rounded-full border-2 border-cream-200 border-t-transparent" />
-                    ) : (
-                      <Upload size={14} className="text-cream-100" />
-                    )}
-                  </div>
+                  <StudentAvatar
+                    photoURL={detailStudent.photoURL}
+                    name={detailStudent.name}
+                    size={60}
+                    rank={rankOf(ranking, detailStudent.id)}
+                  />
+                  <span className="absolute inset-0 flex items-center justify-center rounded-full bg-navy/55 opacity-0 transition-opacity group-hover:opacity-100">
+                    <Upload size={14} className="text-cream-100" />
+                  </span>
                 </button>
                 <span className="pill bg-navy text-cream-200 text-base">
                   {detailStudent.points} {t("students.points")}

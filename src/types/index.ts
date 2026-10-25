@@ -77,6 +77,8 @@ export interface ClassRecord {
   ownerName?: string;
   /** Lower-cased Gmail the co-teacher signs in with; claimed on their first sign-in. */
   teacherEmail?: string;
+  /** Which avatar collection this class's students choose from. Set once (at creation, or one time for older classes) and then locked. */
+  avatarGender?: "boys" | "girls" | "mixed";
   createdAt: number;
 }
 
@@ -107,6 +109,10 @@ export interface StudentRecord {
   badgeIds: string[];
   /** Denormalized copy of the teacher's WhatsApp number, kept in sync whenever the teacher updates it, so the parent portal can show a "Contact via WhatsApp" button without extra permissions. */
   teacherWhatsapp?: string;
+  /** Copy of the class's `avatarGender`, so the student portal (which can't read class docs) knows which avatars to offer. */
+  avatarGender?: "boys" | "girls" | "mixed";
+  /** True once the student chose their own avatar in the student portal — they can do that only one time. */
+  avatarPicked?: boolean;
   /** Denormalized copy of the teacher's school logo (same idea as `teacherWhatsapp`), so the parent portal can show it without reading the teacher's profile. */
   schoolLogoURL?: string;
   /** Firebase Auth uid of the student's own portal account, once claimed via an invite link. */

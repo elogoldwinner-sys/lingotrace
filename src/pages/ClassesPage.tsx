@@ -16,6 +16,8 @@ import {
 import { subscribeToStudentCounts } from "../lib/services/studentsService";
 import { getOrCreateInvite, buildInviteUrl } from "../lib/services/invitesService";
 import type { ClassRecord } from "../types";
+import ClassTypeCard from "../components/avatars/ClassTypeCard";
+import type { AvatarGender } from "../lib/avatars";
 import Modal from "../components/common/Modal";
 import EmptyState from "../components/common/EmptyState";
 import Spinner from "../components/common/Spinner";
@@ -30,6 +32,7 @@ export default function ClassesPage() {
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
   const [newSubject, setNewSubject] = useState("");
+  const [newAvatarGender, setNewAvatarGender] = useState<AvatarGender | "">("");
   const [subjectEdit, setSubjectEdit] = useState<ClassRecord | null>(null);
   const [subjectEditValue, setSubjectEditValue] = useState("");
   const [submitting, setSubmitting] = useState(false);
@@ -147,9 +150,17 @@ export default function ClassesPage() {
     if (!user) return;
     setSubmitting(true);
     try {
-      await createClass({ name, description, teacherId: user.uid, subject: newSubject.trim() || undefined });
+      if (!newAvatarGender) return;
+      await createClass({
+        name,
+        description,
+        teacherId: user.uid,
+        subject: newSubject.trim() || undefined,
+        avatarGender: newAvatarGender,
+      });
       setName("");
       setNewSubject("");
+      setNewAvatarGender("");
       setDescription("");
       setModalOpen(false);
     } finally {
@@ -325,6 +336,11 @@ export default function ClassesPage() {
             />
           </div>
           <div>
+            <label className="label-eyebrow block mb-1.5">{t("avatars.classTypeLabel")}</label>
+            <ClassTypeCard value={newAvatarGender} onChange={setNewAvatarGender} />
+            <p className="mt-1.5 text-xs font-semibold text-amber-700">{t("avatars.typeOnce")}</p>
+          </div>
+          <div>
             <label className="label-eyebrow block mb-1.5">{t("classes.description")}</label>
             <textarea
               value={description}
@@ -337,7 +353,7 @@ export default function ClassesPage() {
             <button type="button" onClick={() => setModalOpen(false)} className="btn-secondary">
               {t("common.cancel")}
             </button>
-            <button type="submit" disabled={submitting} className="btn-primary">
+            <button type="submit" disabled={submitting || !newAvatarGender} className="btn-primary disabled:opacity-50">
               {t("common.save")}
             </button>
           </div>

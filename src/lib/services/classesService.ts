@@ -63,6 +63,7 @@ export async function createClass(data: {
   teacherId: string;
   color?: string;
   subject?: string;
+  avatarGender?: "boys" | "girls" | "mixed";
 }) {
   return service.create({ ...data, studentIds: [] } as Omit<ClassRecord, "id" | "createdAt">);
 }
@@ -114,6 +115,8 @@ export async function addSubjectTeacher(data: {
     ownerId: data.ownerId,
     ownerName: data.ownerName,
     teacherEmail: normalizeEmail(data.teacherEmail),
+    // A subject starts with the same avatar collection as its main class.
+    ...(data.mainClass.avatarGender ? { avatarGender: data.mainClass.avatarGender } : {}),
   } as Omit<ClassRecord, "id" | "createdAt">);
 }
 

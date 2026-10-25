@@ -98,7 +98,10 @@ service cloud.firestore {
         resource.data.get('ownerId', '') == request.auth.uid ||
         (resource.data.teacherId == '' && isInvitedCoTeacher(resource.data))
       );
-      allow update: if isSignedIn() && (
+      // The avatar collection (Boys / Girls / Mixed) can be set once and never changed after.
+      allow update: if isSignedIn() &&
+        (!('avatarGender' in resource.data) ||
+          request.resource.data.get('avatarGender', '') == resource.data.avatarGender) && (
         resource.data.teacherId == request.auth.uid ||
         (resource.data.teacherId == '' && isInvitedCoTeacher(resource.data) &&
           request.resource.data.diff(resource.data).affectedKeys().hasOnly(["teacherId"]) &&
@@ -132,8 +135,12 @@ service cloud.firestore {
           request.resource.data.authUid == request.auth.uid) ||
         (isLinkedParent(studentId) &&
           request.resource.data.diff(resource.data).affectedKeys().hasOnly(["parentName", "parentEmail", "parentUids"])) ||
+        // A student may choose their picture from the built-in gallery exactly once.
         (isLinkedStudent(studentId) &&
-          request.resource.data.diff(resource.data).affectedKeys().hasOnly(["photoURL"]));
+          request.resource.data.diff(resource.data).affectedKeys().hasOnly(["photoURL", "avatarPicked"]) &&
+          resource.data.get('avatarPicked', false) == false &&
+          request.resource.data.avatarPicked == true &&
+          request.resource.data.photoURL.matches('.*/avatars/(boys|girls)-[0-9]+[.]webp'));
       allow create: if ownsClass(request.resource.data.classId) ||
         (isSignedIn() && request.resource.data.authUid == request.auth.uid);
       allow delete: if ownsClass(resource.data.classId);
@@ -252,10 +259,27 @@ service cloud.firestore {
     }
 
     // ---- Linked activities (GATway exams / LingoBite Play games) ----
-    // NOTE: if your live rules already contain blocks for linkedAssignments
-    // and linkedResults (they must, or the Exams & Games page wouldn't load),
-    // keep those exactly as they are in the console and only add the
-    // linkedMarkAwards block below.
+
+    // An exam/game a teacher assigned to a class by pasting its link.
+    // Any signed-in user may read (a rule can't filter a list query by "is
+    // this my child's class"), so the portals show only their own class's
+    // items by querying on classId. Only titles and links live here.
+    // Only the teacher who runs the class can create, edit or delete.
+    match /linkedAssignments/{assignmentId} {
+      allow read: if isSignedIn();
+      allow create: if ownsClass(request.resource.data.classId) &&
+        request.resource.data.teacherId == request.auth.uid;
+      allow update, delete: if ownsClass(resource.data.classId);
+    }
+
+    // Scores reported back by GATway / Play. Doc id = `${assignmentId}_${studentId}`.
+    // Per the app's design these are written by their backends, never by a
+    // LingoTrace client, so clients get read-only access. If GATway/Play write
+    // from a browser client instead of a backend, this needs a create rule.
+    match /linkedResults/{resultId} {
+      allow read: if isSignedIn();
+      allow write: if false;
+    }
 
     // Marks a teacher has already turned into points ("Add 10 marks").
     // Doc id = `${assignmentId}_${studentId}`. The client first reads the doc
@@ -263,8 +287,14 @@ service cloud.firestore {
     // succeed when the doc does not exist yet (resource == null). The claim is
     // deleted again if awarding the points fails, hence `delete`.
     match /linkedMarkAwards/{awardId} {
+      // Portals also read this doc, to hide exams/games whose mark was already
+      // added, so the linked student/parent and the class's teacher may read it.
       allow read: if isSignedIn() &&
-        (resource == null || resource.data.awardedBy == request.auth.uid);
+        (resource == null ||
+          resource.data.awardedBy == request.auth.uid ||
+          ownsClass(resource.data.classId) ||
+          isLinkedStudent(resource.data.studentId) ||
+          isLinkedParent(resource.data.studentId));
       allow create: if isSignedIn() &&
         request.resource.data.awardedBy == request.auth.uid &&
         ownsClass(request.resource.data.classId);

@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import StudentAvatar, { rankInAny } from "../avatars/StudentAvatar";
 import { useTranslation } from "react-i18next";
 import { ShieldCheck, NotebookPen, Star, CalendarDays, User, GraduationCap } from "lucide-react";
 import { subscribeToStudent } from "../../lib/services/studentsService";
@@ -17,6 +18,7 @@ import CertificatesSection from "./CertificatesSection";
 import { useAwardedAssignmentIds } from "../../lib/hooks/useLinkedAwards";
 import { Star as StarDecor } from "../home/KidHomeArt";
 import type {
+  ClassRanking,
   PointsTransaction,
   AttendanceRecord,
   AttendanceStatus,
@@ -88,9 +90,11 @@ function KidLinkedActivityCard({ assignment, studentId }: { assignment: LinkedAs
 export default function KidChildPanel({
   studentId,
   onRemoved,
+  rankings,
 }: {
   studentId: string;
   onRemoved: (studentId: string) => void;
+  rankings?: ClassRanking[];
 }) {
   const { t, i18n } = useTranslation();
   const [child, setChild] = useState<StudentRecord | null>(null);
@@ -174,13 +178,13 @@ export default function KidChildPanel({
       {/* Your Child */}
       <div className={cardCls}>
         <div className="flex items-start gap-4">
-          <span className="flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-full bg-gold-50 text-gold-500">
-            {child.photoURL ? (
-              <img src={child.photoURL} alt={child.name} className="h-full w-full object-cover" />
-            ) : (
-              <User size={26} />
-            )}
-          </span>
+          <StudentAvatar
+            photoURL={child.photoURL}
+            name={child.name}
+            size={64}
+            rank={rankInAny(rankings, child.id)}
+            fallback={<User size={26} className="text-gold-500" />}
+          />
           <div className={`min-w-0 ${child.schoolLogoURL ? "pe-14" : ""}`}>
             <p className="text-xs font-extrabold uppercase tracking-wide text-gold-600">
               {t("portal.parentWelcome")}

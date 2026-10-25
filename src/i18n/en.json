@@ -607,5 +607,32 @@
     "sum": "Total",
     "totalsOnlyNote": "Showing each student's current total points only (entire period). Subject teachers' dated point history is not readable yet — publish the updated Firestore rules to unlock dates and gained/lost.",
     "notJoined": "{{count}} subject teacher(s) haven't signed in yet, so their subject is not included."
+  },
+  "avatars": {
+    "type": {
+      "boys": "Boys",
+      "girls": "Girls",
+      "mixed": "Mixed"
+    },
+    "pictures": "{{count}} pictures",
+    "classTypeLabel": "Class type (decides which pictures students can choose from)",
+    "typeOnce": "Choose carefully: this can be set only once and can't be changed later.",
+    "confirmType": "Set this class as “{{type}}”? You won't be able to change it later.",
+    "saveType": "Save class type",
+    "bannerTitle": "Choose this class's picture collection",
+    "bannerText": "This class has no type yet. Pick Boys, Girls or Mixed — one time only. It decides which cartoon pictures its students can use.",
+    "setTypeFirst": "First choose the class type (Boys / Girls / Mixed) for this class.",
+    "chooseAvatar": "Choose a picture",
+    "uploadInstead": "Upload a photo instead",
+    "available": "{{free}} of {{total}} pictures are available",
+    "taken": "Already used by a classmate",
+    "confirm": "Confirm",
+    "saveError": "Couldn't save the picture. Please try again.",
+    "randomButton": "Random pictures",
+    "randomConfirm": "Give all {{count}} students in this class a random picture from the collection ({{max}} available)? This replaces their current pictures, including ones students chose themselves.",
+    "randomPartial": "{{count}} student(s) did not get a picture because the collection has only {{max}} pictures and no duplicates are allowed.",
+    "studentChoose": "Choose your picture",
+    "studentChooseShort": "Choose",
+    "studentWarning": "You can choose your picture only ONE time. After you confirm, it can't be changed."
   }
 }

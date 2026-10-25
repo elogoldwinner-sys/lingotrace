@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
 import { LogOut, Globe, Repeat, UserRound } from "lucide-react";
+import StudentAvatar, { rankInAny } from "../../components/avatars/StudentAvatar";
 import { useAuth } from "../../contexts/AuthContext";
 import { useTheme } from "../../contexts/ThemeContext";
 import KidParentPortalPage from "../../components/portal/KidParentPortalPage";
@@ -91,7 +92,15 @@ function LinkedActivityCard({ assignment, studentId }: { assignment: LinkedAssig
  * still-loading (both had `child === null`), so the panel just spun
  * forever instead of ever telling the parent what happened.
  */
-function ChildPanel({ studentId, onRemoved }: { studentId: string; onRemoved: (studentId: string) => void }) {
+function ChildPanel({
+  studentId,
+  onRemoved,
+  rankings,
+}: {
+  studentId: string;
+  onRemoved: (studentId: string) => void;
+  rankings?: ClassRanking[];
+}) {
   const { t, i18n } = useTranslation();
   const [child, setChild] = useState<StudentRecord | null>(null);
   const [pointsHistory, setPointsHistory] = useState<PointsTransaction[]>([]);
@@ -185,13 +194,13 @@ function ChildPanel({ studentId, onRemoved }: { studentId: string; onRemoved: (s
   return (
     <div className="space-y-6">
       <div className="card flex items-start gap-4 p-6">
-        <span className="flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-full border border-cream-400 bg-cream-100 text-gold">
-          {child.photoURL ? (
-            <img src={child.photoURL} alt={child.name} className="h-full w-full object-cover" />
-          ) : (
-            <UserRound size={26} />
-          )}
-        </span>
+        <StudentAvatar
+          photoURL={child.photoURL}
+          name={child.name}
+          size={64}
+          rank={rankInAny(rankings, child.id)}
+          fallback={<UserRound size={26} className="text-gold" />}
+        />
         <div className="min-w-0 flex-1">
           <p className="label-eyebrow mb-1">{t("portal.parentWelcome")}</p>
           <h1 className="text-2xl font-semibold text-navy">{child.name}</h1>
@@ -666,7 +675,7 @@ export default function ParentPortalPage() {
         ))}
 
         {currentStudentId ? (
-          <ChildPanel key={currentStudentId} studentId={currentStudentId} onRemoved={handleChildRemoved} />
+          <ChildPanel key={currentStudentId} studentId={currentStudentId} onRemoved={handleChildRemoved} rankings={visibleRankings} />
         ) : (
           <div className="card p-6 text-center text-sm text-cream-600">{t("portal.noChildrenLinked")}</div>
         )}

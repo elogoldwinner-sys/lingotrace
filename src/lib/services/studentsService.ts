@@ -284,6 +284,28 @@ export async function applySchoolLogoToStudents(
   }
 }
 
+/** Copies the class's avatar collection type onto its students so the student portal can offer the right avatars. */
+export async function applyAvatarGenderToStudents(
+  students: Pick<StudentRecord, "id" | "avatarGender">[],
+  gender: "boys" | "girls" | "mixed"
+) {
+  const stale = students.filter((s) => s.avatarGender !== gender);
+  for (let i = 0; i < stale.length; i += 400) {
+    const batch = writeBatch(db);
+    stale.slice(i, i + 400).forEach((s) => batch.update(doc(db, "students", s.id), { avatarGender: gender }));
+    await batch.commit();
+  }
+}
+
+/** Sets several students' pictures at once (used by "random avatars for the whole class"). */
+export async function assignAvatars(assignments: { id: string; photoURL: string }[]) {
+  for (let i = 0; i < assignments.length; i += 400) {
+    const batch = writeBatch(db);
+    assignments.slice(i, i + 400).forEach((a) => batch.update(doc(db, "students", a.id), { photoURL: a.photoURL }));
+    await batch.commit();
+  }
+}
+
 /** Applies the teacher's school logo (or its removal) to every student in every class the teacher teaches. */
 export async function syncSchoolLogoForTeacher(teacherUid: string, url: string | null) {
   const classesSnap = await getDocs(query(collection(db, "classes"), where("teacherId", "==", teacherUid)));
