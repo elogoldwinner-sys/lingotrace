@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { startOfWeek, addDays, format as formatDate, parseISO } from "date-fns";
-import { Plus, Minus, Trash2, Shuffle, ChevronDown, X, Layers, NotebookPen, Users } from "lucide-react";
+import { Plus, Minus, Trash2, Disc3, ChevronDown, X, Layers, NotebookPen, Users } from "lucide-react";
 import { useAuth } from "../contexts/AuthContext";
 import { subscribeToClasses } from "../lib/services/classesService";
 import { subscribeToStudents } from "../lib/services/studentsService";
@@ -31,6 +31,8 @@ import EmptyState from "../components/common/EmptyState";
 import Spinner from "../components/common/Spinner";
 import ClassSelector from "../components/common/ClassSelector";
 import NumberedHeadsModal from "../components/common/NumberedHeadsModal";
+import NamesWheelModal from "../components/common/NamesWheelModal";
+import MarkReinforcement, { type MarkReinforcementEvent } from "../components/common/MarkReinforcement";
 import { reasonsForAmount, POINTS_REASON_ICONS, POSITIVE_POINTS_REASONS } from "../lib/pointsReasons";
 
 const STATUS_STYLES: Record<AttendanceStatus, string> = {
@@ -80,10 +82,11 @@ export default function SessionsPage() {
   const [noteSentiment, setNoteSentiment] = useState<NoteSentiment>("positive");
   const [noteSubmitting, setNoteSubmitting] = useState(false);
 
-  const [isPicking, setIsPicking] = useState(false);
+  const [wheelOpen, setWheelOpen] = useState(false);
+  // Written reinforcement ("Perfect!", "Oops!"…) flashed on screen after a mark is saved.
+  const [reinforcement, setReinforcement] = useState<MarkReinforcementEvent | null>(null);
   const [highlightedId, setHighlightedId] = useState<string | null>(null);
   const [pickNotice, setPickNotice] = useState("");
-  const pickIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   // Random pick works in rounds: nobody is picked twice until every eligible student has had a turn.
   const pickedIdsRef = useRef<Set<string>>(new Set());
   const lastPickedIdRef = useRef<string | null>(null);
@@ -101,12 +104,6 @@ export default function SessionsPage() {
   // for, so a teacher's manual expand/collapse of an older week isn't
   // stomped on every time the sessions snapshot re-fires.
   const defaultedClassRef = useRef<string | null>(null);
-
-  useEffect(() => {
-    return () => {
-      if (pickIntervalRef.current) clearInterval(pickIntervalRef.current);
-    };
-  }, []);
 
   useEffect(() => {
     if (!user) return;
@@ -245,21 +242,31 @@ export default function SessionsPage() {
     setPickNotice("");
   }
 
-  function handleRandomPick() {
-    if (isPicking) return;
-    const eligible = students.filter((st) => {
-      const status = sessionAttendanceByStudent.get(st.id)?.status;
-      return status && RANDOM_PICK_ELIGIBLE_STATUSES.includes(status);
-    });
+  /** Students who can be picked: only those flagged present or late in the active session. */
+  const eligibleStudents = useMemo(
+    () =>
+      students.filter((st) => {
+        const status = sessionAttendanceByStudent.get(st.id)?.status;
+        return status && RANDOM_PICK_ELIGIBLE_STATUSES.includes(status);
+      }),
+    [students, sessionAttendanceByStudent]
+  );
+  const eligibleIds = useMemo(() => new Set(eligibleStudents.map((st) => st.id)), [eligibleStudents]);
+
+  /**
+   * Decides who the wheel will stop on (called when the teacher spins).
+   * Same rules as before: only present/late students are in the draw, nobody
+   * is picked twice until everyone has had a turn, and a new round's first
+   * pick can't be the student who just finished the previous round.
+   */
+  function handleWheelDraw(): string | null {
+    const eligible = eligibleStudents;
     if (eligible.length === 0) {
       setPickNotice(t("sessions.noEligibleForPick"));
-      return;
+      return null;
     }
     setPickNotice("");
 
-    // Only students who haven't had a turn this round are in the draw. Once
-    // everyone has been picked, a new round starts — and its first pick
-    // can't be the student who just finished the previous round.
     let pool = eligible.filter((st) => !pickedIdsRef.current.has(st.id));
     if (pool.length === 0) {
       pickedIdsRef.current = new Set();
@@ -268,29 +275,18 @@ export default function SessionsPage() {
         pool = eligible.filter((st) => st.id !== lastPickedIdRef.current);
       }
     }
-    const winner = pool[Math.floor(Math.random() * pool.length)];
-    setIsPicking(true);
+    return pool[Math.floor(Math.random() * pool.length)].id;
+  }
 
-    const durationMs = 1800;
-    const tickMs = 90;
-    let elapsed = 0;
-
-    pickIntervalRef.current = setInterval(() => {
-      // The spinning highlight is just for show; the winner was already decided above.
-      const randomIndex = Math.floor(Math.random() * eligible.length);
-      setHighlightedId(eligible[randomIndex].id);
-      elapsed += tickMs;
-
-      if (elapsed >= durationMs) {
-        if (pickIntervalRef.current) clearInterval(pickIntervalRef.current);
-        pickedIdsRef.current.add(winner.id);
-        lastPickedIdRef.current = winner.id;
-        setPickedCount(pickedIdsRef.current.size);
-        setHighlightedId(winner.id);
-        setIsPicking(false);
-        setTimeout(() => openPointsModal(winner), 450);
-      }
-    }, tickMs);
+  /** The wheel has stopped: record the pick, highlight the student and open the points window. */
+  function handleWheelLanded(studentId: string) {
+    const winner = students.find((st) => st.id === studentId);
+    if (!winner) return;
+    pickedIdsRef.current.add(winner.id);
+    lastPickedIdRef.current = winner.id;
+    setPickedCount(pickedIdsRef.current.size);
+    setHighlightedId(winner.id);
+    setTimeout(() => openPointsModal(winner), 450);
   }
 
   async function handleAwardPoints(e: React.FormEvent) {
@@ -304,6 +300,7 @@ export default function SessionsPage() {
       note: pointsReason === "custom" ? pointsNote.trim() : undefined,
       awardedBy: user.uid,
     });
+    if (pointsAmount !== 0) setReinforcement({ id: Date.now(), amount: pointsAmount });
     setPointsModalStudent(null);
     setHighlightedId(null);
   }
@@ -452,12 +449,14 @@ export default function SessionsPage() {
                               <h3 className="text-sm font-semibold text-navy">{t("sessions.rosterTitle")}</h3>
                               <div className="flex items-center gap-2">
                                 <button
-                                  onClick={handleRandomPick}
-                                  disabled={isPicking}
-                                  className="btn-gold py-1.5 px-3 text-sm disabled:opacity-60"
+                                  onClick={() => {
+                                    setPickNotice("");
+                                    setWheelOpen(true);
+                                  }}
+                                  className="btn-gold py-1.5 px-3 text-sm"
                                 >
-                                  <Shuffle size={16} className={isPicking ? "animate-spin" : ""} />
-                                  {isPicking ? t("sessions.picking") : t("sessions.randomPick")}
+                                  <Disc3 size={16} />
+                                  {t("sessions.wheelButton")}
                                 </button>
                                 <button
                                   onClick={() => setGroupPickOpen(true)}
@@ -484,10 +483,7 @@ export default function SessionsPage() {
                               <p className="text-xs text-cream-600 -mt-2">
                                 {t("sessions.pickRoundProgress", {
                                   picked: students.filter((st) => pickedIdsRef.current.has(st.id)).length,
-                                  total: students.filter((st) => {
-                                    const status = sessionAttendanceByStudent.get(st.id)?.status;
-                                    return status && RANDOM_PICK_ELIGIBLE_STATUSES.includes(status);
-                                  }).length,
+                                  total: eligibleStudents.length,
                                 })}{" "}
                                 <button onClick={resetRandomPickRound} className="font-semibold text-gold hover:underline">
                                   {t("sessions.pickRoundReset")}
@@ -585,13 +581,30 @@ export default function SessionsPage() {
         </div>
       )}
 
+      <NamesWheelModal
+        key={`wheel-${selectedClassId}`}
+        open={wheelOpen}
+        onClose={() => setWheelOpen(false)}
+        students={students}
+        eligibleIds={eligibleIds}
+        onDraw={handleWheelDraw}
+        onLanded={handleWheelLanded}
+        notice={pickNotice}
+        pickedCount={students.filter((st) => pickedIdsRef.current.has(st.id)).length}
+        eligibleCount={eligibleStudents.length}
+        onResetRound={resetRandomPickRound}
+      />
+
       <NumberedHeadsModal
         key={selectedClassId}
         open={groupPickOpen}
         onClose={() => setGroupPickOpen(false)}
         students={students}
         teacherId={user?.uid || ""}
+        onMarkSaved={(amount) => setReinforcement({ id: Date.now(), amount })}
       />
+
+      <MarkReinforcement event={reinforcement} onDone={() => setReinforcement(null)} />
 
       <Modal open={modalOpen} onClose={() => setModalOpen(false)} title={t("sessions.newSession")}>
         <form onSubmit={handleCreate} className="space-y-4">

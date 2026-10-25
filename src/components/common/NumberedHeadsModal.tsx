@@ -58,11 +58,14 @@ export default function NumberedHeadsModal({
   onClose,
   students,
   teacherId,
+  onMarkSaved,
 }: {
   open: boolean;
   onClose: () => void;
   students: StudentRecord[];
   teacherId: string;
+  /** Called after marks are saved (used for the on-screen "Perfect!" reinforcement). */
+  onMarkSaved?: (amount: number) => void;
 }) {
   const { t } = useTranslation();
   const [round, setRound] = useState<Round | null>(null);
@@ -150,6 +153,7 @@ export default function NumberedHeadsModal({
         reason: "participationStar",
         awardedBy: teacherId,
       });
+      onMarkSaved?.(amount);
       advance(1);
     } catch {
       setError(t("numberedHeads.saveError"));
