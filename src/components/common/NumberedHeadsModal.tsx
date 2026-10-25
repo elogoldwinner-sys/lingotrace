@@ -4,6 +4,7 @@ import { Shuffle, Check, X } from "lucide-react";
 import Modal from "./Modal";
 import { STUDENT_GROUPS, type StudentGroup, type StudentRecord } from "../../types";
 import { awardPoints } from "../../lib/services/pointsService";
+import { unlockSound } from "../../lib/sounds";
 import card1 from "../../assets/numbered-cards/card-1.png";
 import card2 from "../../assets/numbered-cards/card-2.png";
 import card3 from "../../assets/numbered-cards/card-3.png";
@@ -143,6 +144,7 @@ export default function NumberedHeadsModal({
 
   async function addMark(amount: number) {
     if (!target || saving || !Number.isFinite(amount) || amount === 0) return;
+    unlockSound();
     setSaving(true);
     setError("");
     try {

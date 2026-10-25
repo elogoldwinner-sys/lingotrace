@@ -188,6 +188,9 @@
     "wheelHint": "Tap GO! to spin — the wheel picks one of the present/late students.",
     "wheelWinner": "{{name}} is up!",
     "wheelGreyHint": "Greyed-out names are absent, excused or not marked yet — they can't be picked.",
+    "wheelContinue": "Give / deduct marks",
+    "soundOn": "Sound on — tap to mute",
+    "soundOff": "Sound off — tap to turn on",
     "reinforce": {
       "good": "Good!",
       "great": "Great!",

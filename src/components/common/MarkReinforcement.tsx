@@ -2,6 +2,7 @@ import { useEffect } from "react";
 import { createPortal } from "react-dom";
 import { useTranslation } from "react-i18next";
 import confetti from "canvas-confetti";
+import { playGain, playLoss } from "../../lib/sounds";
 
 export interface MarkReinforcementEvent {
   /** Changes on every save so the animation replays even for the same amount. */
@@ -56,6 +57,8 @@ export default function MarkReinforcement({
 
   useEffect(() => {
     if (!event) return;
+    if (event.amount > 0) playGain(event.amount);
+    else if (event.amount < 0) playLoss();
     if (event.amount > 0 && !reducedMotion()) {
       confetti({
         particleCount: 70,

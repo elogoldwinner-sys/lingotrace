@@ -2,6 +2,8 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import confetti from "canvas-confetti";
 import { RotateCcw } from "lucide-react";
+import SoundToggle from "./SoundToggle";
+import { playReveal, playTick, unlockSound } from "../../lib/sounds";
 import Modal from "./Modal";
 import StudentAvatar from "../avatars/StudentAvatar";
 import type { StudentRecord } from "../../types";
@@ -22,6 +24,8 @@ const LIGHTS = 20;
 
 const SPIN_MS = 5200;
 const EXTRA_TURNS = 6;
+/** How long the chosen name stays on screen before the marks window opens by itself. */
+const REVEAL_MS = 4500;
 
 function polar(deg: number, r: number): [number, number] {
   const a = ((deg - 90) * Math.PI) / 180;
@@ -50,11 +54,21 @@ function prefersReducedMotion(): boolean {
 function fitName(name: string, n: number): { text: string; size: number } {
   const arcLimit = (2 * Math.PI * 115 * 0.55) / n; // keeps lettering inside its own wedge
   const base = n <= 8 ? 20 : n <= 14 ? 16 : n <= 22 ? 13 : n <= 32 ? 10.5 : 8.5;
-  const size = Math.max(7, Math.min(base, arcLimit));
-  const maxChars = Math.max(4, Math.floor(100 / (size * 0.58)));
   const clean = name.trim();
-  const text = clean.length > maxChars ? `${clean.slice(0, maxChars - 1)}…` : clean;
-  return { text, size };
+  const capacity = (size: number) => Math.max(4, Math.floor(104 / (size * 0.58)));
+
+  let size = Math.max(7, Math.min(base, arcLimit));
+  if (clean.length <= capacity(size)) return { text: clean, size };
+
+  // Too long: shrink the lettering a little first…
+  size = Math.max(7, size * 0.8);
+  if (clean.length <= capacity(size)) return { text: clean, size };
+
+  // …then fall back to the first name, and only then cut with "…".
+  const first = clean.split(/\s+/)[0];
+  const max = capacity(size);
+  if (first.length <= max) return { text: first, size: Math.min(base, arcLimit) };
+  return { text: `${first.slice(0, max - 1)}…`, size };
 }
 
 interface NamesWheelModalProps {
@@ -68,6 +82,8 @@ interface NamesWheelModalProps {
   onDraw: () => string | null;
   /** The wheel has stopped on this student. */
   onLanded: (studentId: string) => void;
+  /** Time to open the marks window for this student (after the name has been shown, or when the teacher taps the button). */
+  onContinue: (studentId: string) => void;
   notice?: string;
   pickedCount: number;
   eligibleCount: number;
@@ -87,6 +103,7 @@ export default function NamesWheelModal({
   eligibleIds,
   onDraw,
   onLanded,
+  onContinue,
   notice,
   pickedCount,
   eligibleCount,
@@ -99,12 +116,69 @@ export default function NamesWheelModal({
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const landedRef = useRef(onLanded);
   landedRef.current = onLanded;
+  const continueRef = useRef(onContinue);
+  continueRef.current = onContinue;
+  const wheelRef = useRef<HTMLDivElement | null>(null);
+  const rafRef = useRef<number | null>(null);
+  const revealTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // True while the chosen name is on screen waiting to open the marks window.
+  const [revealing, setRevealing] = useState(false);
+
+  function stopTicking() {
+    if (rafRef.current !== null) cancelAnimationFrame(rafRef.current);
+    rafRef.current = null;
+  }
+
+  function clearReveal() {
+    if (revealTimerRef.current) clearTimeout(revealTimerRef.current);
+    revealTimerRef.current = null;
+    setRevealing(false);
+  }
 
   useEffect(() => {
     return () => {
       if (timerRef.current) clearTimeout(timerRef.current);
+      if (revealTimerRef.current) clearTimeout(revealTimerRef.current);
+      if (rafRef.current !== null) cancelAnimationFrame(rafRef.current);
     };
   }, []);
+
+  /** Plays a click every time a segment passes the pointer, by watching the wheel's real on-screen angle. */
+  function startTicking(startRotation: number) {
+    stopTicking();
+    const angleOf = () => {
+      const el = wheelRef.current;
+      if (!el) return null;
+      const m = new DOMMatrix(getComputedStyle(el).transform);
+      return (Math.atan2(m.b, m.a) * 180) / Math.PI;
+    };
+    let prev = angleOf();
+    if (prev === null) return;
+    let unwrapped = ((startRotation % 360) + 360) % 360;
+    let lastIndex = Math.floor(unwrapped / seg);
+    let lastTickAt = 0;
+    const loop = () => {
+      const cur = angleOf();
+      if (cur !== null && prev !== null) {
+        let d = cur - prev;
+        if (d > 180) d -= 360;
+        if (d < -180) d += 360;
+        unwrapped += d;
+        prev = cur;
+        const idx = Math.floor(unwrapped / seg);
+        const now = performance.now();
+        if (idx !== lastIndex) {
+          lastIndex = idx;
+          if (now - lastTickAt > 28) {
+            lastTickAt = now;
+            playTick();
+          }
+        }
+      }
+      rafRef.current = requestAnimationFrame(loop);
+    };
+    rafRef.current = requestAnimationFrame(loop);
+  }
 
   const n = students.length;
   const seg = n > 0 ? 360 / n : 360;
@@ -124,6 +198,8 @@ export default function NamesWheelModal({
 
   function spin() {
     if (spinning || n === 0) return;
+    unlockSound();
+    clearReveal();
     const id = onDraw();
     if (!id) return;
     const index = students.findIndex((s) => s.id === id);
@@ -138,10 +214,13 @@ export default function NamesWheelModal({
 
     setSpinning(true);
     setRotation(rotation + 360 * (reduceMotion ? 1 : EXTRA_TURNS) + delta);
+    startTicking(rotation);
 
     timerRef.current = setTimeout(() => {
+      stopTicking();
       setSpinning(false);
       setWinnerId(id);
+      playReveal();
       confetti({
         particleCount: 90,
         spread: 75,
@@ -151,11 +230,19 @@ export default function NamesWheelModal({
         zIndex: 100,
       });
       landedRef.current(id);
+      // Leave the name on screen long enough to be read before the marks window opens.
+      setRevealing(true);
+      revealTimerRef.current = setTimeout(() => {
+        revealTimerRef.current = null;
+        setRevealing(false);
+        continueRef.current(id);
+      }, REVEAL_MS);
     }, duration + 80);
   }
 
   function handleClose() {
     if (spinning) return; // let the spin finish so the pick is never lost
+    clearReveal();
     onClose();
   }
 
@@ -165,6 +252,8 @@ export default function NamesWheelModal({
     <Modal open={open} onClose={handleClose} title={t("sessions.wheelTitle")} widthClassName="max-w-md">
       <style>{`
         @keyframes nw-pop{0%{transform:scale(.6) rotate(-4deg);opacity:0}70%{transform:scale(1.07) rotate(1deg);opacity:1}100%{transform:scale(1) rotate(0)}}
+        @keyframes nw-countdown{from{width:100%}to{width:0}}
+        .nw-countdown{animation:nw-countdown ${REVEAL_MS}ms linear forwards}
         .nw-pop{animation:nw-pop .4s cubic-bezier(.34,1.56,.64,1)}
         @keyframes nw-tick{from{transform:rotate(-14deg)}to{transform:rotate(6deg)}}
         .nw-ticking{animation:nw-tick .16s ease-in-out infinite alternate}
@@ -178,6 +267,7 @@ export default function NamesWheelModal({
       ) : (
         <div className="flex flex-col items-center gap-4">
           <div className="relative w-full max-w-[22rem] pt-5">
+            <SoundToggle className="absolute right-0 top-0 z-20" />
             {/* Pointer */}
             <svg
               viewBox="0 0 60 64"
@@ -199,6 +289,7 @@ export default function NamesWheelModal({
 
             {/* Wheel */}
             <div
+              ref={wheelRef}
               className="aspect-square w-full"
               style={{
                 transform: `rotate(${rotation}deg)`,
@@ -325,11 +416,28 @@ export default function NamesWheelModal({
           {/* Result */}
           <div className="flex min-h-[3.75rem] w-full items-center justify-center">
             {winner && !spinning ? (
-              <div className="nw-pop flex max-w-full items-center gap-3 rounded-xl2 border-2 border-gold bg-gold-50 px-4 py-2 shadow-card">
-                <StudentAvatar photoURL={winner.photoURL} name={winner.name} size={44} />
-                <p className="min-w-0 truncate text-base font-extrabold text-navy">
-                  {t("sessions.wheelWinner", { name: winner.name })}
-                </p>
+              <div className="nw-pop w-full overflow-hidden rounded-xl2 border-2 border-gold bg-gold-50 shadow-card">
+                <div className="flex items-center gap-3 px-4 py-2.5">
+                  <StudentAvatar photoURL={winner.photoURL} name={winner.name} size={52} />
+                  <p className="min-w-0 flex-1 text-lg font-extrabold leading-tight text-navy [overflow-wrap:anywhere]">
+                    {t("sessions.wheelWinner", { name: winner.name })}
+                  </p>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      clearReveal();
+                      continueRef.current(winner.id);
+                    }}
+                    className="btn-primary shrink-0 px-3 py-1.5 text-xs"
+                  >
+                    {t("sessions.wheelContinue")}
+                  </button>
+                </div>
+                {revealing && (
+                  <div className="h-1.5 w-full bg-gold-100">
+                    <div className="nw-countdown h-full bg-gold" />
+                  </div>
+                )}
               </div>
             ) : (
               <p className="text-center text-sm text-cream-600">

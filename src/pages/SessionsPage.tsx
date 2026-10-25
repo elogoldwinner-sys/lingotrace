@@ -32,6 +32,8 @@ import Spinner from "../components/common/Spinner";
 import ClassSelector from "../components/common/ClassSelector";
 import NumberedHeadsModal from "../components/common/NumberedHeadsModal";
 import NamesWheelModal from "../components/common/NamesWheelModal";
+import SoundToggle from "../components/common/SoundToggle";
+import { unlockSound } from "../lib/sounds";
 import MarkReinforcement, { type MarkReinforcementEvent } from "../components/common/MarkReinforcement";
 import { reasonsForAmount, POINTS_REASON_ICONS, POSITIVE_POINTS_REASONS } from "../lib/pointsReasons";
 
@@ -278,7 +280,7 @@ export default function SessionsPage() {
     return pool[Math.floor(Math.random() * pool.length)].id;
   }
 
-  /** The wheel has stopped: record the pick, highlight the student and open the points window. */
+  /** The wheel has stopped: record the pick and highlight the student. */
   function handleWheelLanded(studentId: string) {
     const winner = students.find((st) => st.id === studentId);
     if (!winner) return;
@@ -286,12 +288,18 @@ export default function SessionsPage() {
     lastPickedIdRef.current = winner.id;
     setPickedCount(pickedIdsRef.current.size);
     setHighlightedId(winner.id);
-    setTimeout(() => openPointsModal(winner), 450);
+  }
+
+  /** The chosen name has been on screen long enough (or the teacher tapped the button): open the marks window. */
+  function handleWheelContinue(studentId: string) {
+    const winner = students.find((st) => st.id === studentId);
+    if (winner) openPointsModal(winner);
   }
 
   async function handleAwardPoints(e: React.FormEvent) {
     e.preventDefault();
     if (!pointsModalStudent || !user) return;
+    unlockSound();
     await awardPoints({
       studentId: pointsModalStudent.id,
       classId: pointsModalStudent.classId,
@@ -465,6 +473,7 @@ export default function SessionsPage() {
                                   <Users size={16} />
                                   {t("numberedHeads.button")}
                                 </button>
+                                <SoundToggle />
                                 <button
                                   onClick={() => setActiveSessionId(null)}
                                   className="h-8 w-8 flex items-center justify-center rounded-full text-cream-600 hover:bg-cream-300"
@@ -589,6 +598,7 @@ export default function SessionsPage() {
         eligibleIds={eligibleIds}
         onDraw={handleWheelDraw}
         onLanded={handleWheelLanded}
+        onContinue={handleWheelContinue}
         notice={pickNotice}
         pickedCount={students.filter((st) => pickedIdsRef.current.has(st.id)).length}
         eligibleCount={eligibleStudents.length}
