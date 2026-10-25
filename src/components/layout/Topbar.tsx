@@ -25,7 +25,7 @@ function familyName(displayName: string): string {
 }
 
 const KID_PILL =
-  "flex items-center gap-2 rounded-full border border-navy-100 bg-white px-4 py-2 text-sm font-bold text-navy-700 shadow-[0_4px_12px_-8px_rgba(90,60,200,0.5)] transition hover:-translate-y-0.5 hover:bg-navy-50";
+  "flex items-center gap-1.5 rounded-full border border-navy-100 bg-white px-2.5 py-1.5 text-sm font-bold sm:gap-2 sm:px-4 sm:py-2 text-navy-700 shadow-[0_4px_12px_-8px_rgba(90,60,200,0.5)] transition hover:-translate-y-0.5 hover:bg-navy-50";
 
 export default function Topbar() {
   const { t, i18n } = useTranslation();
@@ -163,15 +163,15 @@ export default function Topbar() {
     <>
       {isKid ? (
         <>
-          <header className="sticky top-0 z-20 flex flex-wrap items-center justify-between gap-x-3 gap-y-3 border-b border-navy-100/70 bg-white/85 px-4 py-3 shadow-[0_8px_24px_-16px_rgba(90,60,200,0.5)] backdrop-blur md:px-8">
+          <header className="z-20 flex flex-wrap items-center justify-between gap-x-3 gap-y-2 border-b border-navy-100/70 bg-white/85 px-3 py-2 shadow-[0_8px_24px_-16px_rgba(90,60,200,0.5)] backdrop-blur sm:px-4 sm:py-3 md:sticky md:top-0 md:px-8">
             <div className="flex min-w-0 flex-1 items-center gap-3">
-              <SchoolLogo size={52} />
-              <span className="text-[2.2rem] leading-none" aria-hidden="true">
+              <SchoolLogo size={46} />
+              <span className="hidden text-[2.2rem] leading-none sm:inline" aria-hidden="true">
                 👋
               </span>
               <div className="min-w-0">
                 {profile && (
-                  <p className="truncate font-serif text-xl font-bold leading-tight text-navy-700 md:text-2xl">
+                  <p className="line-clamp-2 break-words font-serif text-base font-bold leading-tight text-navy-700 sm:text-xl md:truncate md:text-2xl">
                     {t("dashboard.welcomeKid", {
                       // U+200E keeps the "!" after an Arabic name on the correct side in an English sentence.
                       name: `${t(gender === "male" ? "dashboard.titleMr" : "dashboard.titleMs")} ${familyName(profile.displayName)}\u200E`,
@@ -182,7 +182,7 @@ export default function Topbar() {
               </div>
             </div>
 
-            <div className="flex shrink-0 flex-wrap items-center justify-end gap-2 lg:flex-nowrap">
+            <div className="flex w-full shrink-0 flex-wrap items-center justify-between gap-1.5 sm:gap-2 lg:w-auto lg:flex-nowrap lg:justify-end">
               <ThemeToggle variant="header" />
 
               <button onClick={toggleLanguage} className={KID_PILL} title={t("common.language")}>
@@ -216,12 +216,12 @@ export default function Topbar() {
                       onClick={() => handleGender(g)}
                       aria-pressed={active}
                       title={label}
-                      className={`flex h-8 items-center gap-1.5 rounded-full px-3 text-sm font-bold transition ${
+                      className={`flex h-8 items-center gap-1.5 rounded-full px-2.5 text-sm font-bold transition sm:px-3 ${
                         active ? "bg-navy-700 text-white shadow" : "text-navy-500 hover:bg-navy-50"
                       }`}
                     >
                       {g === "male" ? <Mars size={16} /> : <Venus size={16} />}
-                      <span className={active ? "" : "sr-only"}>{label}</span>
+                      <span className={active ? "hidden sm:inline" : "sr-only"}>{label}</span>
                     </button>
                   );
                 })}
@@ -299,7 +299,7 @@ export default function Topbar() {
           <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={handlePhotoSelected} />
         </>
       ) : (
-        <header className="sticky top-0 z-10 flex items-center justify-between border-b border-cream-400 bg-cream-100/90 backdrop-blur px-6 py-4">
+        <header className="z-10 flex flex-wrap items-center justify-between gap-x-3 gap-y-2 border-b border-cream-400 bg-cream-100/90 px-3 py-3 backdrop-blur sm:px-6 sm:py-4 md:sticky md:top-0">
           <div className="flex min-w-0 items-center gap-3">
             <SchoolLogo size={42} />
             {profile && (
@@ -308,7 +308,7 @@ export default function Topbar() {
               </p>
             )}
           </div>
-          <div className="flex items-center gap-3">
+          <div className="flex w-full flex-wrap items-center gap-2 sm:gap-3 md:w-auto">
             <ThemeToggle />
 
             <button
@@ -326,7 +326,7 @@ export default function Topbar() {
               title={t("settings.whatsappNumber")}
             >
               <MessageCircle size={14} />
-              {t("settings.whatsapp")}
+              <span className="hidden lg:inline">{t("settings.whatsapp")}</span>
             </button>
 
             <button
@@ -335,7 +335,7 @@ export default function Topbar() {
               title={t("ranking.scheduleLabel")}
             >
               <Trophy size={14} />
-              {t("ranking.schedule")}
+              <span className="hidden lg:inline">{t("ranking.schedule")}</span>
             </button>
 
             <input
@@ -375,7 +375,7 @@ export default function Topbar() {
                 title={otherPortalLabel}
               >
                 <Repeat size={14} />
-                {otherPortalLabel}
+                <span className="hidden lg:inline">{otherPortalLabel}</span>
               </button>
             )}
 
@@ -384,7 +384,7 @@ export default function Topbar() {
               className="flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold text-navy/70 hover:bg-cream-400/60"
             >
               <LogOut size={14} />
-              {t("nav.signOut")}
+              <span className="hidden sm:inline">{t("nav.signOut")}</span>
             </button>
           </div>
         </header>

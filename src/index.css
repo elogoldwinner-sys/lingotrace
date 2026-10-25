@@ -118,6 +118,23 @@
 
   h1, h2, h3, h4 {
     font-family: var(--font-serif), Georgia, serif;
+    overflow-wrap: anywhere;
+  }
+
+  /* Never let one wide element make the whole page scroll sideways (on phones
+     that also makes the browser zoom the page out). `clip` — unlike `hidden` —
+     keeps sticky headers working. */
+  html,
+  body {
+    max-width: 100%;
+    overflow-x: clip;
+  }
+
+  img,
+  svg,
+  video,
+  canvas {
+    max-width: 100%;
   }
 
   [data-theme="kid"] h1,
@@ -321,6 +338,8 @@
 }
 
 .lt-report {
+  max-width: 100%;
+  overflow-x: auto;
   background: #fff;
   color: #111827;
   font-size: 13px;
@@ -340,6 +359,7 @@
 }
 .lt-report-head {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: 14px;
   padding-bottom: 12px;
@@ -377,7 +397,7 @@
   html, body { background: #fff !important; }
   body > *:not(.lt-print-root) { display: none !important; }
   .lt-print-root { display: block !important; }
-  .lt-report { border: 0; border-radius: 0; padding: 0; }
+  .lt-report { border: 0; border-radius: 0; padding: 0; overflow: visible; }
   * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
   .lt-avoid { break-inside: avoid; }
   .lt-table thead { display: table-header-group; }

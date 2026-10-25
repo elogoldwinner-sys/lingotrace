@@ -190,12 +190,12 @@ export default function StudentPortalPage() {
   return (
     <div className="min-h-screen bg-cream relative overflow-hidden">
       {isKid && <CloudLayer className="absolute top-0 left-0 w-full h-64" />}
-      <header className="flex items-center justify-between border-b border-cream-400 bg-cream-100/90 px-6 py-4 relative z-10">
+      <header className="relative z-10 flex flex-wrap items-center justify-between gap-x-3 gap-y-2 border-b border-cream-400 bg-cream-100/90 px-3 py-3 sm:px-6 sm:py-4">
         <div className="flex items-center gap-2">
           <Logo size={28} />
           <span className="font-serif text-xl font-semibold text-navy">{t("app.name")}</span>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex flex-wrap items-center gap-2 sm:gap-3">
           <ThemeToggle />
           <button
             onClick={toggleLanguage}

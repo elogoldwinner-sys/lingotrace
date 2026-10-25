@@ -36,6 +36,15 @@ function labelIndices(count: number, max = 8): Set<number> {
 
 const W = 640;
 
+/** On a phone the chart keeps a readable minimum width and scrolls sideways inside its own box. */
+function ChartBox({ children }: { children: React.ReactNode }) {
+  return (
+    <div style={{ overflowX: "auto", maxWidth: "100%" }}>
+      <div style={{ minWidth: 520 }}>{children}</div>
+    </div>
+  );
+}
+
 /** Green bars up (points gained) and red bars down (points lost) for each day / week / month. */
 export function GainedLostBars({ buckets, height = 230 }: { buckets: Bucket[]; height?: number }) {
   const padL = 36;
@@ -55,6 +64,7 @@ export function GainedLostBars({ buckets, height = 230 }: { buckets: Bucket[]; h
   const labels = labelIndices(buckets.length);
 
   return (
+    <ChartBox>
     <svg viewBox={`0 0 ${W} ${height}`} width="100%" role="img" style={{ direction: "ltr", display: "block" }}>
       {[maxUp, maxUp / 2, 0, ...(down ? [-down / 2, -down] : [])].map((v) => (
         <g key={v}>
@@ -79,6 +89,7 @@ export function GainedLostBars({ buckets, height = 230 }: { buckets: Bucket[]; h
         );
       })}
     </svg>
+    </ChartBox>
   );
 }
 
@@ -104,6 +115,7 @@ export function RunningTotalLine({ buckets, height = 200 }: { buckets: Bucket[];
   const ticks = [max, (max + min) / 2, min].map((v) => Math.round(v));
 
   return (
+    <ChartBox>
     <svg viewBox={`0 0 ${W} ${height}`} width="100%" role="img" style={{ direction: "ltr", display: "block" }}>
       {ticks.map((v, i) => (
         <g key={i}>
@@ -126,6 +138,7 @@ export function RunningTotalLine({ buckets, height = 200 }: { buckets: Bucket[];
         </g>
       ))}
     </svg>
+    </ChartBox>
   );
 }
 
@@ -155,6 +168,7 @@ export function HorizontalBars({
   const plotW = W - labelW - padR;
 
   return (
+    <ChartBox>
     <svg viewBox={`0 0 ${W} ${height}`} width="100%" role="img" style={{ direction: "ltr", display: "block" }}>
       {rows.map((r, i) => {
         const top = 4 + i * rowH;
@@ -181,6 +195,7 @@ export function HorizontalBars({
       })}
       <line x1={labelW} x2={labelW} y1="0" y2={height} stroke={GRID} />
     </svg>
+    </ChartBox>
   );
 }
 

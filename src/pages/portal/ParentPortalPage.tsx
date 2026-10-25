@@ -622,12 +622,12 @@ export default function ParentPortalPage() {
   return (
     <div className="min-h-screen bg-cream">
       <div className="sticky top-0 z-30">
-      <header className="flex items-center justify-between border-b border-cream-400 bg-cream-100/95 px-6 py-4 backdrop-blur">
+      <header className="flex flex-wrap items-center justify-between gap-x-3 gap-y-2 border-b border-cream-400 bg-cream-100/95 px-3 py-3 backdrop-blur sm:px-6 sm:py-4">
         <div className="flex items-center gap-2">
           <Logo size={28} />
           <span className="font-serif text-xl font-semibold text-navy">{t("app.name")}</span>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex flex-wrap items-center gap-2 sm:gap-3">
           <ThemeToggle />
           <button
             onClick={toggleLanguage}

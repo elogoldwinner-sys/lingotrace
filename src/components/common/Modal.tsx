@@ -20,12 +20,12 @@ export default function Modal({ open, onClose, title, children, widthClassName }
   // otherwise trap the modal inside that ancestor's small box instead of
   // the page.
   return createPortal(
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-navy/40 backdrop-blur-sm px-4">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-navy/40 backdrop-blur-sm px-2 sm:px-4">
       <div
-        className={`card w-full ${widthClassName || "max-w-lg"} p-6 max-h-[85vh] overflow-y-auto overscroll-contain`}
+        className={`card w-full min-w-0 ${widthClassName || "max-w-lg"} p-4 sm:p-6 max-h-[90vh] max-h-[90dvh] overflow-y-auto overscroll-contain`}
       >
         <div className="flex items-center justify-between mb-4">
-          <h2 className="text-lg font-semibold text-navy">{title}</h2>
+          <h2 className="min-w-0 text-base font-semibold text-navy sm:text-lg">{title}</h2>
           <button
             onClick={onClose}
             className="text-cream-600 hover:text-navy rounded-full p-1 hover:bg-cream-300"

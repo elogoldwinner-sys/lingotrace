@@ -21,6 +21,7 @@ import {
   LineChart,
   Scale,
   Shuffle,
+  Images,
 } from "lucide-react";
 import { deleteField } from "firebase/firestore";
 import { useAuth } from "../contexts/AuthContext";
@@ -599,7 +600,7 @@ export default function StudentsPage() {
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <h1 className="text-2xl font-semibold text-navy">{t("students.title")}</h1>
-        <div className="flex flex-wrap gap-2">
+        <div className="grid w-full grid-cols-2 gap-2 sm:flex sm:w-auto sm:flex-wrap [&>button]:w-full [&>button]:justify-center sm:[&>button]:w-auto">
           <button onClick={() => setAddModalOpen(true)} className="btn-primary text-sm py-2 px-3" disabled={!selectedClassId}>
             <Plus size={16} />
             {t("students.addStudent")}
@@ -1025,7 +1026,7 @@ export default function StudentsPage() {
                     rank={rankOf(ranking, detailStudent.id)}
                   />
                   <span className="absolute inset-0 flex items-center justify-center rounded-full bg-navy/55 opacity-0 transition-opacity group-hover:opacity-100">
-                    <Upload size={14} className="text-cream-100" />
+                    <Images size={18} className="text-cream-100" />
                   </span>
                 </button>
                 <span className="pill bg-navy text-cream-200 text-base">
