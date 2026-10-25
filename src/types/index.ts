@@ -107,6 +107,8 @@ export interface StudentRecord {
   badgeIds: string[];
   /** Denormalized copy of the teacher's WhatsApp number, kept in sync whenever the teacher updates it, so the parent portal can show a "Contact via WhatsApp" button without extra permissions. */
   teacherWhatsapp?: string;
+  /** Denormalized copy of the teacher's school logo (same idea as `teacherWhatsapp`), so the parent portal can show it without reading the teacher's profile. */
+  schoolLogoURL?: string;
   /** Firebase Auth uid of the student's own portal account, once claimed via an invite link. */
   authUid?: string;
   /** Subject name, set on students in a subject class (copied from the class so parents — who can't read class docs — can tell the records apart). */

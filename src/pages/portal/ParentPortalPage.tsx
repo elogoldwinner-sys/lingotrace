@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
-import { LogOut, Globe, Repeat } from "lucide-react";
+import { LogOut, Globe, Repeat, UserRound } from "lucide-react";
 import { useAuth } from "../../contexts/AuthContext";
 import { useTheme } from "../../contexts/ThemeContext";
 import KidParentPortalPage from "../../components/portal/KidParentPortalPage";
@@ -184,16 +184,32 @@ function ChildPanel({ studentId, onRemoved }: { studentId: string; onRemoved: (s
 
   return (
     <div className="space-y-6">
-      <div className="card p-6">
-        <p className="label-eyebrow mb-1">{t("portal.parentWelcome")}</p>
-        <h1 className="text-2xl font-semibold text-navy">{child.name}</h1>
-        {child.subject && <p className="text-sm font-semibold text-gold">{child.subject}</p>}
-        <div className="mt-4 flex flex-wrap items-center gap-4">
-          <div className="flex items-center gap-3">
-            <span className="text-3xl font-bold text-gold">{child.points}</span>
-            <span className="text-sm text-cream-600">{t("students.points")}</span>
+      <div className="card flex items-start gap-4 p-6">
+        <span className="flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-full border border-cream-400 bg-cream-100 text-gold">
+          {child.photoURL ? (
+            <img src={child.photoURL} alt={child.name} className="h-full w-full object-cover" />
+          ) : (
+            <UserRound size={26} />
+          )}
+        </span>
+        <div className="min-w-0 flex-1">
+          <p className="label-eyebrow mb-1">{t("portal.parentWelcome")}</p>
+          <h1 className="text-2xl font-semibold text-navy">{child.name}</h1>
+          {child.subject && <p className="text-sm font-semibold text-gold">{child.subject}</p>}
+          <div className="mt-4 flex flex-wrap items-center gap-4">
+            <div className="flex items-center gap-3">
+              <span className="text-3xl font-bold text-gold">{child.points}</span>
+              <span className="text-sm text-cream-600">{t("students.points")}</span>
+            </div>
           </div>
         </div>
+        {child.schoolLogoURL && (
+          <img
+            src={child.schoolLogoURL}
+            alt={t("school.logoAlt")}
+            className="h-14 w-14 shrink-0 rounded-full border-2 border-gold/50 bg-white object-cover shadow-sm"
+          />
+        )}
       </div>
 
       <CertificatesSection studentId={studentId} />

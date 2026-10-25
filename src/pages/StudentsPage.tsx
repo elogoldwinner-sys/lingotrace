@@ -26,6 +26,7 @@ import { useAuth } from "../contexts/AuthContext";
 import { subscribeToClasses } from "../lib/services/classesService";
 import {
   subscribeToStudents,
+  applySchoolLogoToStudents,
   deleteStudent,
   deleteManyStudents,
   createStudentManual,
@@ -111,9 +112,20 @@ export default function StudentsPage() {
   const [detailPoints, setDetailPoints] = useState<PointsTransaction[]>([]);
   const [reportModalOpen, setReportModalOpen] = useState(false);
   // Printable student report (points gained/lost + graphs) and class statistics
+  const healedLogoRef = useRef(new Set<string>());
   const [studentReportTarget, setStudentReportTarget] = useState<StudentRecord | null>(null);
   const [classStatsOpen, setClassStatsOpen] = useState(false);
   const [classStatsTab, setClassStatsTab] = useState<StatsTab>("students");
+
+  // Students added or joined after the logo was uploaded get it copied on as soon as the teacher sees them.
+  useEffect(() => {
+    const logo = profile?.schoolLogoURL;
+    if (!logo) return;
+    const missing = students.filter((s) => s.schoolLogoURL !== logo && !healedLogoRef.current.has(`${s.id}|${logo}`));
+    if (missing.length === 0) return;
+    missing.forEach((s) => healedLogoRef.current.add(`${s.id}|${logo}`));
+    applySchoolLogoToStudents(missing, logo).catch((err) => console.error("School logo copy failed", err));
+  }, [students, profile?.schoolLogoURL]);
   const [detailAttendance, setDetailAttendance] = useState<AttendanceRecord[]>([]);
   const [detailNotes, setDetailNotes] = useState<NoteRecord[]>([]);
   const [detailSessions, setDetailSessions] = useState<SessionRecord[]>([]);

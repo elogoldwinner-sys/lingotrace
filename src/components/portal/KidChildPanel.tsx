@@ -174,10 +174,14 @@ export default function KidChildPanel({
       {/* Your Child */}
       <div className={cardCls}>
         <div className="flex items-start gap-4">
-          <span className="flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-gold-50 text-gold-500">
-            <User size={26} />
+          <span className="flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-full bg-gold-50 text-gold-500">
+            {child.photoURL ? (
+              <img src={child.photoURL} alt={child.name} className="h-full w-full object-cover" />
+            ) : (
+              <User size={26} />
+            )}
           </span>
-          <div>
+          <div className={`min-w-0 ${child.schoolLogoURL ? "pe-14" : ""}`}>
             <p className="text-xs font-extrabold uppercase tracking-wide text-gold-600">
               {t("portal.parentWelcome")}
             </p>
@@ -189,7 +193,15 @@ export default function KidChildPanel({
             </div>
           </div>
         </div>
-        <StarDecor className="pointer-events-none absolute end-5 top-5 h-5 w-5 opacity-60" />
+        {child.schoolLogoURL ? (
+          <img
+            src={child.schoolLogoURL}
+            alt={t("school.logoAlt")}
+            className="absolute end-4 top-4 h-12 w-12 rounded-full border-2 border-gold-200 bg-white object-cover shadow-sm"
+          />
+        ) : (
+          <StarDecor className="pointer-events-none absolute end-5 top-5 h-5 w-5 opacity-60" />
+        )}
       </div>
 
       {/* Certificates */}

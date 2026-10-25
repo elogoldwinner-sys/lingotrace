@@ -16,7 +16,7 @@ import {
 import { collection, deleteField, doc, getDoc, getDocs, query, setDoc, serverTimestamp, where } from "firebase/firestore";
 import { auth, db } from "../lib/firebase";
 import type { ParentProfile, StudentRecord, TeacherGender, UserProfile } from "../types";
-import { findStudentByAuthUid, setTeacherWhatsappForClasses } from "../lib/services/studentsService";
+import { findStudentByAuthUid, setTeacherWhatsappForClasses, syncSchoolLogoForTeacher } from "../lib/services/studentsService";
 import { getParentProfile } from "../lib/services/parentsService";
 import { claimPendingSubjects } from "../lib/services/classesService";
 
@@ -353,6 +353,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       else delete next.schoolLogoURL;
       return next;
     });
+    // Parents can't read the teacher's profile, so copy the logo onto the students (like the WhatsApp number).
+    await syncSchoolLogoForTeacher(currentUser.uid, schoolLogoURL);
   }
 
   async function signOut() {

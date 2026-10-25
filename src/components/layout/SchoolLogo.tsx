@@ -1,8 +1,9 @@
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { ImagePlus, X } from "lucide-react";
 import { useAuth } from "../../contexts/AuthContext";
 import { uploadToCloudinary } from "../../lib/cloudinary";
+import { syncSchoolLogoForTeacher } from "../../lib/services/studentsService";
 
 /**
  * The school logo, in a circular frame at the start of the teacher header.
@@ -18,6 +19,19 @@ export default function SchoolLogo({ size = 48 }: { size?: number }) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const logo = profile?.schoolLogoURL;
+
+  // Once per browser session (and per logo), make sure every student record carries the current logo,
+  // so students who joined or were added after the upload still show it in the parent portal.
+  useEffect(() => {
+    if (!logo || !profile) return;
+    const key = `lt-logo-sync:${profile.uid}:${logo}`;
+    if (sessionStorage.getItem(key)) return;
+    sessionStorage.setItem(key, "1");
+    syncSchoolLogoForTeacher(profile.uid, logo).catch((err) => {
+      console.error("School logo sync failed", err);
+      sessionStorage.removeItem(key);
+    });
+  }, [logo, profile?.uid]);
 
   async function handleSelected(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];

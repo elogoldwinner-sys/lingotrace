@@ -1,4 +1,4 @@
-import { arrayUnion, doc, getDoc, getDocs, onSnapshot, query, setDoc, updateDoc, where, collection, writeBatch } from "firebase/firestore";
+import { arrayUnion, deleteField, doc, getDoc, getDocs, onSnapshot, query, setDoc, updateDoc, where, collection, writeBatch } from "firebase/firestore";
 import { db } from "../firebase";
 import { createFirestoreService } from "../firestoreService";
 import { removeChildFromParent } from "./parentsService";
@@ -261,6 +261,39 @@ export async function setTeacherWhatsappForClasses(classIds: string[], whatsappN
       });
       await batch.commit();
     }
+  }
+}
+
+/**
+ * Copies the teacher's school logo onto the given student records
+ * (`schoolLogoURL`; with `null` it removes the copy), so the parent portal can
+ * show it by reading the student doc it already may read — the same approach
+ * as `teacherWhatsapp`. Records that are already up to date are skipped.
+ */
+export async function applySchoolLogoToStudents(
+  students: Pick<StudentRecord, "id" | "schoolLogoURL">[],
+  url: string | null
+) {
+  const stale = students.filter((s) => (s.schoolLogoURL || null) !== url);
+  for (let i = 0; i < stale.length; i += 400) {
+    const batch = writeBatch(db);
+    stale.slice(i, i + 400).forEach((s) => {
+      batch.update(doc(db, "students", s.id), { schoolLogoURL: url ?? deleteField() });
+    });
+    await batch.commit();
+  }
+}
+
+/** Applies the teacher's school logo (or its removal) to every student in every class the teacher teaches. */
+export async function syncSchoolLogoForTeacher(teacherUid: string, url: string | null) {
+  const classesSnap = await getDocs(query(collection(db, "classes"), where("teacherId", "==", teacherUid)));
+  const classIds = classesSnap.docs.map((d) => d.id);
+  for (let i = 0; i < classIds.length; i += 30) {
+    const snap = await getDocs(query(collection(db, "students"), where("classId", "in", classIds.slice(i, i + 30))));
+    await applySchoolLogoToStudents(
+      snap.docs.map((d) => ({ id: d.id, schoolLogoURL: (d.data() as StudentRecord).schoolLogoURL })),
+      url
+    );
   }
 }
 
