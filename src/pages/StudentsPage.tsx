@@ -521,7 +521,7 @@ export default function StudentsPage() {
     if (!pointsModalStudent || !user) return;
     const customText = pointsReason === "custom" ? pointsNote.trim() : "";
     if (pointsReason === "custom" && !customText) return;
-    if (customText && rememberReason) await saveCustomReason(pointsAmount >= 0, customText);
+    if (customText && rememberReason) await saveCustomReason(pointsModalStudent.classId, pointsAmount >= 0, customText);
     await awardPoints({
       studentId: pointsModalStudent.id,
       classId: pointsModalStudent.classId,
@@ -930,6 +930,7 @@ export default function StudentsPage() {
             <label className="label-eyebrow block mb-1.5">{t("points.reason")}</label>
             <ReasonPicker
               amount={pointsAmount}
+              classId={pointsModalStudent?.classId || ""}
               reason={pointsReason}
               note={pointsNote}
               onChange={(r, n) => {

@@ -20,7 +20,9 @@ export interface UserProfile {
   rankingPeriodEnd?: number;
   /** Which teacher illustration (and honorific) the kid-mode dashboard shows. Unset = female. */
   gender?: TeacherGender;
-  /** The teacher's own saved reasons for giving / deducting marks (offered next to the built-in ones). */
+  /** Which reasons the teacher sees when giving / deducting marks (all classes, with optional per-class overrides). */
+  reasonPrefs?: ReasonPrefs;
+  /** Older single list of saved custom reasons — only read as a fallback when `reasonPrefs` is absent. */
   customReasons?: CustomReasons;
   createdAt: number;
 }
@@ -28,6 +30,23 @@ export interface UserProfile {
 export interface CustomReasons {
   positive: string[];
   negative: string[];
+}
+
+/** One direction's reason list: built-in reasons the teacher switched off + their own added reasons. */
+export interface ReasonList {
+  hidden: string[];
+  custom: string[];
+}
+
+export interface ReasonScope {
+  positive: ReasonList;
+  negative: ReasonList;
+}
+
+/** `all` applies to every class; a class listed in `byClass` uses its own scope instead. */
+export interface ReasonPrefs {
+  all: ReasonScope;
+  byClass?: Record<string, ReasonScope>;
 }
 
 export type TeacherGender = "male" | "female";

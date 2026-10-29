@@ -1,23 +1,29 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { X, Plus } from "lucide-react";
+import { Plus } from "lucide-react";
 import { useAuth } from "../../contexts/AuthContext";
-import { reasonsForAmount, POINTS_REASON_ICONS } from "../../lib/pointsReasons";
+import { POINTS_REASON_ICONS } from "../../lib/pointsReasons";
+import { cloneScope, effectiveScope, getPrefs, hasClassOverride, visibleBuiltIn } from "../../lib/reasonPrefs";
 import type { PointsReason } from "../../types";
 
 const MAX_CUSTOM_LENGTH = 60;
 
-/** Saves a teacher's own reason (once) to their personal list for the given direction. */
+/** Saves a reason typed in "Add my own" to the list in effect for that class (its own list, or All classes). */
 export function useSaveCustomReason() {
-  const { profile, updateTeacherCustomReasons } = useAuth();
-  return async function saveCustomReason(positive: boolean, text: string) {
+  const { profile, updateTeacherReasonPrefs } = useAuth();
+  return async function saveCustomReason(classId: string, positive: boolean, text: string) {
     const clean = text.trim();
     if (!clean) return;
-    const current = profile?.customReasons ?? { positive: [], negative: [] };
+    const prefs = getPrefs(profile);
     const key = positive ? "positive" : "negative";
-    if (current[key].some((r) => r.toLowerCase() === clean.toLowerCase())) return;
+    const target = cloneScope(effectiveScope(prefs, classId));
+    if (target[key].custom.some((r) => r.toLowerCase() === clean.toLowerCase())) return;
+    target[key].custom.push(clean);
+    const next = hasClassOverride(prefs, classId)
+      ? { ...prefs, byClass: { ...prefs.byClass, [classId]: target } }
+      : { ...prefs, all: target };
     try {
-      await updateTeacherCustomReasons({ ...current, [key]: [...current[key], clean] });
+      await updateTeacherReasonPrefs(next);
     } catch (err) {
       console.error("Could not save the custom reason", err);
     }
@@ -25,12 +31,13 @@ export function useSaveCustomReason() {
 }
 
 /**
- * Reason chooser for giving / deducting marks: the built-in reasons, the teacher's own saved
- * reasons (tap to use, × to delete), and "Add my own" — type a reason and optionally keep it
- * for next time. Custom reasons are stored on the transaction as reason "custom" + the text.
+ * Reason chooser for giving / deducting marks. It shows only the reasons the teacher chose in
+ * Teacher preferences for this class (built-in ones they kept + their own), plus "Add my own"
+ * for a one-off reason. Custom reasons are stored on the transaction as reason "custom" + the text.
  */
 export default function ReasonPicker({
   amount,
+  classId,
   reason,
   note,
   onChange,
@@ -38,6 +45,7 @@ export default function ReasonPicker({
   onRememberChange,
 }: {
   amount: number;
+  classId: string;
   reason: PointsReason;
   note: string;
   onChange: (reason: PointsReason, note: string) => void;
@@ -45,22 +53,35 @@ export default function ReasonPicker({
   onRememberChange: (value: boolean) => void;
 }) {
   const { t } = useTranslation();
-  const { profile, updateTeacherCustomReasons } = useAuth();
+  const { profile } = useAuth();
   const [typing, setTyping] = useState(false);
   const positive = amount >= 0;
-  const saved = (positive ? profile?.customReasons?.positive : profile?.customReasons?.negative) ?? [];
-  const builtIn = reasonsForAmount(amount).filter((r) => r !== "custom");
+  const scope = effectiveScope(getPrefs(profile), classId);
+  const saved = (positive ? scope.positive : scope.negative).custom;
+  const builtIn = visibleBuiltIn(positive, scope);
   const chip = (active: boolean) =>
     `flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-sm font-semibold transition ${
       active ? "border-gold bg-gold-50 text-gold" : "border-cream-300 text-cream-600 hover:border-gold/50 hover:text-gold"
     }`;
 
-  async function removeSaved(text: string) {
-    const current = profile?.customReasons ?? { positive: [], negative: [] };
-    const key = positive ? "positive" : "negative";
-    await updateTeacherCustomReasons({ ...current, [key]: current[key].filter((r) => r !== text) });
-    if (reason === "custom" && note === text) onChange(builtIn[0], "");
-  }
+  // If the selected reason isn't on the teacher's list (e.g. it was switched off, or the sign flipped), move to one that is.
+  const builtInKey = builtIn.join(",");
+  const savedKey = saved.join("\u0001");
+  useEffect(() => {
+    if (reason !== "custom") {
+      if (typing) setTyping(false);
+      if (builtIn.includes(reason)) return;
+      if (builtIn.length > 0) onChange(builtIn[0], "");
+      else if (saved.length > 0) onChange("custom", saved[0]);
+      else {
+        setTyping(true);
+        onChange("custom", "");
+      }
+    } else if (!typing && !note && builtIn.length > 0) {
+      onChange(builtIn[0], "");
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [builtInKey, savedKey, reason, positive]);
 
   return (
     <div>
@@ -82,31 +103,19 @@ export default function ReasonPicker({
             </button>
           );
         })}
-        {saved.map((text) => {
-          const active = reason === "custom" && note === text && !typing;
-          return (
-            <span key={text} className={`${chip(active)} !py-0 !pe-1 ps-3`}>
-              <button
-                type="button"
-                className="py-1.5"
-                onClick={() => {
-                  setTyping(false);
-                  onChange("custom", text);
-                }}
-              >
-                {text}
-              </button>
-              <button
-                type="button"
-                title={t("points.removeSavedReason")}
-                onClick={() => removeSaved(text)}
-                className="rounded-full p-1 opacity-60 hover:opacity-100"
-              >
-                <X size={12} />
-              </button>
-            </span>
-          );
-        })}
+        {saved.map((text) => (
+          <button
+            key={text}
+            type="button"
+            onClick={() => {
+              setTyping(false);
+              onChange("custom", text);
+            }}
+            className={chip(reason === "custom" && note === text && !typing)}
+          >
+            {text}
+          </button>
+        ))}
         <button
           type="button"
           onClick={() => {

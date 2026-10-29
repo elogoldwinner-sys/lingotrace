@@ -13,9 +13,9 @@ import {
   signOut as firebaseSignOut,
   type User,
 } from "firebase/auth";
-import { collection, deleteField, doc, getDoc, getDocs, query, setDoc, serverTimestamp, where } from "firebase/firestore";
+import { collection, deleteField, doc, getDoc, updateDoc, getDocs, query, setDoc, serverTimestamp, where } from "firebase/firestore";
 import { auth, db } from "../lib/firebase";
-import type { CustomReasons, ParentProfile, StudentRecord, TeacherGender, UserProfile } from "../types";
+import type { ReasonPrefs, ParentProfile, StudentRecord, TeacherGender, UserProfile } from "../types";
 import { findStudentByAuthUid, setTeacherWhatsappForClasses, syncSchoolLogoForTeacher } from "../lib/services/studentsService";
 import { getParentProfile } from "../lib/services/parentsService";
 import { claimPendingSubjects } from "../lib/services/classesService";
@@ -54,8 +54,8 @@ interface AuthContextValue {
   updateTeacherWhatsapp: (whatsappNumber: string) => Promise<void>;
   updateTeacherRankingPeriod: (start: number, end: number) => Promise<void>;
   updateTeacherGender: (gender: TeacherGender) => Promise<void>;
-  /** Saves the teacher's own list of reasons for giving / deducting marks. */
-  updateTeacherCustomReasons: (reasons: CustomReasons) => Promise<void>;
+  /** Saves which reasons the teacher sees when giving / deducting marks. */
+  updateTeacherReasonPrefs: (prefs: ReasonPrefs) => Promise<void>;
   refreshPortalRole: () => Promise<void>;
   signOut: () => Promise<void>;
 }
@@ -359,11 +359,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     await syncSchoolLogoForTeacher(currentUser.uid, schoolLogoURL);
   }
 
-  async function updateTeacherCustomReasons(reasons: CustomReasons) {
+  async function updateTeacherReasonPrefs(prefs: ReasonPrefs) {
     const currentUser = auth.currentUser;
     if (!currentUser) return;
-    await setDoc(doc(db, "teachers", currentUser.uid), { customReasons: reasons }, { merge: true });
-    setProfile((prev) => (prev ? { ...prev, customReasons: reasons } : prev));
+    // updateDoc replaces the whole field, so a removed per-class override really is removed.
+    await updateDoc(doc(db, "teachers", currentUser.uid), { reasonPrefs: prefs });
+    setProfile((prev) => (prev ? { ...prev, reasonPrefs: prefs } : prev));
   }
 
   async function signOut() {
@@ -386,7 +387,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         updateTeacherWhatsapp,
         updateTeacherRankingPeriod,
         updateTeacherGender,
-        updateTeacherCustomReasons,
+        updateTeacherReasonPrefs,
         refreshPortalRole,
         signOut,
       }}

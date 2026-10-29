@@ -266,10 +266,9 @@
       "custom": "Custom",
       "disciplineHero": "Discipline Hero"
     },
-    "removeSavedReason": "Delete this saved reason",
     "addOwnReason": "Add my own",
     "ownReasonPlaceholder": "Type your reason…",
-    "rememberReason": "Save this reason in my list for next time",
+    "rememberReason": "Save this reason in my list (for this class)",
     "wholeGroup": "Give the same mark to all of Group {{group}} ({{count}} students)"
   },
   "common": {
@@ -679,5 +678,28 @@
     "details": "Marks given / deducted",
     "empty": "No marks were given or deducted in this session yet.",
     "noMarks": "{{count}} student(s) had no marks in this session."
+  },
+  "preferences": {
+    "title": "Teacher preferences",
+    "cardHint": "Choose which reasons appear when you give or deduct marks — for all classes or a specific one.",
+    "open": "Open",
+    "reasonsTitle": "Reasons for marks",
+    "reasonsHint": "Switch default reasons off, add your own, and choose where they apply. Changes save automatically.",
+    "appliesTo": "Applies to",
+    "allClasses": "All classes",
+    "ownList": "{{name}} uses its own list of reasons",
+    "followsAll": "This class follows the “All classes” list. Tick the box above to give it its own.",
+    "giving": "Giving marks",
+    "deducting": "Deducting marks",
+    "builtIn": "Default reasons (tap to show / hide)",
+    "builtInHint": "Crossed-out reasons won’t appear in the marks window.",
+    "myReasons": "My own reasons",
+    "noneYet": "None yet",
+    "remove": "Remove",
+    "newReasonPlaceholder": "Type a new reason…",
+    "add": "Add",
+    "reset": "Reset this list to the defaults",
+    "saveError": "Couldn’t save. Please try again.",
+    "done": "Done"
   }
 }

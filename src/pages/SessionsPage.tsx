@@ -321,7 +321,7 @@ export default function SessionsPage() {
     const customText = pointsReason === "custom" ? pointsNote.trim() : "";
     if (pointsReason === "custom" && !customText) return;
     unlockSound();
-    if (customText && rememberReason) await saveCustomReason(pointsAmount >= 0, customText);
+    if (customText && rememberReason) await saveCustomReason(pointsModalStudent.classId, pointsAmount >= 0, customText);
     const base = {
       classId: pointsModalStudent.classId,
       amount: pointsAmount,
@@ -809,6 +809,7 @@ export default function SessionsPage() {
             <label className="label-eyebrow block mb-1.5">{t("points.reason")}</label>
             <ReasonPicker
               amount={pointsAmount}
+              classId={pointsModalStudent?.classId || ""}
               reason={pointsReason}
               note={pointsNote}
               onChange={(r, n) => {
