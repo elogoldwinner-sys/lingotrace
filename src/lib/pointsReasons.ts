@@ -11,6 +11,7 @@ import {
   Rocket,
   Pencil,
   SpellCheck,
+  Medal,
   type LucideIcon,
 } from "lucide-react";
 import type { PointsReason } from "../types";
@@ -60,5 +61,6 @@ export const POINTS_REASON_ICONS: Partial<Record<PointsReason, LucideIcon>> = {
   improvementHero: TrendingUp,
   superLearner: Rocket,
   dictationStar: SpellCheck,
+  disciplineHero: Medal,
   custom: Pencil,
 };

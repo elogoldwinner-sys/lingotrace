@@ -263,7 +263,8 @@
       "missingHomework": "Missing Homework",
       "incompleteWork": "Incomplete Work",
       "missingTools": "Missing Tools",
-      "custom": "Custom"
+      "custom": "Custom",
+      "disciplineHero": "Discipline Hero"
     },
     "removeSavedReason": "Delete this saved reason",
     "addOwnReason": "Add my own",

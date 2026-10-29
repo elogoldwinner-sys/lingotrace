@@ -263,7 +263,8 @@
       "missingHomework": "عدم إحضار الواجب",
       "incompleteWork": "عمل غير مكتمل",
       "missingTools": "عدم إحضار الأدوات",
-      "custom": "مخصص"
+      "custom": "مخصص",
+      "disciplineHero": "بطل الانضباط"
     },
     "removeSavedReason": "حذف هذا السبب المحفوظ",
     "addOwnReason": "إضافة سبب خاص بي",

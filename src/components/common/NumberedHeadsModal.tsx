@@ -5,7 +5,7 @@ import Modal from "./Modal";
 import { STUDENT_GROUPS, type StudentGroup, type StudentRecord } from "../../types";
 import { awardPoints, awardPointsToMany } from "../../lib/services/pointsService";
 import { useAuth } from "../../contexts/AuthContext";
-import ReasonPicker, { useSaveCustomReason } from "./ReasonPicker";
+import { POINTS_REASON_ICONS } from "../../lib/pointsReasons";
 import { downloadCardPng, downloadCardsZip, printCards, type CardArt } from "../../lib/cardExport";
 import type { PointsReason } from "../../types";
 import { unlockSound } from "../../lib/sounds";
@@ -90,12 +90,9 @@ export default function NumberedHeadsModal({
   const [error, setError] = useState("");
   const [customMark, setCustomMark] = useState(1);
   const { profile } = useAuth();
-  const saveCustomReason = useSaveCustomReason();
-  const [reason, setReason] = useState<PointsReason>("participationStar");
-  const [reasonNote, setReasonNote] = useState("");
-  const [rememberReason, setRememberReason] = useState(true);
-  // Give the mark to every student in the group, not only the one whose number was drawn.
-  const [wholeGroup, setWholeGroup] = useState(true);
+  // Give the mark to every student in the group, not only the one whose number was drawn (off by default).
+  const [wholeGroup, setWholeGroup] = useState(false);
+  const [groupReason, setGroupReason] = useState<PointsReason>("teamPlayer");
   const [cardBusy, setCardBusy] = useState("");
   const [cardMsg, setCardMsg] = useState("");
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -161,26 +158,22 @@ export default function NumberedHeadsModal({
 
   function advance(extraMarks = 0) {
     setCustomMark(1);
+    setWholeGroup(false);
+    setGroupReason("teamPlayer");
     setRound((r) => (r ? { ...r, step: r.step + 1, marksGiven: r.marksGiven + extraMarks } : r));
   }
 
   async function addMark(amount: number) {
     if (!target || saving || !Number.isFinite(amount) || amount === 0) return;
-    const customText = reason === "custom" ? reasonNote.trim() : "";
-    if (reason === "custom" && !customText) {
-      setError(t("numberedHeads.reasonMissing"));
-      return;
-    }
     unlockSound();
     setSaving(true);
     setError("");
     try {
-      if (customText && rememberReason) await saveCustomReason(true, customText);
       const base = {
         classId: target.classId,
         amount,
-        reason,
-        note: customText || undefined,
+        // One student: always Participation Star. Whole group: Team Player or Discipline Hero.
+        reason: (wholeGroup ? groupReason : "participationStar") as PointsReason,
         awardedBy: teacherId,
         sessionId,
       };
@@ -284,21 +277,6 @@ export default function NumberedHeadsModal({
                   <p className="text-center text-xs text-cream-600">
                     {t("numberedHeads.addMarkFor", { name: target.name })}
                   </p>
-                  <ReasonPicker
-                    amount={1}
-                    reason={reason}
-                    note={reasonNote}
-                    onChange={(r, n) => {
-                      setReason(r);
-                      setReasonNote(n);
-                    }}
-                    remember={rememberReason}
-                    onRememberChange={setRememberReason}
-                  />
-                  <label className="flex items-start gap-2 rounded-lg border border-cream-300 bg-cream-100/60 px-3 py-2 text-sm text-navy">
-                    <input type="checkbox" className="mt-0.5" checked={wholeGroup} onChange={(e) => setWholeGroup(e.target.checked)} />
-                    <span>{t("numberedHeads.wholeGroup", { group: currentGroup, count: recipients.length })}</span>
-                  </label>
                   <div className="flex flex-wrap items-center justify-center gap-2">
                     {QUICK_MARKS.map((m) => (
                       <button
@@ -349,6 +327,37 @@ export default function NumberedHeadsModal({
                   {target ? t("numberedHeads.cancel") : t("numberedHeads.next")}
                 </button>
               </div>
+
+              {target && (
+                <div className="space-y-2">
+                  <label className="flex items-start gap-2 rounded-lg border border-cream-300 bg-cream-100/60 px-3 py-2 text-sm text-navy">
+                    <input type="checkbox" className="mt-0.5" checked={wholeGroup} onChange={(e) => setWholeGroup(e.target.checked)} />
+                    <span>{t("numberedHeads.wholeGroup", { group: currentGroup, count: recipients.length })}</span>
+                  </label>
+                  {wholeGroup && (
+                    <div className="flex flex-wrap justify-center gap-2">
+                      {(["teamPlayer", "disciplineHero"] as PointsReason[]).map((r) => {
+                        const Icon = POINTS_REASON_ICONS[r];
+                        return (
+                          <button
+                            key={r}
+                            type="button"
+                            onClick={() => setGroupReason(r)}
+                            className={`flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-sm font-semibold transition ${
+                              groupReason === r
+                                ? "border-gold bg-gold-50 text-gold"
+                                : "border-cream-300 text-cream-600 hover:border-gold/50 hover:text-gold"
+                            }`}
+                          >
+                            {Icon && <Icon size={14} />}
+                            {t(`points.reasons.${r}`)}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
           )}
 

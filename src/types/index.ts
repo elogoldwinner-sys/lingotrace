@@ -231,6 +231,7 @@ export type PointsReason =
   | "improvementHero"
   | "superLearner"
   | "dictationStar"
+  | "disciplineHero"
   // Deduction-only reasons (shown when the amount is negative).
   | "misbehavior"
   | "sideTalkNoise"
