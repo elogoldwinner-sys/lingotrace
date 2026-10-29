@@ -1,11 +1,11 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { startOfWeek, addDays, format as formatDate, parseISO } from "date-fns";
-import { Plus, Minus, Trash2, Disc3, ChevronDown, X, Layers, NotebookPen, Users } from "lucide-react";
+import { Plus, Minus, Trash2, Disc3, ChevronDown, X, Layers, NotebookPen, Users, ClipboardList } from "lucide-react";
 import { useAuth } from "../contexts/AuthContext";
 import { subscribeToClasses } from "../lib/services/classesService";
 import { subscribeToStudents } from "../lib/services/studentsService";
-import { awardPoints } from "../lib/services/pointsService";
+import { awardPoints, awardPointsToMany } from "../lib/services/pointsService";
 import { createNote } from "../lib/services/notesService";
 import RichTextEditor from "../components/common/RichTextEditor";
 import { richHtmlToPlainText, sanitizeRichHtml } from "../lib/richText";
@@ -31,11 +31,13 @@ import EmptyState from "../components/common/EmptyState";
 import Spinner from "../components/common/Spinner";
 import ClassSelector from "../components/common/ClassSelector";
 import NumberedHeadsModal from "../components/common/NumberedHeadsModal";
+import SessionSummaryModal from "../components/common/SessionSummaryModal";
 import NamesWheelModal from "../components/common/NamesWheelModal";
 import SoundToggle from "../components/common/SoundToggle";
 import { unlockSound } from "../lib/sounds";
 import MarkReinforcement, { type MarkReinforcementEvent } from "../components/common/MarkReinforcement";
-import { reasonsForAmount, POINTS_REASON_ICONS, POSITIVE_POINTS_REASONS } from "../lib/pointsReasons";
+import { reasonsForAmount, POSITIVE_POINTS_REASONS } from "../lib/pointsReasons";
+import ReasonPicker, { useSaveCustomReason } from "../components/common/ReasonPicker";
 
 const STATUS_STYLES: Record<AttendanceStatus, string> = {
   present: "bg-green-100 text-green-700 border-green-300",
@@ -77,6 +79,8 @@ export default function SessionsPage() {
   const [pointsAmount, setPointsAmount] = useState(1);
   const [pointsReason, setPointsReason] = useState<PointsReason>(POSITIVE_POINTS_REASONS[0]);
   const [pointsNote, setPointsNote] = useState("");
+  const [rememberReason, setRememberReason] = useState(true);
+  const saveCustomReason = useSaveCustomReason();
 
   const [noteModalStudent, setNoteModalStudent] = useState<StudentRecord | null>(null);
   // Formatted note body (HTML) from the editor.
@@ -95,6 +99,9 @@ export default function SessionsPage() {
   // Mirrors pickedIdsRef.size so the "x of y picked" hint re-renders.
   const [pickedCount, setPickedCount] = useState(0);
   const [groupPickOpen, setGroupPickOpen] = useState(false);
+  const [summarySession, setSummarySession] = useState<SessionRecord | null>(null);
+  // "Give the same mark to the whole group" tick in the marks window.
+  const [awardWholeGroup, setAwardWholeGroup] = useState(false);
 
   // Active session (the one currently expanded to apply session procedures)
   const [activeSessionId, setActiveSessionId] = useState<string | null>(null);
@@ -218,15 +225,16 @@ export default function SessionsPage() {
     setPointsAmount(direction * 1);
     setPointsReason(reasonsForAmount(direction)[0]);
     setPointsNote("");
+    setAwardWholeGroup(false);
     setPointsModalStudent(student);
   }
 
   /** Keeps the selected reason valid for the current sign of the amount — resetting to that side's first option (and clearing the custom-detail box) the moment the sign flips, e.g. from typing a negative number directly into the amount field. */
   function handlePointsAmountChange(next: number) {
+    const flipped = (next < 0) !== (pointsAmount < 0);
     setPointsAmount(next);
-    const list = reasonsForAmount(next);
-    if (!list.includes(pointsReason)) {
-      setPointsReason(list[0]);
+    if (flipped) {
+      setPointsReason(reasonsForAmount(next)[0]);
       setPointsNote("");
     }
   }
@@ -296,18 +304,40 @@ export default function SessionsPage() {
     if (winner) openPointsModal(winner);
   }
 
+  /** Students of `student`'s group who can receive a group mark (not absent/excused in this session). */
+  function groupRecipients(student: StudentRecord): StudentRecord[] {
+    if (!student.group) return [student];
+    return students.filter((st) => {
+      if (st.group !== student.group) return false;
+      if (st.id === student.id) return true;
+      const status = sessionAttendanceByStudent.get(st.id)?.status;
+      return status !== "absent" && status !== "excused";
+    });
+  }
+
   async function handleAwardPoints(e: React.FormEvent) {
     e.preventDefault();
     if (!pointsModalStudent || !user) return;
+    const customText = pointsReason === "custom" ? pointsNote.trim() : "";
+    if (pointsReason === "custom" && !customText) return;
     unlockSound();
-    await awardPoints({
-      studentId: pointsModalStudent.id,
+    if (customText && rememberReason) await saveCustomReason(pointsAmount >= 0, customText);
+    const base = {
       classId: pointsModalStudent.classId,
       amount: pointsAmount,
       reason: pointsReason,
-      note: pointsReason === "custom" ? pointsNote.trim() : undefined,
+      note: customText || undefined,
       awardedBy: user.uid,
-    });
+      sessionId: activeSessionId || undefined,
+    };
+    if (awardWholeGroup && pointsModalStudent.group) {
+      await awardPointsToMany(
+        groupRecipients(pointsModalStudent).map((st) => st.id),
+        base
+      );
+    } else {
+      await awardPoints({ ...base, studentId: pointsModalStudent.id });
+    }
     if (pointsAmount !== 0) setReinforcement({ id: Date.now(), amount: pointsAmount });
     setPointsModalStudent(null);
     setHighlightedId(null);
@@ -473,6 +503,13 @@ export default function SessionsPage() {
                                   <Users size={16} />
                                   {t("numberedHeads.button")}
                                 </button>
+                                <button
+                                  onClick={() => setSummarySession(s)}
+                                  className="btn-secondary py-1.5 px-3 text-sm"
+                                >
+                                  <ClipboardList size={16} />
+                                  {t("sessionSummary.button")}
+                                </button>
                                 <SoundToggle />
                                 <button
                                   onClick={() => setActiveSessionId(null)}
@@ -611,7 +648,21 @@ export default function SessionsPage() {
         onClose={() => setGroupPickOpen(false)}
         students={students}
         teacherId={user?.uid || ""}
+        sessionId={activeSessionId || undefined}
+        excludedIds={students
+          .filter((st) => {
+            const status = sessionAttendanceByStudent.get(st.id)?.status;
+            return status === "absent" || status === "excused";
+          })
+          .map((st) => st.id)}
         onMarkSaved={(amount) => setReinforcement({ id: Date.now(), amount })}
+      />
+
+      <SessionSummaryModal
+        session={summarySession}
+        students={students}
+        teacherId={user?.uid || ""}
+        onClose={() => setSummarySession(null)}
       />
 
       <MarkReinforcement event={reinforcement} onDone={() => setReinforcement(null)} />
@@ -756,36 +807,34 @@ export default function SessionsPage() {
           </div>
           <div>
             <label className="label-eyebrow block mb-1.5">{t("points.reason")}</label>
-            <div className="flex flex-wrap gap-2">
-              {reasonsForAmount(pointsAmount).map((reason) => {
-                const ReasonIcon = POINTS_REASON_ICONS[reason];
-                return (
-                  <button
-                    key={reason}
-                    type="button"
-                    onClick={() => setPointsReason(reason)}
-                    className={`flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-sm font-semibold transition ${
-                      pointsReason === reason
-                        ? "border-gold bg-gold-50 text-gold"
-                        : "border-cream-300 text-cream-600 hover:border-gold/50 hover:text-gold"
-                    }`}
-                  >
-                    {ReasonIcon && <ReasonIcon size={14} />}
-                    {t(`points.reasons.${reason}`)}
-                  </button>
-                );
-              })}
-            </div>
-            {pointsReason === "custom" && (
-              <input
-                type="text"
-                value={pointsNote}
-                onChange={(e) => setPointsNote(e.target.value)}
-                placeholder={t("points.customPlaceholder")}
-                className="input-field mt-2"
-              />
-            )}
+            <ReasonPicker
+              amount={pointsAmount}
+              reason={pointsReason}
+              note={pointsNote}
+              onChange={(r, n) => {
+                setPointsReason(r);
+                setPointsNote(n);
+              }}
+              remember={rememberReason}
+              onRememberChange={setRememberReason}
+            />
           </div>
+          {pointsModalStudent?.group && (
+            <label className="flex items-start gap-2 rounded-lg border border-cream-300 bg-cream-100/60 px-3 py-2 text-sm text-navy">
+              <input
+                type="checkbox"
+                className="mt-0.5"
+                checked={awardWholeGroup}
+                onChange={(e) => setAwardWholeGroup(e.target.checked)}
+              />
+              <span>
+                {t("points.wholeGroup", {
+                  group: pointsModalStudent.group,
+                  count: groupRecipients(pointsModalStudent).length,
+                })}
+              </span>
+            </label>
+          )}
           <div className="flex justify-end gap-2">
             <button type="button" onClick={() => setPointsModalStudent(null)} className="btn-secondary">
               {t("common.cancel")}

@@ -280,7 +280,7 @@ export default function StudentPortalPage() {
           />
         )}
 
-        <CertificatesSection studentId={portalStudent.id} kid={isKid} />
+        <CertificatesSection studentId={portalStudent.id} kid={isKid} logoUrl={portalStudent.schoolLogoURL} />
 
         {visibleAssignments.length > 0 && (
           <div className="card p-6">

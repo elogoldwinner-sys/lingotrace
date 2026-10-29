@@ -15,7 +15,7 @@ import {
 } from "firebase/auth";
 import { collection, deleteField, doc, getDoc, getDocs, query, setDoc, serverTimestamp, where } from "firebase/firestore";
 import { auth, db } from "../lib/firebase";
-import type { ParentProfile, StudentRecord, TeacherGender, UserProfile } from "../types";
+import type { CustomReasons, ParentProfile, StudentRecord, TeacherGender, UserProfile } from "../types";
 import { findStudentByAuthUid, setTeacherWhatsappForClasses, syncSchoolLogoForTeacher } from "../lib/services/studentsService";
 import { getParentProfile } from "../lib/services/parentsService";
 import { claimPendingSubjects } from "../lib/services/classesService";
@@ -54,6 +54,8 @@ interface AuthContextValue {
   updateTeacherWhatsapp: (whatsappNumber: string) => Promise<void>;
   updateTeacherRankingPeriod: (start: number, end: number) => Promise<void>;
   updateTeacherGender: (gender: TeacherGender) => Promise<void>;
+  /** Saves the teacher's own list of reasons for giving / deducting marks. */
+  updateTeacherCustomReasons: (reasons: CustomReasons) => Promise<void>;
   refreshPortalRole: () => Promise<void>;
   signOut: () => Promise<void>;
 }
@@ -357,6 +359,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     await syncSchoolLogoForTeacher(currentUser.uid, schoolLogoURL);
   }
 
+  async function updateTeacherCustomReasons(reasons: CustomReasons) {
+    const currentUser = auth.currentUser;
+    if (!currentUser) return;
+    await setDoc(doc(db, "teachers", currentUser.uid), { customReasons: reasons }, { merge: true });
+    setProfile((prev) => (prev ? { ...prev, customReasons: reasons } : prev));
+  }
+
   async function signOut() {
     await firebaseSignOut(auth);
   }
@@ -377,6 +386,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         updateTeacherWhatsapp,
         updateTeacherRankingPeriod,
         updateTeacherGender,
+        updateTeacherCustomReasons,
         refreshPortalRole,
         signOut,
       }}

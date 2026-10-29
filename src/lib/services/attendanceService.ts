@@ -164,6 +164,7 @@ export async function setAttendanceStatusWithPoints(params: {
         reason: "attendance",
         note: "",
         awardedBy: params.awardedBy,
+        sessionId: params.sessionId,
         createdAt: serverTimestamp(),
       })
     );

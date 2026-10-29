@@ -78,7 +78,8 @@ import StudentReportModal from "../components/reports/StudentReportModal";
 import ClassStatsModal, { type StatsTab } from "../components/reports/ClassStatsModal";
 import CertificateModal from "../components/common/CertificateModal";
 import RichText from "../components/common/RichText";
-import { reasonsForAmount, POINTS_REASON_ICONS, POSITIVE_POINTS_REASONS } from "../lib/pointsReasons";
+import { reasonsForAmount, POSITIVE_POINTS_REASONS } from "../lib/pointsReasons";
+import ReasonPicker, { useSaveCustomReason } from "../components/common/ReasonPicker";
 
 interface BulkRow {
   name: string;
@@ -114,6 +115,8 @@ export default function StudentsPage() {
   const [pointsAmount, setPointsAmount] = useState(1);
   const [pointsReason, setPointsReason] = useState<PointsReason>(POSITIVE_POINTS_REASONS[0]);
   const [pointsNote, setPointsNote] = useState("");
+  const [rememberReason, setRememberReason] = useState(true);
+  const saveCustomReason = useSaveCustomReason();
 
   // Performance detail panel
   const [detailStudent, setDetailStudent] = useState<StudentRecord | null>(null);
@@ -516,12 +519,15 @@ export default function StudentsPage() {
   async function handleAwardPoints(e: React.FormEvent) {
     e.preventDefault();
     if (!pointsModalStudent || !user) return;
+    const customText = pointsReason === "custom" ? pointsNote.trim() : "";
+    if (pointsReason === "custom" && !customText) return;
+    if (customText && rememberReason) await saveCustomReason(pointsAmount >= 0, customText);
     await awardPoints({
       studentId: pointsModalStudent.id,
       classId: pointsModalStudent.classId,
       amount: pointsAmount,
       reason: pointsReason,
-      note: pointsReason === "custom" ? pointsNote.trim() : undefined,
+      note: customText || undefined,
       awardedBy: user.uid,
     });
     setPointsModalStudent(null);
@@ -531,10 +537,10 @@ export default function StudentsPage() {
 
   /** Keeps the selected reason valid for the current sign of the amount — resetting to that side's first option (and clearing the custom-detail box) the moment the sign flips. */
   function handlePointsAmountChange(next: number) {
+    const flipped = (next < 0) !== (pointsAmount < 0);
     setPointsAmount(next);
-    const list = reasonsForAmount(next);
-    if (!list.includes(pointsReason)) {
-      setPointsReason(list[0]);
+    if (flipped) {
+      setPointsReason(reasonsForAmount(next)[0]);
       setPointsNote("");
     }
   }
@@ -922,35 +928,17 @@ export default function StudentsPage() {
           </div>
           <div>
             <label className="label-eyebrow block mb-1.5">{t("points.reason")}</label>
-            <div className="flex flex-wrap gap-2">
-              {reasonsForAmount(pointsAmount).map((reason) => {
-                const ReasonIcon = POINTS_REASON_ICONS[reason];
-                return (
-                  <button
-                    key={reason}
-                    type="button"
-                    onClick={() => setPointsReason(reason)}
-                    className={`flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-sm font-semibold transition ${
-                      pointsReason === reason
-                        ? "border-gold bg-gold-50 text-gold"
-                        : "border-cream-300 text-cream-600 hover:border-gold/50 hover:text-gold"
-                    }`}
-                  >
-                    {ReasonIcon && <ReasonIcon size={14} />}
-                    {t(`points.reasons.${reason}`)}
-                  </button>
-                );
-              })}
-            </div>
-            {pointsReason === "custom" && (
-              <input
-                type="text"
-                value={pointsNote}
-                onChange={(e) => setPointsNote(e.target.value)}
-                placeholder={t("points.customPlaceholder")}
-                className="input-field mt-2"
-              />
-            )}
+            <ReasonPicker
+              amount={pointsAmount}
+              reason={pointsReason}
+              note={pointsNote}
+              onChange={(r, n) => {
+                setPointsReason(r);
+                setPointsNote(n);
+              }}
+              remember={rememberReason}
+              onRememberChange={setRememberReason}
+            />
           </div>
           <div className="flex justify-end gap-2">
             <button type="button" onClick={() => setPointsModalStudent(null)} className="btn-secondary">

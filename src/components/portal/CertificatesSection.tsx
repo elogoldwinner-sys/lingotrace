@@ -11,7 +11,16 @@ import type { CertificateRecord } from "../../types";
  * download (A4, print-ready). Renders nothing until there is one.
  * `kid` switches to the playful portal styling.
  */
-export default function CertificatesSection({ studentId, kid = false }: { studentId: string; kid?: boolean }) {
+export default function CertificatesSection({
+  studentId,
+  kid = false,
+  logoUrl,
+}: {
+  studentId: string;
+  kid?: boolean;
+  /** The teacher's school logo (copied onto the student record), drawn on the downloaded certificate. */
+  logoUrl?: string;
+}) {
   const { t, i18n } = useTranslation();
   const [certificates, setCertificates] = useState<CertificateRecord[]>([]);
   const [busyId, setBusyId] = useState("");
@@ -30,7 +39,7 @@ export default function CertificatesSection({ studentId, kid = false }: { studen
     setBusyId(c.id);
     setError("");
     try {
-      await downloadCertificates([toRenderData(c)]);
+      await downloadCertificates([toRenderData(c, logoUrl)]);
     } catch (err) {
       console.error("Certificate download failed", err);
       setError(t("certificate.downloadError"));

@@ -209,7 +209,7 @@ export default function KidChildPanel({
       </div>
 
       {/* Certificates */}
-      <CertificatesSection studentId={studentId} kid />
+      <CertificatesSection studentId={studentId} kid logoUrl={child.schoolLogoURL} />
 
       {/* Exams & Games */}
       {visibleAssignments.length > 0 && (

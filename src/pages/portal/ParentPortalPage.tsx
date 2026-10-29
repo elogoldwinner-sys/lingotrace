@@ -221,7 +221,7 @@ function ChildPanel({
         )}
       </div>
 
-      <CertificatesSection studentId={studentId} />
+      <CertificatesSection studentId={studentId} logoUrl={child.schoolLogoURL} />
 
       {visibleAssignments.length > 0 && (
         <div className="card p-6">

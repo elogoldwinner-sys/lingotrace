@@ -109,8 +109,9 @@ export function toRenderData(c: {
   rank: number | null;
   classSize: number | null;
   badgeIds: string[];
-}): CertificateRenderData {
+}, logoUrl?: string): CertificateRenderData {
   return {
+    logoUrl,
     studentName: c.studentName,
     reason: c.reason,
     points: c.points,

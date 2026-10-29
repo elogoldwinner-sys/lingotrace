@@ -20,7 +20,14 @@ export interface UserProfile {
   rankingPeriodEnd?: number;
   /** Which teacher illustration (and honorific) the kid-mode dashboard shows. Unset = female. */
   gender?: TeacherGender;
+  /** The teacher's own saved reasons for giving / deducting marks (offered next to the built-in ones). */
+  customReasons?: CustomReasons;
   createdAt: number;
+}
+
+export interface CustomReasons {
+  positive: string[];
+  negative: string[];
 }
 
 export type TeacherGender = "male" | "female";
@@ -242,6 +249,8 @@ export interface PointsTransaction {
   reason: PointsReason;
   note?: string;
   awardedBy: string;
+  /** Set when the mark was given from inside a session (used by the Session Summary). */
+  sessionId?: string;
   createdAt: number;
 }
 

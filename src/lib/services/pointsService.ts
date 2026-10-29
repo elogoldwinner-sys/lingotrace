@@ -34,6 +34,8 @@ export async function awardPoints(data: {
   reason: PointsReason;
   note?: string;
   awardedBy: string;
+  /** The session the mark was given in, if any (shown in the Session Summary). */
+  sessionId?: string;
 }) {
   const studentRef = doc(db, "students", data.studentId);
   const transactionRef = doc(collection(db, "pointsTransactions"));
@@ -56,6 +58,7 @@ export async function awardPoints(data: {
       reason: data.reason,
       note: data.note || "",
       awardedBy: data.awardedBy,
+      ...(data.sessionId ? { sessionId: data.sessionId } : {}),
       createdAt: serverTimestamp(),
     });
   });
@@ -83,4 +86,29 @@ export async function getPointsForStudentInRange(
       const created = toMillis(txn.createdAt);
       return created >= startMs && created <= endMs;
     });
+}
+
+/** Gives the same mark to several students at once (e.g. a whole group). Resolves with how many were saved. */
+export async function awardPointsToMany(
+  studentIds: string[],
+  data: Omit<Parameters<typeof awardPoints>[0], "studentId">
+): Promise<number> {
+  const results = await Promise.allSettled(studentIds.map((studentId) => awardPoints({ ...data, studentId })));
+  const failed = results.filter((r) => r.status === "rejected").length;
+  if (failed === results.length && failed > 0) throw new Error("Could not save the marks.");
+  return results.length - failed;
+}
+
+/** Every mark the teacher gave inside one session (one-off fetch, oldest first). */
+export async function getSessionTransactions(sessionId: string, teacherId: string): Promise<PointsTransaction[]> {
+  const snapshot = await getDocs(
+    query(
+      collection(db, "pointsTransactions"),
+      where("sessionId", "==", sessionId),
+      where("awardedBy", "==", teacherId)
+    )
+  );
+  return snapshot.docs
+    .map((d) => ({ id: d.id, ...d.data() } as PointsTransaction))
+    .sort((a, b) => toMillis(a.createdAt) - toMillis(b.createdAt));
 }

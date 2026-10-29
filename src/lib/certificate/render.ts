@@ -1,5 +1,6 @@
 import { customBoldFontUrl, customRegularFontUrl } from "./customFonts";
 import type { OverlayImage } from "./pdfOverlay";
+import { loadLogoImage } from "../logoImage";
 
 export interface CertificateBadge {
   icon: string;
@@ -16,6 +17,8 @@ export interface CertificateRenderData {
   rank: number | null;
   classSize: number | null;
   badges: CertificateBadge[];
+  /** The issuing teacher's school logo (drawn top-right); nothing is drawn when absent. */
+  logoUrl?: string;
 }
 
 /** Resource names + object numbers of the template's placeholder images (see scripts used to prepare template.pdf). */
@@ -24,6 +27,7 @@ export const SLOT_IMAGES = {
   reason: { objNum: 14, resName: "LtReason" },
   stats: { objNum: 15, resName: "LtStats" },
   badges: { objNum: 12, resName: "LtBadges" },
+  logo: { objNum: 155, resName: "LtLogo" },
 } as const;
 
 /** Top edge of the template page's coordinate system; the template's layout numbers below are measured downward from it. */
@@ -43,6 +47,8 @@ const NAME_LAYOUT = { cx: 295.6, baseline: 419.0, size: 40.33, minSize: 17, maxW
 const REASON_LAYOUT = { cx: 289.5, midBaseline: 485.4, size: 18.18, minSize: 12.5, pitch: 1.331, maxW: 348, maxLines: 3 };
 const CHIPS_LAYOUT = { cx: 291, cy: 533, chipH: 20, maxW: 336 };
 const BADGES_LAYOUT = { cx: 290, cy: 683, maxW: 336 };
+/** Where the school logo goes (the spot the old built-in logo occupied), in points from the top of the page. */
+const LOGO_LAYOUT = { cx: 410, cy: 112, maxW: 150, maxH: 110 };
 
 const GOOGLE_FONTS_CSS =
   "https://fonts.googleapis.com/css2?family=Patrick+Hand&family=Baloo+Bhaijaan+2:wght@500;700&display=swap";
@@ -357,6 +363,19 @@ function renderBadges(badges: CertificateBadge[]): OverlayImage | null {
   return toOverlay(SLOT_IMAGES.badges, layer, BADGES_LAYOUT.cx - boxW / 2, BADGES_LAYOUT.cy - boxH / 2);
 }
 
+/** The teacher's school logo, fitted into its box (aspect ratio kept, transparency kept). */
+async function renderLogo(url?: string): Promise<OverlayImage | null> {
+  const img = await loadLogoImage(url);
+  if (!img || !img.naturalWidth) return null;
+  const ratio = Math.min(LOGO_LAYOUT.maxW / img.naturalWidth, LOGO_LAYOUT.maxH / img.naturalHeight);
+  const w = img.naturalWidth * ratio;
+  const h = img.naturalHeight * ratio;
+  const layer = newLayer(w, h);
+  layer.ctx.imageSmoothingQuality = "high";
+  layer.ctx.drawImage(img, 0, 0, w, h);
+  return toOverlay(SLOT_IMAGES.logo, layer, LOGO_LAYOUT.cx - w / 2, LOGO_LAYOUT.cy - h / 2);
+}
+
 /** Draws every dynamic part of one certificate and returns it as image layers ready to be placed on the template. */
 export async function renderCertificateOverlays(data: CertificateRenderData): Promise<OverlayImage[]> {
   const name = data.studentName.replace(/\s+/g, " ").trim();
@@ -368,6 +387,7 @@ export async function renderCertificateOverlays(data: CertificateRenderData): Pr
     renderReason(reason),
     renderStats(data.points, data.rank, data.classSize),
     renderBadges(data.badges),
+    await renderLogo(data.logoUrl),
   ];
   return overlays.filter((o): o is OverlayImage => o !== null);
 }

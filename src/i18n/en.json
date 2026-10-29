@@ -264,7 +264,12 @@
       "incompleteWork": "Incomplete Work",
       "missingTools": "Missing Tools",
       "custom": "Custom"
-    }
+    },
+    "removeSavedReason": "Delete this saved reason",
+    "addOwnReason": "Add my own",
+    "ownReasonPlaceholder": "Type your reason…",
+    "rememberReason": "Save this reason in my list for next time",
+    "wholeGroup": "Give the same mark to all of Group {{group}} ({{count}} students)"
   },
   "common": {
     "save": "Save",
@@ -493,7 +498,17 @@
     "cancel": "Cancel",
     "next": "Next group",
     "saveError": "Couldn't save the mark. Please try again.",
-    "roundDone": "All groups have answered — {{count}} mark(s) given."
+    "roundDone": "All groups have answered — {{count}} mark(s) given.",
+    "reasonMissing": "Type a reason first, or pick one from the list.",
+    "wholeGroup": "Award the whole of Group {{group}} ({{count}} students get the mark)",
+    "cardsTitle": "Number cards for printing",
+    "printCards": "Print all cards",
+    "downloadAll": "Download all (ZIP)",
+    "downloadOne": "Download card {{number}}",
+    "zipName": "Number cards",
+    "noLogoHint": "Upload your school logo (top bar) to have it printed on the cards.",
+    "logoFailed": "The cards were made, but your school logo couldn't be loaded.",
+    "cardError": "Couldn't prepare the cards. Please try again."
   },
   "pointsReport": {
     "button": "Points report",
@@ -653,5 +668,15 @@
     "studentChoose": "Choose your picture",
     "studentChooseShort": "Choose",
     "studentWarning": "You can choose your picture only ONE time. After you confirm, it can't be changed."
+  },
+  "sessionSummary": {
+    "button": "Session summary",
+    "title": "Session summary",
+    "session": "Session",
+    "date": "Date",
+    "student": "Student",
+    "details": "Marks given / deducted",
+    "empty": "No marks were given or deducted in this session yet.",
+    "noMarks": "{{count}} student(s) had no marks in this session."
   }
 }

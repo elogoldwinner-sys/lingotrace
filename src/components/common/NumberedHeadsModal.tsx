@@ -1,9 +1,13 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Shuffle, Check, X } from "lucide-react";
+import { Shuffle, Check, X, Download, Printer } from "lucide-react";
 import Modal from "./Modal";
 import { STUDENT_GROUPS, type StudentGroup, type StudentRecord } from "../../types";
-import { awardPoints } from "../../lib/services/pointsService";
+import { awardPoints, awardPointsToMany } from "../../lib/services/pointsService";
+import { useAuth } from "../../contexts/AuthContext";
+import ReasonPicker, { useSaveCustomReason } from "./ReasonPicker";
+import { downloadCardPng, downloadCardsZip, printCards, type CardArt } from "../../lib/cardExport";
+import type { PointsReason } from "../../types";
 import { unlockSound } from "../../lib/sounds";
 import card1 from "../../assets/numbered-cards/card-1.png";
 import card2 from "../../assets/numbered-cards/card-2.png";
@@ -12,6 +16,7 @@ import card4 from "../../assets/numbered-cards/card-4.png";
 
 const CARD_IMAGES: Record<number, string> = { 1: card1, 2: card2, 3: card3, 4: card4 };
 const CARD_NUMBERS = [1, 2, 3, 4];
+const CARD_ARTS: CardArt[] = CARD_NUMBERS.map((n) => ({ number: n, url: CARD_IMAGES[n] }));
 
 /** Marks the teacher can give with one tap. */
 const QUICK_MARKS = [1, 2, 3, 5];
@@ -59,12 +64,18 @@ export default function NumberedHeadsModal({
   onClose,
   students,
   teacherId,
+  sessionId,
+  excludedIds = [],
   onMarkSaved,
 }: {
   open: boolean;
   onClose: () => void;
   students: StudentRecord[];
   teacherId: string;
+  /** The open session, so the marks show up in its Session Summary. */
+  sessionId?: string;
+  /** Students who can't receive marks right now (absent / excused) — skipped by a whole-group award. */
+  excludedIds?: string[];
   /** Called after marks are saved (used for the on-screen "Perfect!" reinforcement). */
   onMarkSaved?: (amount: number) => void;
 }) {
@@ -78,6 +89,15 @@ export default function NumberedHeadsModal({
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
   const [customMark, setCustomMark] = useState(1);
+  const { profile } = useAuth();
+  const saveCustomReason = useSaveCustomReason();
+  const [reason, setReason] = useState<PointsReason>("participationStar");
+  const [reasonNote, setReasonNote] = useState("");
+  const [rememberReason, setRememberReason] = useState(true);
+  // Give the mark to every student in the group, not only the one whose number was drawn.
+  const [wholeGroup, setWholeGroup] = useState(true);
+  const [cardBusy, setCardBusy] = useState("");
+  const [cardMsg, setCardMsg] = useState("");
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   // Students of each group, numbered 1..n by name so the numbering is stable between draws.
@@ -104,6 +124,8 @@ export default function NumberedHeadsModal({
   const currentGroup = roundActive ? round!.order[round!.step] : null;
   const members = currentGroup ? groups.get(currentGroup) || [] : [];
   const target = round ? members[round.number - 1] : undefined;
+  // Everyone who gets the mark when "whole group" is on (absent / excused students are skipped).
+  const recipients = members.filter((m) => m.id === target?.id || !excludedIds.includes(m.id));
 
   function draw() {
     if (spinning || saving || groupKeys.length === 0) return;
@@ -144,23 +166,46 @@ export default function NumberedHeadsModal({
 
   async function addMark(amount: number) {
     if (!target || saving || !Number.isFinite(amount) || amount === 0) return;
+    const customText = reason === "custom" ? reasonNote.trim() : "";
+    if (reason === "custom" && !customText) {
+      setError(t("numberedHeads.reasonMissing"));
+      return;
+    }
     unlockSound();
     setSaving(true);
     setError("");
     try {
-      await awardPoints({
-        studentId: target.id,
+      if (customText && rememberReason) await saveCustomReason(true, customText);
+      const base = {
         classId: target.classId,
         amount,
-        reason: "participationStar",
+        reason,
+        note: customText || undefined,
         awardedBy: teacherId,
-      });
+        sessionId,
+      };
+      if (wholeGroup) await awardPointsToMany(recipients.map((m) => m.id), base);
+      else await awardPoints({ ...base, studentId: target.id });
       onMarkSaved?.(amount);
       advance(1);
     } catch {
       setError(t("numberedHeads.saveError"));
     } finally {
       setSaving(false);
+    }
+  }
+
+  async function runCardAction(key: string, action: () => Promise<{ logoApplied: boolean }>) {
+    setCardBusy(key);
+    setCardMsg("");
+    try {
+      const { logoApplied } = await action();
+      if (!logoApplied) setCardMsg(t("numberedHeads.logoFailed"));
+    } catch (err) {
+      console.error("Card export failed", err);
+      setCardMsg(t("numberedHeads.cardError"));
+    } finally {
+      setCardBusy("");
     }
   }
 
@@ -239,6 +284,21 @@ export default function NumberedHeadsModal({
                   <p className="text-center text-xs text-cream-600">
                     {t("numberedHeads.addMarkFor", { name: target.name })}
                   </p>
+                  <ReasonPicker
+                    amount={1}
+                    reason={reason}
+                    note={reasonNote}
+                    onChange={(r, n) => {
+                      setReason(r);
+                      setReasonNote(n);
+                    }}
+                    remember={rememberReason}
+                    onRememberChange={setRememberReason}
+                  />
+                  <label className="flex items-start gap-2 rounded-lg border border-cream-300 bg-cream-100/60 px-3 py-2 text-sm text-navy">
+                    <input type="checkbox" className="mt-0.5" checked={wholeGroup} onChange={(e) => setWholeGroup(e.target.checked)} />
+                    <span>{t("numberedHeads.wholeGroup", { group: currentGroup, count: recipients.length })}</span>
+                  </label>
                   <div className="flex flex-wrap items-center justify-center gap-2">
                     {QUICK_MARKS.map((m) => (
                       <button
@@ -297,6 +357,44 @@ export default function NumberedHeadsModal({
               {t("numberedHeads.roundDone", { count: round.marksGiven })}
             </p>
           )}
+
+          <div className="w-full border-t border-cream-300 pt-3 text-center">
+            <p className="mb-2 text-xs font-semibold text-navy">{t("numberedHeads.cardsTitle")}</p>
+            <div className="flex flex-wrap items-center justify-center gap-2">
+              <button
+                type="button"
+                disabled={!!cardBusy}
+                onClick={() => runCardAction("print", () => printCards(CARD_ARTS, profile?.schoolLogoURL, t("numberedHeads.cardsTitle")))}
+                className="btn-secondary py-1.5 px-3 text-xs disabled:opacity-60"
+              >
+                <Printer size={14} />
+                {t("numberedHeads.printCards")}
+              </button>
+              <button
+                type="button"
+                disabled={!!cardBusy}
+                onClick={() => runCardAction("zip", () => downloadCardsZip(CARD_ARTS, profile?.schoolLogoURL, t("numberedHeads.zipName")))}
+                className="btn-secondary py-1.5 px-3 text-xs disabled:opacity-60"
+              >
+                <Download size={14} />
+                {t("numberedHeads.downloadAll")}
+              </button>
+              {shown && !spinning && (
+                <button
+                  type="button"
+                  disabled={!!cardBusy}
+                  onClick={() => runCardAction("one", () => downloadCardPng(CARD_ARTS[shown - 1], profile?.schoolLogoURL))}
+                  className="btn-secondary py-1.5 px-3 text-xs disabled:opacity-60"
+                >
+                  <Download size={14} />
+                  {t("numberedHeads.downloadOne", { number: shown })}
+                </button>
+              )}
+            </div>
+            {!profile?.schoolLogoURL && <p className="mt-1 text-[11px] text-cream-600">{t("numberedHeads.noLogoHint")}</p>}
+            {cardBusy && <p className="mt-1 text-[11px] text-cream-600">{t("common.loading")}</p>}
+            {cardMsg && <p className="mt-1 text-[11px] text-red-600">{cardMsg}</p>}
+          </div>
 
           {!roundActive && (
             <button onClick={draw} disabled={spinning} className="btn-gold py-2 px-5 text-sm disabled:opacity-60">
