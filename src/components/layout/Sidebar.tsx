@@ -112,7 +112,7 @@ export default function Sidebar({ collapsed, mobileOpen, onToggle, onNavigate }:
                     }`
               }
             >
-              <Icon size={isKid ? 28 : 24} strokeWidth={2.2} className="shrink-0" />
+              <Icon size={isKid ? 21 : 18} strokeWidth={2.2} className="shrink-0" />
               <span
                 className={`truncate ${mobileOpen ? "inline" : "hidden"} ${collapsed ? "md:hidden" : "md:inline"}`}
               >

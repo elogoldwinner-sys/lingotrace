@@ -1,23 +1,14 @@
 import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
-import { LogOut, Globe, Camera, MessageCircle, Trophy, ChevronDown, Mars, Venus, Repeat } from "lucide-react";
+import { LogOut, Globe, Camera, ChevronDown, Mars, Venus, Repeat } from "lucide-react";
 import { useAuth } from "../../contexts/AuthContext";
 import { uploadToCloudinary } from "../../lib/cloudinary";
-import { getDefaultRankingPeriod } from "../../lib/services/classRankingsService";
-import Modal from "../common/Modal";
 import { ACTION_TONES } from "../../lib/uiColors";
 import ThemeToggle from "../common/ThemeToggle";
 import SchoolLogo from "./SchoolLogo";
 import { useTheme } from "../../contexts/ThemeContext";
 import type { TeacherGender } from "../../types";
-
-/** "YYYY-MM-DD" in local time, the format <input type="date"> needs. */
-function msToLocalDateValue(ms: number): string {
-  const d = new Date(ms);
-  const pad = (n: number) => String(n).padStart(2, "0");
-  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
-}
 
 /** "Mahmoud Badawi" → "Badawi" (the design greets teachers as "Ms. Ahmed"). */
 function familyName(displayName: string): string {
@@ -27,8 +18,6 @@ function familyName(displayName: string): string {
 
 const KID_TONES = {
   blue: "!border-blue-300 !bg-blue-50 !text-blue-800 hover:!bg-blue-100",
-  emerald: "!border-emerald-300 !bg-emerald-50 !text-emerald-800 hover:!bg-emerald-100",
-  amber: "!border-amber-300 !bg-amber-50 !text-amber-800 hover:!bg-amber-100",
 };
 
 const KID_PILL =
@@ -44,8 +33,6 @@ export default function Topbar() {
     portalStudent,
     signOut,
     updateTeacherPhoto,
-    updateTeacherWhatsapp,
-    updateTeacherRankingPeriod,
     updateTeacherGender,
   } = useAuth();
   const navigate = useNavigate();
@@ -58,17 +45,6 @@ export default function Topbar() {
     : t("nav.switchToStudentPortal");
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [uploading, setUploading] = useState(false);
-
-  const [whatsappModalOpen, setWhatsappModalOpen] = useState(false);
-  const [whatsappInput, setWhatsappInput] = useState("");
-  const [savingWhatsapp, setSavingWhatsapp] = useState(false);
-
-  const defaultPeriod = getDefaultRankingPeriod();
-  const [scheduleModalOpen, setScheduleModalOpen] = useState(false);
-  const [scheduleStart, setScheduleStart] = useState(msToLocalDateValue(defaultPeriod.start));
-  const [scheduleEnd, setScheduleEnd] = useState(msToLocalDateValue(defaultPeriod.end));
-  const [savingSchedule, setSavingSchedule] = useState(false);
-  const [scheduleError, setScheduleError] = useState("");
 
   // Kid mode only: the avatar's drop-down (change photo / sign out).
   const [menuOpen, setMenuOpen] = useState(false);
@@ -118,54 +94,6 @@ export default function Topbar() {
     }
   }
 
-  function openWhatsappModal() {
-    setWhatsappInput(profile?.whatsappNumber || "");
-    setWhatsappModalOpen(true);
-  }
-
-  async function handleSaveWhatsapp(e: React.FormEvent) {
-    e.preventDefault();
-    setSavingWhatsapp(true);
-    try {
-      await updateTeacherWhatsapp(whatsappInput.trim());
-      setWhatsappModalOpen(false);
-    } finally {
-      setSavingWhatsapp(false);
-    }
-  }
-
-  function openScheduleModal() {
-    const period = getDefaultRankingPeriod();
-    setScheduleStart(msToLocalDateValue(profile?.rankingPeriodStart ?? period.start));
-    setScheduleEnd(msToLocalDateValue(profile?.rankingPeriodEnd ?? period.end));
-    setScheduleError("");
-    setScheduleModalOpen(true);
-  }
-
-  async function handleSaveSchedule(e: React.FormEvent) {
-    e.preventDefault();
-    if (!scheduleStart || !scheduleEnd) return;
-    // ISO date strings sort the same as the dates they represent.
-    if (scheduleEnd < scheduleStart) {
-      setScheduleError(t("ranking.invalidRange"));
-      return;
-    }
-    setScheduleError("");
-    setSavingSchedule(true);
-    try {
-      // End date is inclusive through the end of that calendar day.
-      const startMs = new Date(`${scheduleStart}T00:00:00`).getTime();
-      const endMs = new Date(`${scheduleEnd}T23:59:59.999`).getTime();
-      await updateTeacherRankingPeriod(startMs, endMs);
-      setScheduleModalOpen(false);
-    } catch (err) {
-      console.error("Could not save the champions period", err);
-      setScheduleError(t("ranking.saveError"));
-    } finally {
-      setSavingSchedule(false);
-    }
-  }
-
   return (
     <>
       {isKid ? (
@@ -197,15 +125,7 @@ export default function Topbar() {
                 {i18n.language === "ar" ? "EN" : "AR"}
               </button>
 
-              <button onClick={openWhatsappModal} className={`${KID_PILL} ${KID_TONES.emerald}`} title={t("settings.whatsappNumber")}>
-                <MessageCircle size={17} />
-                <span className="hidden 2xl:inline">{t("settings.whatsapp")}</span>
-              </button>
 
-              <button onClick={openScheduleModal} className={`${KID_PILL} ${KID_TONES.amber}`} title={t("ranking.scheduleLabel")}>
-                <Trophy size={17} />
-                <span className="hidden 2xl:inline">{t("ranking.schedule")}</span>
-              </button>
 
               {/* male / female — picks the teacher illustration on the dashboard */}
               <div
@@ -327,23 +247,7 @@ export default function Topbar() {
               {i18n.language === "ar" ? "EN" : "AR"}
             </button>
 
-            <button
-              onClick={openWhatsappModal}
-              className={`flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs font-semibold ${ACTION_TONES.emerald}`}
-              title={t("settings.whatsappNumber")}
-            >
-              <MessageCircle size={14} />
-              <span className="hidden lg:inline">{t("settings.whatsapp")}</span>
-            </button>
 
-            <button
-              onClick={openScheduleModal}
-              className={`flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs font-semibold ${ACTION_TONES.amber}`}
-              title={t("ranking.scheduleLabel")}
-            >
-              <Trophy size={14} />
-              <span className="hidden lg:inline">{t("ranking.schedule")}</span>
-            </button>
 
             <input
               ref={fileInputRef}
@@ -396,68 +300,6 @@ export default function Topbar() {
           </div>
         </header>
       )}
-
-      <Modal open={whatsappModalOpen} onClose={() => setWhatsappModalOpen(false)} title={t("settings.whatsappNumber")}>
-        <form onSubmit={handleSaveWhatsapp} className="space-y-4">
-          <div>
-            <label className="label-eyebrow block mb-1.5">{t("settings.whatsappNumber")}</label>
-            <input
-              type="tel"
-              value={whatsappInput}
-              onChange={(e) => setWhatsappInput(e.target.value)}
-              placeholder={t("settings.whatsappPlaceholder")}
-              className="input-field"
-            />
-            <p className="text-xs text-cream-600 mt-1.5">{t("settings.whatsappHint")}</p>
-          </div>
-          <div className="flex justify-end gap-2">
-            <button type="button" onClick={() => setWhatsappModalOpen(false)} className="btn-secondary">
-              {t("common.cancel")}
-            </button>
-            <button type="submit" disabled={savingWhatsapp} className="btn-primary">
-              {savingWhatsapp ? t("common.loading") : t("common.save")}
-            </button>
-          </div>
-        </form>
-      </Modal>
-
-      <Modal open={scheduleModalOpen} onClose={() => setScheduleModalOpen(false)} title={t("ranking.scheduleLabel")}>
-        <form onSubmit={handleSaveSchedule} className="space-y-4">
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label className="label-eyebrow block mb-1.5">{t("ranking.startDate")}</label>
-              <input
-                type="date"
-                required
-                value={scheduleStart}
-                onChange={(e) => setScheduleStart(e.target.value)}
-                className="input-field"
-              />
-            </div>
-            <div>
-              <label className="label-eyebrow block mb-1.5">{t("ranking.endDate")}</label>
-              <input
-                type="date"
-                required
-                value={scheduleEnd}
-                min={scheduleStart || undefined}
-                onChange={(e) => setScheduleEnd(e.target.value)}
-                className="input-field"
-              />
-            </div>
-          </div>
-          <p className="text-xs text-cream-600">{t("ranking.scheduleHint")}</p>
-          {scheduleError && <p className="text-sm text-red-600">{scheduleError}</p>}
-          <div className="flex justify-end gap-2">
-            <button type="button" onClick={() => setScheduleModalOpen(false)} className="btn-secondary">
-              {t("common.cancel")}
-            </button>
-            <button type="submit" disabled={savingSchedule} className="btn-primary">
-              {savingSchedule ? t("common.loading") : t("common.save")}
-            </button>
-          </div>
-        </form>
-      </Modal>
     </>
   );
 }

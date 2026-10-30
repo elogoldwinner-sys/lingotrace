@@ -1,8 +1,9 @@
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
-import { X, Plus, RotateCcw, CalendarCheck } from "lucide-react";
+import { X, Plus, RotateCcw, CalendarCheck, MessageCircle, Trophy } from "lucide-react";
 import { useAuth } from "../contexts/AuthContext";
 import { POINTS_REASON_ICONS } from "../lib/pointsReasons";
+import { getDefaultRankingPeriod } from "../lib/services/classRankingsService";
 import { subscribeToClasses } from "../lib/services/classesService";
 import { allBuiltIn, cloneScope, getPrefs, hasClassOverride, effectiveScope } from "../lib/reasonPrefs";
 import { useEffect } from "react";
@@ -10,10 +11,66 @@ import type { ClassRecord, ReasonPrefs, ReasonScope } from "../types";
 
 const ALL = "__all__";
 
+/** "YYYY-MM-DD" in local time, the format <input type="date"> needs. */
+function msToLocalDateValue(ms: number): string {
+  const d = new Date(ms);
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+}
+
 /** Teacher preferences page (side menu, under Dashboard): attendance marks on/off + which reasons appear when giving / deducting marks. */
 export default function PreferencesPage() {
   const { t } = useTranslation();
-  const { user, profile, updateTeacherReasonPrefs, updateTeacherAttendancePoints } = useAuth();
+  const { user, profile, updateTeacherReasonPrefs, updateTeacherAttendancePoints, updateTeacherWhatsapp, updateTeacherRankingPeriod } = useAuth();
+
+  // WhatsApp number (used for parent messages)
+  const [whatsapp, setWhatsapp] = useState(profile?.whatsappNumber || "");
+  const [savingWhatsapp, setSavingWhatsapp] = useState(false);
+  const [whatsappSaved, setWhatsappSaved] = useState(false);
+
+  // Champions reporting period
+  const defaultPeriod = getDefaultRankingPeriod();
+  const [periodStart, setPeriodStart] = useState(msToLocalDateValue(profile?.rankingPeriodStart ?? defaultPeriod.start));
+  const [periodEnd, setPeriodEnd] = useState(msToLocalDateValue(profile?.rankingPeriodEnd ?? defaultPeriod.end));
+  const [savingPeriod, setSavingPeriod] = useState(false);
+  const [periodMsg, setPeriodMsg] = useState<{ ok: boolean; text: string } | null>(null);
+
+  async function saveWhatsapp(e: React.FormEvent) {
+    e.preventDefault();
+    setSavingWhatsapp(true);
+    setWhatsappSaved(false);
+    try {
+      await updateTeacherWhatsapp(whatsapp.trim());
+      setWhatsappSaved(true);
+      setTimeout(() => setWhatsappSaved(false), 3000);
+    } finally {
+      setSavingWhatsapp(false);
+    }
+  }
+
+  async function savePeriod(e: React.FormEvent) {
+    e.preventDefault();
+    if (!periodStart || !periodEnd) return;
+    if (periodEnd < periodStart) {
+      setPeriodMsg({ ok: false, text: t("ranking.invalidRange") });
+      return;
+    }
+    setSavingPeriod(true);
+    setPeriodMsg(null);
+    try {
+      // End date is inclusive through the end of that calendar day.
+      await updateTeacherRankingPeriod(
+        new Date(`${periodStart}T00:00:00`).getTime(),
+        new Date(`${periodEnd}T23:59:59.999`).getTime()
+      );
+      setPeriodMsg({ ok: true, text: t("preferences.saved") });
+    } catch (err) {
+      console.error("Could not save the champions period", err);
+      setPeriodMsg({ ok: false, text: t("ranking.saveError") });
+    } finally {
+      setSavingPeriod(false);
+    }
+  }
   const [classes, setClasses] = useState<ClassRecord[]>([]);
   const [prefs, setPrefs] = useState<ReasonPrefs>(() => getPrefs(profile));
   const [scopeId, setScopeId] = useState(ALL);
@@ -108,6 +165,57 @@ export default function PreferencesPage() {
           <span className={`absolute top-0.5 h-6 w-6 rounded-full bg-white shadow transition-all ${attendanceOn ? "start-[1.4rem]" : "start-0.5"}`} />
         </button>
       </div>
+
+      <form onSubmit={saveWhatsapp} className="card space-y-3 p-5">
+        <div className="flex items-start gap-3">
+          <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-emerald-50 text-emerald-600">
+            <MessageCircle size={20} />
+          </div>
+          <div className="min-w-0 flex-1">
+            <p className="text-base font-semibold text-navy">{t("settings.whatsappNumber")}</p>
+            <p className="text-sm text-cream-600">{t("settings.whatsappHint")}</p>
+          </div>
+        </div>
+        <div className="flex flex-wrap items-center gap-2">
+          <input
+            type="tel"
+            value={whatsapp}
+            onChange={(e) => setWhatsapp(e.target.value)}
+            placeholder={t("settings.whatsappPlaceholder")}
+            className="input-field max-w-xs"
+          />
+          <button type="submit" disabled={savingWhatsapp} className="btn-primary py-2 px-4 text-sm">
+            {savingWhatsapp ? t("common.loading") : t("common.save")}
+          </button>
+          {whatsappSaved && <span className="text-sm font-semibold text-green-700">{t("preferences.saved")}</span>}
+        </div>
+      </form>
+
+      <form onSubmit={savePeriod} className="card space-y-3 p-5">
+        <div className="flex items-start gap-3">
+          <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-amber-50 text-amber-600">
+            <Trophy size={20} />
+          </div>
+          <div className="min-w-0 flex-1">
+            <p className="text-base font-semibold text-navy">{t("ranking.scheduleLabel")}</p>
+            <p className="text-sm text-cream-600">{t("ranking.scheduleHint")}</p>
+          </div>
+        </div>
+        <div className="flex flex-wrap items-end gap-2">
+          <div>
+            <label className="label-eyebrow mb-1 block">{t("ranking.startDate")}</label>
+            <input type="date" required value={periodStart} onChange={(e) => setPeriodStart(e.target.value)} className="input-field w-auto" />
+          </div>
+          <div>
+            <label className="label-eyebrow mb-1 block">{t("ranking.endDate")}</label>
+            <input type="date" required value={periodEnd} min={periodStart || undefined} onChange={(e) => setPeriodEnd(e.target.value)} className="input-field w-auto" />
+          </div>
+          <button type="submit" disabled={savingPeriod} className="btn-primary py-2 px-4 text-sm">
+            {savingPeriod ? t("common.loading") : t("common.save")}
+          </button>
+        </div>
+        {periodMsg && <p className={`text-sm font-semibold ${periodMsg.ok ? "text-green-700" : "text-red-600"}`}>{periodMsg.text}</p>}
+      </form>
 
       <div className="card space-y-4 p-5">
         <div>

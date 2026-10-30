@@ -714,7 +714,8 @@
     "saveError": "Couldn’t save. Please try again.",
     "done": "Done",
     "attendanceMarks": "Marks for attendance",
-    "attendanceMarksHint": "When on, marking a student present or late adds a mark. Turn it off to record attendance without adding or deducting any marks."
+    "attendanceMarksHint": "When on, marking a student present or late adds a mark. Turn it off to record attendance without adding or deducting any marks.",
+    "saved": "Saved"
   },
   "attendanceReport": {
     "title": "Attendance report",
