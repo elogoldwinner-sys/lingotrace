@@ -17,7 +17,8 @@
     "switchToTeacher": "Switch to Teacher Dashboard",
     "switchToParentPortal": "Switch to Parent Portal",
     "switchToStudentPortal": "Switch to Student Portal",
-    "preferences": "Teacher preferences"
+    "preferences": "Teacher preferences",
+    "archive": "Archive"
   },
   "auth": {
     "continueWithGoogle": "Continue with Google",
@@ -219,7 +220,11 @@
     "weekSessionCount": "{{count}} session(s)",
     "weekLabel": "Week {{number}} ({{range}})",
     "pickRoundProgress": "Random pick round: {{picked}} of {{total}} picked — nobody repeats until everyone has had a turn.",
-    "pickRoundReset": "Start over"
+    "pickRoundReset": "Start over",
+    "archiveTitle": "Archive",
+    "archiveHint": "Weeks older than last week move here automatically. They work exactly like the weeks on the Sessions page.",
+    "archiveEmpty": "Nothing is archived yet. Weeks move here once they are older than last week.",
+    "allArchived": "No sessions in the current or previous week. Older weeks are in the Archive."
   },
   "notes": {
     "title": "Notes",

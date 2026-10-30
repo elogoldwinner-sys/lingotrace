@@ -63,6 +63,7 @@ export default function App() {
             <Route path="/students" element={<StudentsPage />} />
             <Route path="/attendance" element={<AttendancePage />} />
             <Route path="/sessions" element={<SessionsPage />} />
+            <Route path="/archive" element={<SessionsPage archived />} />
             <Route path="/notes" element={<NotesPage />} />
             <Route path="/projects" element={<ProjectsPage />} />
             <Route path="/linked-activities" element={<LinkedActivitiesPage />} />

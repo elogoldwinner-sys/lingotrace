@@ -56,7 +56,12 @@ function todayISO() {
   return new Date().toISOString().slice(0, 10);
 }
 
-export default function SessionsPage() {
+/**
+ * `archived` shows the same weeks with every feature intact, but only the ones older than last
+ * week; the normal Sessions page shows the current week and the week before. The split is
+ * computed from the dates each time, so weeks move to the Archive on their own.
+ */
+export default function SessionsPage({ archived = false }: { archived?: boolean }) {
   const { t } = useTranslation();
   const { user } = useAuth();
   const [classes, setClasses] = useState<ClassRecord[]>([]);
@@ -197,6 +202,13 @@ export default function SessionsPage() {
       .sort((a, b) => b.key.localeCompare(a.key));
   }, [sessions]);
 
+  // Current and previous week stay on Sessions; anything older is archived (Sunday-first weeks, like the grouping above).
+  const keepFromKey = formatDate(addDays(startOfWeek(new Date(), { weekStartsOn: 0 }), -7), "yyyy-MM-dd");
+  const visibleWeeks = useMemo(
+    () => weekGroups.filter((w) => (archived ? w.key < keepFromKey : w.key >= keepFromKey)),
+    [weekGroups, archived, keepFromKey]
+  );
+
   // Reset the "latest week open" default whenever the selected class
   // changes, then apply it once the first batch of weeks for that class
   // has loaded.
@@ -207,10 +219,10 @@ export default function SessionsPage() {
 
   useEffect(() => {
     if (defaultedClassRef.current === selectedClassId) return;
-    if (weekGroups.length === 0) return;
-    setExpandedWeeks(new Set([weekGroups[0].key]));
+    if (visibleWeeks.length === 0) return;
+    setExpandedWeeks(new Set([visibleWeeks[0].key]));
     defaultedClassRef.current = selectedClassId;
-  }, [weekGroups, selectedClassId]);
+  }, [visibleWeeks, selectedClassId]);
 
   function toggleWeek(key: string) {
     setExpandedWeeks((prev) => {
@@ -399,8 +411,8 @@ export default function SessionsPage() {
   return (
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-        <h1 className="text-2xl font-semibold text-navy">{t("sessions.title")}</h1>
-        <div className="flex flex-wrap items-center gap-3">
+        <h1 className="text-2xl font-semibold text-navy">{t(archived ? "sessions.archiveTitle" : "sessions.title")}</h1>
+        <div className={`flex flex-wrap items-center gap-3 ${archived ? "hidden" : ""}`}>
           <button
             onClick={() => setBulkModalOpen(true)}
             className="btn-secondary"
@@ -422,9 +434,12 @@ export default function SessionsPage() {
         <Spinner />
       ) : sessions.length === 0 ? (
         <EmptyState message={t("sessions.noSessions")} icon="📝" />
+      ) : visibleWeeks.length === 0 ? (
+        <EmptyState message={t(archived ? "sessions.archiveEmpty" : "sessions.allArchived")} icon={archived ? "🗄️" : "📝"} />
       ) : (
         <div className="space-y-3">
-          {weekGroups.map((week) => {
+          {archived && <p className="text-sm text-cream-600">{t("sessions.archiveHint")}</p>}
+          {visibleWeeks.map((week) => {
             const isWeekOpen = expandedWeeks.has(week.key);
             const weekEnd = addDays(week.weekStart, 4);
             const weekRange = `${formatDate(week.weekStart, "MMM d")} – ${formatDate(weekEnd, "MMM d, yyyy")}`;

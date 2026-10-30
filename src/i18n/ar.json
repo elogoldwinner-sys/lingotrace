@@ -17,7 +17,8 @@
     "switchToTeacher": "التبديل إلى لوحة المعلم",
     "switchToParentPortal": "التبديل إلى بوابة ولي الأمر",
     "switchToStudentPortal": "التبديل إلى بوابة الطالب",
-    "preferences": "تفضيلات المعلم"
+    "preferences": "تفضيلات المعلم",
+    "archive": "الأرشيف"
   },
   "auth": {
     "continueWithGoogle": "المتابعة باستخدام جوجل",
@@ -219,7 +220,11 @@
     "weekSessionCount": "{{count}} حصة",
     "weekLabel": "الأسبوع {{number}} ({{range}})",
     "pickRoundProgress": "جولة الاختيار العشوائي: تم اختيار {{picked}} من {{total}} — لا يتكرر أحد حتى يأخذ الجميع دوره.",
-    "pickRoundReset": "ابدأ من جديد"
+    "pickRoundReset": "ابدأ من جديد",
+    "archiveTitle": "الأرشيف",
+    "archiveHint": "تنتقل الأسابيع الأقدم من الأسبوع الماضي إلى هنا تلقائيًا، وتعمل تمامًا مثل أسابيع صفحة الحصص.",
+    "archiveEmpty": "لا يوجد شيء في الأرشيف بعد. تنتقل الأسابيع إلى هنا عندما تصبح أقدم من الأسبوع الماضي.",
+    "allArchived": "لا توجد حصص في الأسبوع الحالي أو السابق. الأسابيع الأقدم في الأرشيف."
   },
   "notes": {
     "title": "الملاحظات",
