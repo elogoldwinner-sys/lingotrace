@@ -90,7 +90,12 @@ export default function Sidebar({ collapsed, mobileOpen, onToggle, onNavigate }:
                 mobileOpen ? "block" : "hidden"
               } ${collapsed ? "md:hidden" : "md:block"}`}
             >
-              <AnimatedName text={t("app.name")} isArabic={i18n.language === "ar"} />
+              <AnimatedName
+                text={t("app.name")}
+                style={logoAnim.nameStyle}
+                isArabic={i18n.language === "ar"}
+                onLoop={logoAnim.nextNameStyle}
+              />
             </span>
           </div>
         ) : (

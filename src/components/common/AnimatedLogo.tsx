@@ -11,6 +11,12 @@ import { useCallback, useEffect, useRef, useState } from "react";
 const VARIANTS = ["float", "hop", "shine", "glow", "jelly", "sparkle"] as const;
 export type LogoVariant = (typeof VARIANTS)[number];
 
+/** Text effects for the app name (it rotates through these like the logo does). */
+export const NAME_STYLES = ["wave", "jelly", "drop", "shimmer", "neon", "rainbow", "glitch"] as const;
+export type NameStyle = (typeof NAME_STYLES)[number];
+/** These split the name into letters, which would break joined Arabic script. */
+const LETTER_STYLES: readonly string[] = ["wave", "jelly", "drop"];
+
 function pickDifferent<T extends string>(list: readonly T[], storageKey: string): T {
   let last: string | null = null;
   try {
@@ -29,17 +35,20 @@ function pickDifferent<T extends string>(list: readonly T[], storageKey: string)
 }
 
 /** How many times a movement loops before the next one takes over. */
-const LOOPS_BEFORE_SWITCH = 6;
+const LOOPS_BEFORE_SWITCH = 3;
 
 /**
- * Picks a movement on mount (refresh / fresh login) and, via `nextVariant`,
- * a different one each time the current one has looped 3 times.
+ * Picks a logo movement and a name effect on mount (refresh / fresh login) and,
+ * via `nextVariant` / `nextNameStyle`, a different one each time the current
+ * one has looped 3 times. The two rotate independently.
  */
 export function useLogoAnimation() {
   const [variant, setVariant] = useState<LogoVariant>(() => pickDifferent(VARIANTS, "lt-logo-variant"));
-  // pickDifferent compares with what is stored, which is always the movement on screen.
+  const [nameStyle, setNameStyle] = useState<NameStyle>(() => pickDifferent(NAME_STYLES, "lt-name-style"));
+  // pickDifferent compares with what is stored, which is always the effect on screen.
   const nextVariant = useCallback(() => setVariant(pickDifferent(VARIANTS, "lt-logo-variant")), []);
-  return { variant, nextVariant };
+  const nextNameStyle = useCallback(() => setNameStyle(pickDifferent(NAME_STYLES, "lt-name-style")), []);
+  return { variant, nextVariant, nameStyle, nextNameStyle };
 }
 
 const STAR = "M12 0C13 7 17 11 24 12 17 13 13 17 12 24 11 17 7 13 0 12 7 11 11 7 12 0Z";
@@ -97,19 +106,52 @@ export default function AnimatedLogo({
 }
 
 /**
- * The app name with a letter-by-letter wave. In Arabic the letters join, so
- * splitting them into separate elements would break the word; there the whole
- * word gets the same gentle bounce instead.
+ * The app name with one of several text effects. Letter-based effects (wave,
+ * jelly, drop) only run in Latin script; in Arabic the letters join, so there
+ * the whole word gets a gentle bounce instead. `onLoop` fires after the
+ * effect has repeated 3 times.
  */
-export function AnimatedName({ text, isArabic }: { text: string; isArabic: boolean }) {
-  if (isArabic) return <span className="lt-name lt-name-bob">{text}</span>;
+export function AnimatedName({
+  text,
+  style,
+  isArabic,
+  onLoop,
+}: {
+  text: string;
+  style: NameStyle;
+  isArabic: boolean;
+  onLoop?: () => void;
+}) {
+  const effect = isArabic && LETTER_STYLES.includes(style) ? "bob" : style;
+  const letters = LETTER_STYLES.includes(effect);
+
+  const count = useRef(0);
+  useEffect(() => {
+    count.current = 0;
+  }, [effect]);
+
   return (
-    <span className="lt-name lt-name-wave" aria-label={text}>
-      {Array.from(text).map((c, i) => (
-        <span key={i} aria-hidden="true" style={{ ["--i" as string]: i }}>
-          {c}
-        </span>
-      ))}
+    <span
+      className={`lt-name lt-n-${effect}`}
+      aria-label={text}
+      onAnimationIteration={(e) => {
+        // Letter effects fire once per letter; only count the first letter (or the whole word).
+        const el = e.currentTarget;
+        if (e.target !== el && e.target !== el.firstElementChild) return;
+        count.current += 1;
+        if (count.current >= LOOPS_BEFORE_SWITCH) {
+          count.current = 0;
+          onLoop?.();
+        }
+      }}
+    >
+      {letters
+        ? Array.from(text).map((c, i) => (
+            <span key={i} aria-hidden="true" style={{ ["--i" as string]: i }}>
+              {c === " " ? "\u00a0" : c}
+            </span>
+          ))
+        : text}
     </span>
   );
 }
