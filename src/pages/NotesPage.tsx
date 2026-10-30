@@ -1,12 +1,12 @@
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Plus, Trash2 } from "lucide-react";
+import { Plus, Trash2, CheckCheck } from "lucide-react";
 import { useAuth } from "../contexts/AuthContext";
 import { subscribeToClasses } from "../lib/services/classesService";
 import { subscribeToStudents } from "../lib/services/studentsService";
 import { subscribeToSessions } from "../lib/services/sessionsService";
 import {
-  subscribeToStudentNotes,
+  subscribeToClassNotes,
   createNote,
   deleteNote,
 } from "../lib/services/notesService";
@@ -56,8 +56,7 @@ export default function NotesPage() {
     if (!selectedClassId) return;
     const unsubscribe = subscribeToStudents(selectedClassId, (data) => {
       setStudents(data);
-      if (data.length > 0) setSelectedStudentId(data[0].id);
-      else setSelectedStudentId("");
+      setSelectedStudentId((prev) => (data.some((st) => st.id === prev) ? prev : data[0]?.id || ""));
     });
     return unsubscribe;
   }, [selectedClassId]);
@@ -71,15 +70,17 @@ export default function NotesPage() {
     return unsubscribe;
   }, [selectedClassId]);
 
+  // All of the class's notes (every student) — no student dropdown needed to see them.
   useEffect(() => {
-    if (!selectedStudentId) {
+    if (!selectedClassId || !user) {
       setNotes([]);
       setLoading(false);
       return;
     }
     setLoading(true);
-    const unsubscribe = subscribeToStudentNotes(
-      selectedStudentId,
+    const unsubscribe = subscribeToClassNotes(
+      selectedClassId,
+      user.uid,
       (data) => {
         setNotes(data);
         setLoading(false);
@@ -87,7 +88,7 @@ export default function NotesPage() {
       () => setLoading(false)
     );
     return unsubscribe;
-  }, [selectedStudentId]);
+  }, [selectedClassId, user]);
 
   async function handleCreate(e: React.FormEvent) {
     e.preventDefault();
@@ -113,12 +114,7 @@ export default function NotesPage() {
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <h1 className="text-2xl font-semibold text-navy">{t("notes.title")}</h1>
         <div className="flex flex-wrap items-center gap-3">
-          <select value={selectedStudentId} onChange={(e) => setSelectedStudentId(e.target.value)} className="input-field w-auto">
-            {students.map((s) => (
-              <option key={s.id} value={s.id}>{s.name}</option>
-            ))}
-          </select>
-          <button onClick={() => setModalOpen(true)} className="btn-primary" disabled={!selectedStudentId}>
+          <button onClick={() => setModalOpen(true)} className="btn-primary" disabled={students.length === 0}>
             <Plus size={16} />
             {t("notes.add")}
           </button>
@@ -159,6 +155,18 @@ export default function NotesPage() {
                     )}
                   </p>
                   <RichText html={n.contentHtml} text={n.content} className="text-sm text-navy mt-0.5" />
+                  {n.visibleToParent &&
+                    (n.readByParent ? (
+                      <span className="mt-1.5 inline-flex items-center gap-1 rounded-full bg-green-100 px-2.5 py-0.5 text-xs font-semibold text-green-700">
+                        <CheckCheck size={13} />
+                        {t("notes.readByParent")}
+                        {n.readAt ? ` · ${formatNoteDate(n.readAt, i18n.language)}` : ""}
+                      </span>
+                    ) : (
+                      <span className="mt-1.5 inline-flex items-center rounded-full bg-cream-300 px-2.5 py-0.5 text-xs font-semibold text-cream-700">
+                        {t("notes.notReadYet")}
+                      </span>
+                    ))}
                 </div>
                 <button onClick={() => deleteNote(n.id)} className="text-cream-600 hover:text-red-600 p-1 shrink-0">
                   <Trash2 size={16} />
@@ -171,6 +179,16 @@ export default function NotesPage() {
 
       <Modal open={modalOpen} onClose={() => setModalOpen(false)} title={t("notes.add")}>
         <form onSubmit={handleCreate} className="space-y-4">
+          <div>
+            <label className="label-eyebrow mb-1 block">{t("notes.forStudent")}</label>
+            <select value={selectedStudentId} onChange={(e) => setSelectedStudentId(e.target.value)} className="input-field">
+              {students.map((s) => (
+                <option key={s.id} value={s.id}>
+                  {s.name}
+                </option>
+              ))}
+            </select>
+          </div>
           <div className="flex gap-2">
             <button
               type="button"

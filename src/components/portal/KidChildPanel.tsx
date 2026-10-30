@@ -1,11 +1,11 @@
 import { useEffect, useMemo, useState } from "react";
 import StudentAvatar, { rankInAny } from "../avatars/StudentAvatar";
 import { useTranslation } from "react-i18next";
-import { ShieldCheck, NotebookPen, Star, CalendarDays, User, GraduationCap } from "lucide-react";
+import { ShieldCheck, NotebookPen, Star, CalendarDays, User, GraduationCap, Check } from "lucide-react";
 import { subscribeToStudent } from "../../lib/services/studentsService";
 import { subscribeToStudentPointsHistory } from "../../lib/services/pointsService";
 import { subscribeToStudentAttendance } from "../../lib/services/attendanceService";
-import { subscribeToVisibleParentNotes } from "../../lib/services/notesService";
+import { setNoteReadByParent, subscribeToVisibleParentNotes } from "../../lib/services/notesService";
 import { getBadgeDefinition } from "../../lib/services/badgesService";
 import {
   subscribeToClassAssignments,
@@ -270,6 +270,16 @@ export default function KidChildPanel({
                     {formatNoteDate(note.createdAt, i18n.language)}
                   </p>
                 )}
+                <button
+                  type="button"
+                  onClick={() => setNoteReadByParent(note.id, !note.readByParent)}
+                  className={`mt-2 inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-bold transition ${
+                    note.readByParent ? "border-green-300 bg-green-100 text-green-700" : "border-current bg-white/70"
+                  }`}
+                >
+                  <Check size={13} />
+                  {note.readByParent ? t("notes.markedRead") : t("notes.markRead")}
+                </button>
               </div>
             ))}
           </div>

@@ -163,7 +163,11 @@ service cloud.firestore {
     match /notes/{noteId} {
       allow read: if (isSignedIn() && resource.data.authorId == request.auth.uid) ||
         (resource.data.visibleToParent == true && isLinkedParent(resource.data.studentId));
-      allow update, delete: if isSignedIn() && resource.data.authorId == request.auth.uid;
+      // The author can edit / delete; the linked parent may ONLY toggle the "read" mark.
+      allow update: if (isSignedIn() && resource.data.authorId == request.auth.uid) ||
+        (resource.data.visibleToParent == true && isLinkedParent(resource.data.studentId) &&
+         request.resource.data.diff(resource.data).affectedKeys().hasOnly(['readByParent', 'readAt']));
+      allow delete: if isSignedIn() && resource.data.authorId == request.auth.uid;
       allow create: if isSignedIn() && request.resource.data.authorId == request.auth.uid;
     }
 

@@ -7,6 +7,7 @@ import HomePage from "./pages/HomePage";
 import LoginPage from "./pages/LoginPage";
 import PortalLoginPage from "./pages/PortalLoginPage";
 import DashboardPage from "./pages/DashboardPage";
+import PreferencesPage from "./pages/PreferencesPage";
 import ClassesPage from "./pages/ClassesPage";
 import StudentsPage from "./pages/StudentsPage";
 import AttendancePage from "./pages/AttendancePage";
@@ -57,6 +58,7 @@ export default function App() {
             }
           >
             <Route path="/dashboard" element={<DashboardPage />} />
+            <Route path="/preferences" element={<PreferencesPage />} />
             <Route path="/classes" element={<ClassesPage />} />
             <Route path="/students" element={<StudentsPage />} />
             <Route path="/attendance" element={<AttendancePage />} />

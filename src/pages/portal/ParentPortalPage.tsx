@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
-import { LogOut, Globe, Repeat, UserRound } from "lucide-react";
+import { LogOut, Globe, Repeat, UserRound, Check } from "lucide-react";
 import StudentAvatar, { rankInAny } from "../../components/avatars/StudentAvatar";
 import { useAuth } from "../../contexts/AuthContext";
 import { useTheme } from "../../contexts/ThemeContext";
@@ -10,7 +10,7 @@ import ChildSwitcher from "../../components/portal/ChildSwitcher";
 import { subscribeToStudent, getStudentOnce } from "../../lib/services/studentsService";
 import { subscribeToStudentPointsHistory } from "../../lib/services/pointsService";
 import { subscribeToStudentAttendance } from "../../lib/services/attendanceService";
-import { subscribeToVisibleParentNotes } from "../../lib/services/notesService";
+import { setNoteReadByParent, subscribeToVisibleParentNotes } from "../../lib/services/notesService";
 import { getBadgeDefinition } from "../../lib/services/badgesService";
 import { subscribeToAnnouncements, isAnnouncementVisibleTo } from "../../lib/services/announcementsService";
 import { getClassRankingOnce, subscribeToClassRanking } from "../../lib/services/classRankingsService";
@@ -275,6 +275,16 @@ function ChildPanel({
                 {note.createdAt && (
                   <p className="text-xs mt-1 opacity-70">{formatNoteDate(note.createdAt, i18n.language)}</p>
                 )}
+                <button
+                  type="button"
+                  onClick={() => setNoteReadByParent(note.id, !note.readByParent)}
+                  className={`mt-2 inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-bold transition ${
+                    note.readByParent ? "border-green-300 bg-green-100 text-green-700" : "border-current bg-white/70"
+                  }`}
+                >
+                  <Check size={13} />
+                  {note.readByParent ? t("notes.markedRead") : t("notes.markRead")}
+                </button>
               </div>
             ))}
           </div>

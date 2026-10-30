@@ -20,6 +20,8 @@ export interface UserProfile {
   rankingPeriodEnd?: number;
   /** Which teacher illustration (and honorific) the kid-mode dashboard shows. Unset = female. */
   gender?: TeacherGender;
+  /** Whether marking attendance adds / deducts marks (default on). Set in Teacher preferences. */
+  attendancePoints?: boolean;
   /** Which reasons the teacher sees when giving / deducting marks (all classes, with optional per-class overrides). */
   reasonPrefs?: ReasonPrefs;
   /** Older single list of saved custom reasons — only read as a fallback when `reasonPrefs` is absent. */
@@ -223,6 +225,9 @@ export interface NoteRecord {
   visibleToParent: boolean;
   /** Set when the note was added from inside a specific session's roster. */
   sessionId?: string;
+  /** Set by the parent from the portal ("mark as read"). */
+  readByParent?: boolean;
+  readAt?: number;
   createdAt: number;
 }
 

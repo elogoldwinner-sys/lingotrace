@@ -20,7 +20,6 @@ import Modal from "../components/common/Modal";
 import RichTextEditor from "../components/common/RichTextEditor";
 import { plainTextToHtml, richHtmlToPlainText, sanitizeRichHtml } from "../lib/richText";
 import { useTheme } from "../contexts/ThemeContext";
-import TeacherPreferencesCard from "../components/common/TeacherPreferencesCard";
 import KidDashboard from "../components/dashboard/KidDashboard";
 
 function StatCard({
@@ -625,14 +624,7 @@ export default function DashboardPage() {
         <KidDashboard
           classes={classes}
           studentCounts={studentCounts}
-          extra={
-            <>
-              {announcementsBlock}
-              <div className="mt-6">
-                <TeacherPreferencesCard classes={classes} />
-              </div>
-            </>
-          }
+          extra={announcementsBlock}
         />
         {editorModal}
       </>
@@ -644,8 +636,6 @@ export default function DashboardPage() {
       <h1 className="text-2xl font-semibold text-navy">{t("dashboard.title")}</h1>
 
       {announcementsBlock}
-
-      <TeacherPreferencesCard classes={classes} />
 
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         <StatCard

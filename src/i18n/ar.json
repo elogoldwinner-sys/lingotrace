@@ -7,7 +7,7 @@
     "classes": "الصفوف",
     "students": "الطلاب",
     "attendance": "الحضور",
-    "sessions": "الجلسات",
+    "sessions": "الحصص",
     "notes": "الملاحظات",
     "projects": "تسليم المشاريع",
     "linkedActivities": "الامتحانات والألعاب",
@@ -16,7 +16,8 @@
     "toggleSidebar": "تبديل القائمة",
     "switchToTeacher": "التبديل إلى لوحة المعلم",
     "switchToParentPortal": "التبديل إلى بوابة ولي الأمر",
-    "switchToStudentPortal": "التبديل إلى بوابة الطالب"
+    "switchToStudentPortal": "التبديل إلى بوابة الطالب",
+    "preferences": "تفضيلات المعلم"
   },
   "auth": {
     "continueWithGoogle": "المتابعة باستخدام جوجل",
@@ -49,13 +50,13 @@
     "bannerLine2": "تصنع تقدّمًا كبيرًا",
     "manageClasses": "إدارة صفوفك",
     "manageStudents": "عرض الطلاب وإدارتهم",
-    "todaySessions": "جلسات اليوم",
-    "viewSessions": "عرض الجلسات القادمة",
+    "todaySessions": "حصص اليوم",
+    "viewSessions": "عرض الحصص القادمة",
     "recentClasses": "أحدث الصفوف",
     "viewAll": "عرض الكل",
     "colClass": "اسم الصف",
     "colStudents": "الطلاب",
-    "colNext": "الجلسة القادمة",
+    "colNext": "الحصة القادمة",
     "colStatus": "الحالة",
     "statusActive": "نشط",
     "statusInactive": "غير نشط",
@@ -66,7 +67,7 @@
     "createClass": "إنشاء صف",
     "addStudents": "إضافة طلاب",
     "viewAttendance": "عرض الحضور",
-    "createSession": "إنشاء جلسة",
+    "createSession": "إنشاء حصة",
     "upcoming": "القادم",
     "viewCalendar": "عرض التقويم",
     "prevMonth": "الشهر السابق",
@@ -162,7 +163,7 @@
     "sendError": "تعذّر إرسال التقرير. يرجى المحاولة مرة أخرى.",
     "noParentEmail": "لا يوجد بريد إلكتروني لولي الأمر لهذا الطالب.",
     "recordTitle": "تسجيل الحضور",
-    "recordHint": "سجّل حالة كل طالب أدناه. سيصبح الطلاب الحاضرون أو المتأخرون متاحين للتعامل معهم في الجلسة المطابقة.",
+    "recordHint": "سجّل حالة كل طالب أدناه. سيصبح الطلاب الحاضرون أو المتأخرون متاحين للتعامل معهم في الحصة المطابقة.",
     "notMarked": "لم يُسجَّل",
     "selectAll": "تحديد جميع الطلاب",
     "selectedCount": "تم تحديد {{count}}",
@@ -171,8 +172,8 @@
     "bulkError": "تعذّر تحديث جميع الطلاب. يرجى المحاولة مرة أخرى."
   },
   "sessions": {
-    "title": "الجلسات",
-    "newSession": "جلسة جديدة",
+    "title": "الحصص",
+    "newSession": "حصة جديدة",
     "date": "التاريخ",
     "topic": "الموضوع",
     "objectives": "أهداف التعلم",
@@ -200,12 +201,12 @@
       "careful": "انتبه!",
       "improve": "لنتحسّن!"
     },
-    "noSessions": "لا توجد جلسات بعد. أنشئ جلسة، أو ولّد مجموعة جلسات دفعة واحدة.",
-    "bulkGenerate": "توليد جلسات بالجملة",
+    "noSessions": "لا توجد حصص بعد. أنشئ حصة، أو ولّد مجموعة حصص دفعة واحدة.",
+    "bulkGenerate": "توليد حصص بالجملة",
     "startDate": "تاريخ البدء",
     "endDate": "تاريخ الانتهاء",
     "weeklyDistribution": "التوزيع الأسبوعي",
-    "weeklyDistributionHint": "عدد الجلسات المجدولة في كل يوم من أيام الأسبوع، لكل أسبوع ضمن الفترة المحددة (0–4).",
+    "weeklyDistributionHint": "عدد الحصص المجدولة في كل يوم من أيام الأسبوع، لكل أسبوع ضمن الفترة المحددة (0–4).",
     "weekdays": {
       "0": "الأحد",
       "1": "الاثنين",
@@ -213,9 +214,9 @@
       "3": "الأربعاء",
       "4": "الخميس"
     },
-    "generate": "توليد الجلسات",
+    "generate": "توليد الحصص",
     "attendanceHint": "يتم تسجيل الحضور من صفحة الحضور. يظهر الطلاب الغائبون أو المعذورون هنا بشكل باهت ولا يمكن منحهم نقاطًا أو ملاحظات.",
-    "weekSessionCount": "{{count}} جلسة",
+    "weekSessionCount": "{{count}} حصة",
     "weekLabel": "الأسبوع {{number}} ({{range}})",
     "pickRoundProgress": "جولة الاختيار العشوائي: تم اختيار {{picked}} من {{total}} — لا يتكرر أحد حتى يأخذ الجميع دوره.",
     "pickRoundReset": "ابدأ من جديد"
@@ -227,7 +228,12 @@
     "negative": "سلبية",
     "contentPlaceholder": "ماذا حدث؟",
     "noneYet": "لا توجد ملاحظات بعد.",
-    "parentOnlyHint": "سيرى ولي الأمر هذه الملاحظة فقط — وليس الطالب."
+    "parentOnlyHint": "سيرى ولي الأمر هذه الملاحظة فقط — وليس الطالب.",
+    "forStudent": "الطالب",
+    "readByParent": "قرأها ولي الأمر",
+    "notReadYet": "لم تُقرأ بعد",
+    "markRead": "تحديد كمقروءة",
+    "markedRead": "مقروءة ✓"
   },
   "points": {
     "award": "منح نقاط",
@@ -425,7 +431,7 @@
     "welcome": "مرحبًا بك في {{appName}}",
     "subtitle": "اختر طريقة تسجيل الدخول",
     "teacherPortal": "بوابة المعلم",
-    "teacherPortalDesc": "إدارة الصفوف والطلاب والجلسات",
+    "teacherPortalDesc": "إدارة الصفوف والطلاب والحصص",
     "parentPortal": "بوابة ولي الأمر",
     "parentPortalDesc": "تابع تقدّم طفلك وحضوره"
   },
@@ -700,6 +706,27 @@
     "add": "إضافة",
     "reset": "إعادة هذه القائمة إلى الافتراضي",
     "saveError": "تعذّر الحفظ. يرجى المحاولة مرة أخرى.",
-    "done": "تم"
+    "done": "تم",
+    "attendanceMarks": "درجات الحضور",
+    "attendanceMarksHint": "عند التفعيل، يضيف تسجيل الطالب حاضرًا أو متأخرًا درجة. أوقفه لتسجيل الحضور دون إضافة أو خصم أي درجات."
+  },
+  "attendanceReport": {
+    "title": "تقرير الحضور",
+    "open": "التقرير والإحصائيات",
+    "studentReport": "تقرير",
+    "subject": "التقرير لـ",
+    "wholeClass": "الصف كاملًا",
+    "wholePeriod": "كامل الفترة",
+    "class": "الصف",
+    "period": "الفترة",
+    "date": "التاريخ",
+    "status": "الحالة",
+    "note": "ملاحظة",
+    "rate": "نسبة الحضور",
+    "trend": "نسبة الحضور حسب الأسبوع",
+    "distribution": "التوزيع",
+    "downloadCsv": "تنزيل CSV",
+    "empty": "لم يُسجَّل حضور لهذا الاختيار.",
+    "rateNote": "نسبة الحضور = (حاضر + متأخر) ÷ (حاضر + متأخر + غائب). لا تُحتسب الحصص المعذورة على الطالب."
   }
 }

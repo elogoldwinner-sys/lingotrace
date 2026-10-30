@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Send, Check, ChevronDown } from "lucide-react";
+import { Send, Check, ChevronDown, BarChart3, Printer } from "lucide-react";
 import { startOfWeek, addDays, format as formatDate, parseISO } from "date-fns";
 import { useAuth } from "../contexts/AuthContext";
 import { subscribeToClasses } from "../lib/services/classesService";
@@ -15,6 +15,7 @@ import type { ClassRecord, StudentRecord, AttendanceRecord, AttendanceStatus, Se
 import Spinner from "../components/common/Spinner";
 import EmptyState from "../components/common/EmptyState";
 import ClassSelector from "../components/common/ClassSelector";
+import AttendanceReportModal from "../components/reports/AttendanceReportModal";
 
 const STATUS_STYLES: Record<AttendanceStatus, string> = {
   present: "bg-green-100 text-green-700 border-green-300",
@@ -65,7 +66,11 @@ function daysAgoISO(days: number) {
  */
 export default function AttendancePage() {
   const { t } = useTranslation();
-  const { user } = useAuth();
+  const { user, profile } = useAuth();
+  // Teacher preference: when off, marking attendance never adds or deducts marks.
+  const attendanceMarksOn = profile?.attendancePoints !== false;
+  const [reportOpen, setReportOpen] = useState(false);
+  const [reportStudentId, setReportStudentId] = useState<string | undefined>(undefined);
   const [classes, setClasses] = useState<ClassRecord[]>([]);
   const [selectedClassId, setSelectedClassId] = useState("");
   const [students, setStudents] = useState<StudentRecord[]>([]);
@@ -225,8 +230,9 @@ export default function AttendancePage() {
   async function handleSetStatus(student: StudentRecord, session: SessionRecord, status: AttendanceStatus) {
     if (!user) return;
     const existing = recordByStudentAndSession.get(`${student.id}:${session.id}`);
-    const newPoints = ATTENDANCE_POINTS[status];
     const previousPoints = existing?.pointsAwarded || 0;
+    // Marks switched off: keep whatever was already granted, change nothing.
+    const newPoints = attendanceMarksOn ? ATTENDANCE_POINTS[status] : previousPoints;
 
     // Plain writes with a local optimistic echo — no transaction round-trip,
     // so the badge and the student's score both update the instant this fires.
@@ -476,7 +482,18 @@ export default function AttendancePage() {
           <div>
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-3">
               <h2 className="text-lg font-semibold text-navy">{t("attendance.report")}</h2>
-              <div className="flex flex-wrap items-center gap-2">
+              <div className="flex flex-wrap items-end gap-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setReportStudentId(undefined);
+                    setReportOpen(true);
+                  }}
+                  className="btn-primary py-2 px-3 text-sm"
+                >
+                  <BarChart3 size={16} />
+                  {t("attendanceReport.open")}
+                </button>
                 <div>
                   <label className="label-eyebrow block mb-1 text-[10px]">{t("sessions.startDate")}</label>
                   <input
@@ -545,7 +562,19 @@ export default function AttendancePage() {
                         <td className="py-2 px-2 text-center text-gold-700 font-semibold">{counts.late}</td>
                         <td className="py-2 px-2 text-center text-red-700 font-semibold">{counts.absent}</td>
                         <td className="py-2 px-2 text-center text-navy font-semibold">{counts.excused}</td>
-                        <td className="py-2 pl-2 text-right">
+                        <td className="py-2 pl-2 text-right whitespace-nowrap">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setReportStudentId(st.id);
+                              setReportOpen(true);
+                            }}
+                            title={t("attendanceReport.studentReport")}
+                            className="btn-secondary me-2 py-1.5 px-3 text-xs"
+                          >
+                            <Printer size={14} />
+                            {t("attendanceReport.studentReport")}
+                          </button>
                           <button
                             onClick={() => handleSendReport(st)}
                             disabled={sendingId === st.id || !st.parentEmail}
@@ -576,6 +605,18 @@ export default function AttendancePage() {
           </div>
         </div>
       )}
+
+      <AttendanceReportModal
+        key={`${reportOpen}-${reportStudentId || "class"}`}
+        open={reportOpen}
+        onClose={() => setReportOpen(false)}
+        className={classes.find((c) => c.id === selectedClassId)?.name || ""}
+        students={students}
+        records={records}
+        startDate={startDate}
+        endDate={endDate}
+        initialStudentId={reportStudentId}
+      />
     </div>
   );
 }

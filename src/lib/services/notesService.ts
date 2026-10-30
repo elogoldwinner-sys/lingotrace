@@ -1,4 +1,4 @@
-import { addDoc, collection, getDocs, query, Timestamp, where } from "firebase/firestore";
+import { addDoc, collection, doc, getDocs, query, Timestamp, updateDoc, where } from "firebase/firestore";
 import { db } from "../firebase";
 import { createFirestoreService } from "../firestoreService";
 import type { NoteRecord, NoteSentiment } from "../../types";
@@ -17,6 +17,28 @@ export function subscribeToStudentNotes(
     onData,
     onError
   );
+}
+
+/**
+ * Every note the teacher wrote for a class (all students), newest first. Two equality clauses only
+ * (no orderBy → no composite index); `authorId` is included so the Firestore rules can verify the query.
+ */
+export function subscribeToClassNotes(
+  classId: string,
+  authorId: string,
+  onData: (notes: NoteRecord[]) => void,
+  onError?: (error: Error) => void
+) {
+  return service.subscribe(
+    [service.where("classId", "==", classId), service.where("authorId", "==", authorId)],
+    (notes) => onData([...notes].sort((a, b) => toMillis(b.createdAt) - toMillis(a.createdAt))),
+    onError
+  );
+}
+
+/** The parent ticks / unticks "read" on a note (the Firestore rules only let them change these two fields). */
+export async function setNoteReadByParent(id: string, read: boolean) {
+  await updateDoc(doc(db, "notes", id), { readByParent: read, readAt: read ? Date.now() : 0 });
 }
 
 /**

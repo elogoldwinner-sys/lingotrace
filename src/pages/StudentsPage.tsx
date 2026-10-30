@@ -20,7 +20,6 @@ import {
   BarChart3,
   LineChart,
   Scale,
-  Shuffle,
   Images,
 } from "lucide-react";
 import { deleteField } from "firebase/firestore";
@@ -30,7 +29,6 @@ import {
   subscribeToStudents,
   applySchoolLogoToStudents,
   applyAvatarGenderToStudents,
-  assignAvatars,
   deleteStudent,
   deleteManyStudents,
   createStudentManual,
@@ -73,12 +71,13 @@ import PointsReportModal from "../components/common/PointsReportModal";
 import StudentAvatar, { rankOf } from "../components/avatars/StudentAvatar";
 import AvatarPickerModal from "../components/avatars/AvatarPickerModal";
 import ClassTypeCard from "../components/avatars/ClassTypeCard";
-import { avatarPool, shuffled, takenKeys } from "../lib/avatars";
+import { avatarPool, takenKeys } from "../lib/avatars";
 import StudentReportModal from "../components/reports/StudentReportModal";
 import ClassStatsModal, { type StatsTab } from "../components/reports/ClassStatsModal";
 import CertificateModal from "../components/common/CertificateModal";
 import RichText from "../components/common/RichText";
 import { reasonsForAmount, POSITIVE_POINTS_REASONS } from "../lib/pointsReasons";
+import { ACTION_TONES } from "../lib/uiColors";
 import ReasonPicker, { useSaveCustomReason } from "../components/common/ReasonPicker";
 
 interface BulkRow {
@@ -126,7 +125,6 @@ export default function StudentsPage() {
   const healedLogoRef = useRef(new Set<string>());
   const [avatarPickerOpen, setAvatarPickerOpen] = useState(false);
   const [savingType, setSavingType] = useState(false);
-  const [randomizing, setRandomizing] = useState(false);
   const currentClass = classes.find((c) => c.id === selectedClassId);
   const classGender = currentClass?.avatarGender;
   const [studentReportTarget, setStudentReportTarget] = useState<StudentRecord | null>(null);
@@ -475,22 +473,6 @@ export default function StudentsPage() {
     }
   }
 
-  async function handleRandomAvatars() {
-    if (!classGender || students.length === 0) return;
-    const pool = shuffled(avatarPool(classGender));
-    if (!window.confirm(t("avatars.randomConfirm", { count: students.length, max: pool.length }))) return;
-    setRandomizing(true);
-    try {
-      const chosen = students.slice(0, pool.length);
-      await assignAvatars(chosen.map((s, i) => ({ id: s.id, photoURL: pool[i] })));
-      if (students.length > pool.length) {
-        window.alert(t("avatars.randomPartial", { count: students.length - pool.length, max: pool.length }));
-      }
-    } finally {
-      setRandomizing(false);
-    }
-  }
-
   async function handleResetClass() {
     if (!selectedClassId || students.length === 0) return;
     const className = classes.find((c) => c.id === selectedClassId)?.name || "";
@@ -604,22 +586,22 @@ export default function StudentsPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-        <h1 className="text-2xl font-semibold text-navy">{t("students.title")}</h1>
-        <div className="grid w-full grid-cols-2 gap-2 sm:flex sm:w-auto sm:flex-wrap [&>button]:w-full [&>button]:justify-center sm:[&>button]:w-auto">
+      <div className="flex flex-col gap-3">
+        <h1 className="whitespace-nowrap text-2xl font-semibold text-navy">{t("students.title")}</h1>
+        <div className="grid w-full grid-cols-2 gap-2 sm:flex sm:flex-wrap [&>button]:w-full [&>button]:justify-center sm:[&>button]:w-auto">
           <button onClick={() => setAddModalOpen(true)} className="btn-primary text-sm py-2 px-3" disabled={!selectedClassId}>
             <Plus size={16} />
             {t("students.addStudent")}
           </button>
           <button
             onClick={() => setBulkModalOpen(true)}
-            className="btn-secondary text-sm py-2 px-3"
+            className={`btn-secondary text-sm py-2 px-3 ${ACTION_TONES.teal}`}
             disabled={!selectedClassId}
           >
             <Upload size={16} />
             {t("students.bulkImport")}
           </button>
-          <button onClick={() => setReportModalOpen(true)} className="btn-secondary text-sm py-2 px-3">
+          <button onClick={() => setReportModalOpen(true)} className={`btn-secondary text-sm py-2 px-3 ${ACTION_TONES.blue}`}>
             <FileSpreadsheet size={16} />
             {t("pointsReport.button")}
           </button>
@@ -628,7 +610,7 @@ export default function StudentsPage() {
               setClassStatsTab("students");
               setClassStatsOpen(true);
             }}
-            className="btn-secondary text-sm py-2 px-3"
+            className={`btn-secondary text-sm py-2 px-3 ${ACTION_TONES.emerald}`}
             disabled={!selectedClassId}
           >
             <BarChart3 size={16} />
@@ -639,20 +621,11 @@ export default function StudentsPage() {
               setClassStatsTab("classes");
               setClassStatsOpen(true);
             }}
-            className="btn-secondary text-sm py-2 px-3"
+            className={`btn-secondary text-sm py-2 px-3 ${ACTION_TONES.orange}`}
             disabled={!selectedClassId}
           >
             <Scale size={16} />
             {t("reports.compareButton")}
-          </button>
-          <button
-            onClick={handleRandomAvatars}
-            className="btn-secondary text-sm py-2 px-3 disabled:opacity-50"
-            disabled={!classGender || students.length === 0 || randomizing}
-            title={classGender ? undefined : t("avatars.setTypeFirst")}
-          >
-            <Shuffle size={16} />
-            {t("avatars.randomButton")}
           </button>
         </div>
       </div>

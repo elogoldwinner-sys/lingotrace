@@ -16,7 +16,8 @@
     "toggleSidebar": "Toggle menu",
     "switchToTeacher": "Switch to Teacher Dashboard",
     "switchToParentPortal": "Switch to Parent Portal",
-    "switchToStudentPortal": "Switch to Student Portal"
+    "switchToStudentPortal": "Switch to Student Portal",
+    "preferences": "Teacher preferences"
   },
   "auth": {
     "continueWithGoogle": "Continue with Google",
@@ -227,7 +228,12 @@
     "negative": "Negative",
     "contentPlaceholder": "What happened?",
     "noneYet": "No notes yet.",
-    "parentOnlyHint": "Only the parent will see this note — not the student."
+    "parentOnlyHint": "Only the parent will see this note — not the student.",
+    "forStudent": "Student",
+    "readByParent": "Read by parent",
+    "notReadYet": "Not read yet",
+    "markRead": "Mark as read",
+    "markedRead": "Read ✓"
   },
   "points": {
     "award": "Award points",
@@ -700,6 +706,27 @@
     "add": "Add",
     "reset": "Reset this list to the defaults",
     "saveError": "Couldn’t save. Please try again.",
-    "done": "Done"
+    "done": "Done",
+    "attendanceMarks": "Marks for attendance",
+    "attendanceMarksHint": "When on, marking a student present or late adds a mark. Turn it off to record attendance without adding or deducting any marks."
+  },
+  "attendanceReport": {
+    "title": "Attendance report",
+    "open": "Report & statistics",
+    "studentReport": "Report",
+    "subject": "Report for",
+    "wholeClass": "Whole class",
+    "wholePeriod": "Whole period",
+    "class": "Class",
+    "period": "Period",
+    "date": "Date",
+    "status": "Status",
+    "note": "Note",
+    "rate": "Attendance rate",
+    "trend": "Attendance rate by week",
+    "distribution": "Distribution",
+    "downloadCsv": "Download CSV",
+    "empty": "No attendance was recorded for this selection.",
+    "rateNote": "Attendance rate = (present + late) ÷ (present + late + absent). Excused sessions are not counted against the student."
   }
 }

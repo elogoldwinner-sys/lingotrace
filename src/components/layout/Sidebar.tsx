@@ -10,6 +10,7 @@ import {
   CalendarCheck,
   NotebookPen,
   ClipboardList,
+  SlidersHorizontal,
   FolderCheck,
   GraduationCap,
   ChevronsLeft,
@@ -18,6 +19,7 @@ import {
 
 const navItems = [
   { to: "/dashboard", key: "dashboard", icon: LayoutDashboard },
+  { to: "/preferences", key: "preferences", icon: SlidersHorizontal },
   { to: "/classes", key: "classes", icon: BookOpen },
   { to: "/students", key: "students", icon: Users },
   { to: "/attendance", key: "attendance", icon: CalendarCheck },

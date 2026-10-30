@@ -6,6 +6,7 @@ import { useAuth } from "../../contexts/AuthContext";
 import { uploadToCloudinary } from "../../lib/cloudinary";
 import { getDefaultRankingPeriod } from "../../lib/services/classRankingsService";
 import Modal from "../common/Modal";
+import { ACTION_TONES } from "../../lib/uiColors";
 import ThemeToggle from "../common/ThemeToggle";
 import SchoolLogo from "./SchoolLogo";
 import { useTheme } from "../../contexts/ThemeContext";
@@ -23,6 +24,12 @@ function familyName(displayName: string): string {
   const parts = displayName.trim().split(/\s+/);
   return parts[parts.length - 1] || displayName;
 }
+
+const KID_TONES = {
+  blue: "!border-blue-300 !bg-blue-50 !text-blue-800 hover:!bg-blue-100",
+  emerald: "!border-emerald-300 !bg-emerald-50 !text-emerald-800 hover:!bg-emerald-100",
+  amber: "!border-amber-300 !bg-amber-50 !text-amber-800 hover:!bg-amber-100",
+};
 
 const KID_PILL =
   "flex items-center gap-1.5 rounded-full border border-navy-100 bg-white px-2.5 py-1.5 text-sm font-bold sm:gap-2 sm:px-4 sm:py-2 text-navy-700 shadow-[0_4px_12px_-8px_rgba(90,60,200,0.5)] transition hover:-translate-y-0.5 hover:bg-navy-50";
@@ -183,19 +190,19 @@ export default function Topbar() {
             </div>
 
             <div className="flex w-full shrink-0 flex-wrap items-center justify-between gap-1.5 sm:gap-2 lg:w-auto lg:flex-nowrap lg:justify-end">
-              <ThemeToggle variant="header" />
+              <ThemeToggle variant="header" className={ACTION_TONES.violet} />
 
-              <button onClick={toggleLanguage} className={KID_PILL} title={t("common.language")}>
+              <button onClick={toggleLanguage} className={`${KID_PILL} ${KID_TONES.blue}`} title={t("common.language")}>
                 <Globe size={17} />
                 {i18n.language === "ar" ? "EN" : "AR"}
               </button>
 
-              <button onClick={openWhatsappModal} className={KID_PILL} title={t("settings.whatsappNumber")}>
+              <button onClick={openWhatsappModal} className={`${KID_PILL} ${KID_TONES.emerald}`} title={t("settings.whatsappNumber")}>
                 <MessageCircle size={17} />
                 <span className="hidden 2xl:inline">{t("settings.whatsapp")}</span>
               </button>
 
-              <button onClick={openScheduleModal} className={KID_PILL} title={t("ranking.scheduleLabel")}>
+              <button onClick={openScheduleModal} className={`${KID_PILL} ${KID_TONES.amber}`} title={t("ranking.scheduleLabel")}>
                 <Trophy size={17} />
                 <span className="hidden 2xl:inline">{t("ranking.schedule")}</span>
               </button>
@@ -309,11 +316,11 @@ export default function Topbar() {
             )}
           </div>
           <div className="flex w-full flex-wrap items-center gap-2 sm:gap-3 md:w-auto">
-            <ThemeToggle />
+            <ThemeToggle className={ACTION_TONES.violet} />
 
             <button
               onClick={toggleLanguage}
-              className="flex items-center gap-1.5 rounded-lg border border-gold/40 px-3 py-1.5 text-xs font-semibold text-navy hover:bg-gold-50"
+              className={`flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs font-semibold ${ACTION_TONES.blue}`}
               title={t("common.language")}
             >
               <Globe size={14} />
@@ -322,7 +329,7 @@ export default function Topbar() {
 
             <button
               onClick={openWhatsappModal}
-              className="flex items-center gap-1.5 rounded-lg border border-gold/40 px-3 py-1.5 text-xs font-semibold text-navy hover:bg-gold-50"
+              className={`flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs font-semibold ${ACTION_TONES.emerald}`}
               title={t("settings.whatsappNumber")}
             >
               <MessageCircle size={14} />
@@ -331,7 +338,7 @@ export default function Topbar() {
 
             <button
               onClick={openScheduleModal}
-              className="flex items-center gap-1.5 rounded-lg border border-gold/40 px-3 py-1.5 text-xs font-semibold text-navy hover:bg-gold-50"
+              className={`flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs font-semibold ${ACTION_TONES.amber}`}
               title={t("ranking.scheduleLabel")}
             >
               <Trophy size={14} />

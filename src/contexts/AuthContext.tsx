@@ -56,6 +56,8 @@ interface AuthContextValue {
   updateTeacherGender: (gender: TeacherGender) => Promise<void>;
   /** Saves which reasons the teacher sees when giving / deducting marks. */
   updateTeacherReasonPrefs: (prefs: ReasonPrefs) => Promise<void>;
+  /** Turns "marking attendance adds / deducts marks" on or off. */
+  updateTeacherAttendancePoints: (enabled: boolean) => Promise<void>;
   refreshPortalRole: () => Promise<void>;
   signOut: () => Promise<void>;
 }
@@ -367,6 +369,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setProfile((prev) => (prev ? { ...prev, reasonPrefs: prefs } : prev));
   }
 
+  async function updateTeacherAttendancePoints(enabled: boolean) {
+    const currentUser = auth.currentUser;
+    if (!currentUser) return;
+    await updateDoc(doc(db, "teachers", currentUser.uid), { attendancePoints: enabled });
+    setProfile((prev) => (prev ? { ...prev, attendancePoints: enabled } : prev));
+  }
+
   async function signOut() {
     await firebaseSignOut(auth);
   }
@@ -388,6 +397,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         updateTeacherRankingPeriod,
         updateTeacherGender,
         updateTeacherReasonPrefs,
+        updateTeacherAttendancePoints,
         refreshPortalRole,
         signOut,
       }}
