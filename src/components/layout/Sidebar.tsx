@@ -96,14 +96,14 @@ export default function Sidebar({ collapsed, mobileOpen, onToggle, onNavigate }:
               title={t(`nav.${key}`)}
               className={({ isActive }) =>
                 isKid
-                  ? `flex items-center gap-3.5 rounded-full py-3 text-base font-bold transition-all ease-bouncy duration-150 ${
+                  ? `flex items-center gap-3.5 rounded-full py-2 text-base font-bold transition-all ease-bouncy duration-150 ${
                       mobileOpen ? "justify-start px-4" : "justify-center px-0"
                     } ${collapsed ? "md:justify-center md:px-0" : "md:justify-start md:px-4"} ${
                       isActive
                         ? "bg-gradient-to-b from-[#FFCB45] to-[#FFB020] text-navy-800 shadow-[0_4px_0_#C98A0B]"
                         : "text-white/85 hover:bg-white/10 hover:text-white hover:translate-x-0.5"
                     }`
-                  : `flex items-center gap-3 rounded-lg py-2.5 text-sm font-medium transition-colors ${
+                  : `flex items-center gap-3 rounded-lg py-1.5 text-sm font-medium transition-colors ${
                       mobileOpen ? "justify-start px-3" : "justify-center px-0"
                     } ${collapsed ? "md:justify-center md:px-0" : "md:justify-start md:px-3"} ${
                       isActive
@@ -112,7 +112,7 @@ export default function Sidebar({ collapsed, mobileOpen, onToggle, onNavigate }:
                     }`
               }
             >
-              <Icon size={isKid ? 21 : 18} strokeWidth={2.2} className="shrink-0" />
+              <Icon size={isKid ? 20 : 17} strokeWidth={2.2} className="shrink-0" />
               <span
                 className={`truncate ${mobileOpen ? "inline" : "hidden"} ${collapsed ? "md:hidden" : "md:inline"}`}
               >

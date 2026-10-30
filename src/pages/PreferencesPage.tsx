@@ -1,13 +1,13 @@
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
-import { X, Plus, RotateCcw, CalendarCheck, MessageCircle, Trophy } from "lucide-react";
+import { X, Plus, RotateCcw, CalendarCheck, MessageCircle, Trophy, Mars, Venus, UserRound, BookOpen } from "lucide-react";
 import { useAuth } from "../contexts/AuthContext";
 import { POINTS_REASON_ICONS } from "../lib/pointsReasons";
 import { getDefaultRankingPeriod } from "../lib/services/classRankingsService";
 import { subscribeToClasses } from "../lib/services/classesService";
 import { allBuiltIn, cloneScope, getPrefs, hasClassOverride, effectiveScope } from "../lib/reasonPrefs";
 import { useEffect } from "react";
-import type { ClassRecord, ReasonPrefs, ReasonScope } from "../types";
+import type { ClassRecord, ReasonPrefs, ReasonScope, TeacherGender } from "../types";
 
 const ALL = "__all__";
 
@@ -21,7 +21,7 @@ function msToLocalDateValue(ms: number): string {
 /** Teacher preferences page (side menu, under Dashboard): attendance marks on/off + which reasons appear when giving / deducting marks. */
 export default function PreferencesPage() {
   const { t } = useTranslation();
-  const { user, profile, updateTeacherReasonPrefs, updateTeacherAttendancePoints, updateTeacherWhatsapp, updateTeacherRankingPeriod } = useAuth();
+  const { user, profile, updateTeacherReasonPrefs, updateTeacherAttendancePoints, updateTeacherWhatsapp, updateTeacherRankingPeriod, updateTeacherGender } = useAuth();
 
   // WhatsApp number (used for parent messages)
   const [whatsapp, setWhatsapp] = useState(profile?.whatsappNumber || "");
@@ -34,6 +34,19 @@ export default function PreferencesPage() {
   const [periodEnd, setPeriodEnd] = useState(msToLocalDateValue(profile?.rankingPeriodEnd ?? defaultPeriod.end));
   const [savingPeriod, setSavingPeriod] = useState(false);
   const [periodMsg, setPeriodMsg] = useState<{ ok: boolean; text: string } | null>(null);
+
+  // Gender (greeting + dashboard illustration). Unset behaves as female until chosen.
+  const gender: TeacherGender = profile?.gender ?? "female";
+  const [genderError, setGenderError] = useState(false);
+
+  function handleGender(next: TeacherGender) {
+    if (profile?.gender === next) return;
+    setGenderError(false);
+    updateTeacherGender(next).catch((err) => {
+      console.error("Could not save the teacher gender", err);
+      setGenderError(true);
+    });
+  }
 
   async function saveWhatsapp(e: React.FormEvent) {
     e.preventDefault();
@@ -145,25 +158,48 @@ export default function PreferencesPage() {
     <div className="space-y-6">
       <h1 className="text-2xl font-semibold text-navy">{t("preferences.title")}</h1>
 
-      <div className="card flex items-start justify-between gap-4 p-5">
-        <div className="flex items-start gap-3">
-          <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-gold-50 text-gold">
-            <CalendarCheck size={20} />
+      <div className="flex items-center gap-3 pt-2">
+        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-navy text-cream-100">
+          <UserRound size={18} />
+        </div>
+        <div className="min-w-0">
+          <h2 className="text-lg font-semibold text-navy">{t("preferences.personalTitle")}</h2>
+          <p className="text-xs text-cream-600">{t("preferences.personalHint")}</p>
+        </div>
+      </div>
+
+      <div className="card p-5">
+        <div className="flex flex-wrap items-center justify-between gap-4">
+          <div className="flex min-w-0 items-start gap-3">
+            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-violet-50 text-violet-600">
+              {gender === "male" ? <Mars size={20} /> : <Venus size={20} />}
+            </div>
+            <div className="min-w-0">
+              <p className="text-base font-semibold text-navy">{t("preferences.genderTitle")}</p>
+              <p className="text-sm text-cream-600">{t("preferences.genderHint")}</p>
+            </div>
           </div>
-          <div>
-            <p className="text-base font-semibold text-navy">{t("preferences.attendanceMarks")}</p>
-            <p className="text-sm text-cream-600">{t("preferences.attendanceMarksHint")}</p>
+          <div role="group" aria-label={t("dashboard.genderLabel")} className="flex shrink-0 items-center rounded-full border border-cream-300 bg-cream-100/60 p-1">
+            {(["male", "female"] as const).map((g) => {
+              const active = gender === g && !!profile?.gender;
+              return (
+                <button
+                  key={g}
+                  type="button"
+                  onClick={() => handleGender(g)}
+                  aria-pressed={active}
+                  className={`flex h-8 items-center gap-1.5 rounded-full px-3 text-sm font-semibold transition ${
+                    active ? "bg-navy text-cream-100 shadow" : "text-cream-700 hover:bg-cream-300/60"
+                  }`}
+                >
+                  {g === "male" ? <Mars size={15} /> : <Venus size={15} />}
+                  {t(g === "male" ? "dashboard.genderMale" : "dashboard.genderFemale")}
+                </button>
+              );
+            })}
           </div>
         </div>
-        <button
-          type="button"
-          role="switch"
-          aria-checked={attendanceOn}
-          onClick={() => updateTeacherAttendancePoints(!attendanceOn).catch((err) => console.error(err))}
-          className={`relative mt-1 h-7 w-12 shrink-0 rounded-full transition ${attendanceOn ? "bg-green-500" : "bg-cream-400"}`}
-        >
-          <span className={`absolute top-0.5 h-6 w-6 rounded-full bg-white shadow transition-all ${attendanceOn ? "start-[1.4rem]" : "start-0.5"}`} />
-        </button>
+        {genderError && <p className="mt-3 text-sm text-red-600">{t("preferences.saveError")}</p>}
       </div>
 
       <form onSubmit={saveWhatsapp} className="card space-y-3 p-5">
@@ -190,6 +226,37 @@ export default function PreferencesPage() {
           {whatsappSaved && <span className="text-sm font-semibold text-green-700">{t("preferences.saved")}</span>}
         </div>
       </form>
+
+      <div className="flex items-center gap-3 pt-2">
+        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-navy text-cream-100">
+          <BookOpen size={18} />
+        </div>
+        <div className="min-w-0">
+          <h2 className="text-lg font-semibold text-navy">{t("preferences.classTitle")}</h2>
+          <p className="text-xs text-cream-600">{t("preferences.classHint")}</p>
+        </div>
+      </div>
+
+      <div className="card flex items-start justify-between gap-4 p-5">
+        <div className="flex items-start gap-3">
+          <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-gold-50 text-gold">
+            <CalendarCheck size={20} />
+          </div>
+          <div>
+            <p className="text-base font-semibold text-navy">{t("preferences.attendanceMarks")}</p>
+            <p className="text-sm text-cream-600">{t("preferences.attendanceMarksHint")}</p>
+          </div>
+        </div>
+        <button
+          type="button"
+          role="switch"
+          aria-checked={attendanceOn}
+          onClick={() => updateTeacherAttendancePoints(!attendanceOn).catch((err) => console.error(err))}
+          className={`relative mt-1 h-7 w-12 shrink-0 rounded-full transition ${attendanceOn ? "bg-green-500" : "bg-cream-400"}`}
+        >
+          <span className={`absolute top-0.5 h-6 w-6 rounded-full bg-white shadow transition-all ${attendanceOn ? "start-[1.4rem]" : "start-0.5"}`} />
+        </button>
+      </div>
 
       <form onSubmit={savePeriod} className="card space-y-3 p-5">
         <div className="flex items-start gap-3">

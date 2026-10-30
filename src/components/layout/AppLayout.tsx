@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { Outlet } from "react-router-dom";
 import Sidebar from "./Sidebar";
 import Topbar from "./Topbar";
+import GenderPromptModal from "../common/GenderPromptModal";
 
 const DESKTOP_COLLAPSE_KEY = "lingotrace-sidebar-collapsed";
 
@@ -56,6 +57,8 @@ export default function AppLayout() {
           <Outlet />
         </main>
       </div>
+      {/* First sign-in only: asks a teacher with no saved gender to pick one. */}
+      <GenderPromptModal />
     </div>
   );
 }

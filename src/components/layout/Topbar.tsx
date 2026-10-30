@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
-import { LogOut, Globe, Camera, ChevronDown, Mars, Venus, Repeat } from "lucide-react";
+import { LogOut, Globe, Camera, ChevronDown, Repeat } from "lucide-react";
 import { useAuth } from "../../contexts/AuthContext";
 import { uploadToCloudinary } from "../../lib/cloudinary";
 import { ACTION_TONES } from "../../lib/uiColors";
@@ -33,7 +33,6 @@ export default function Topbar() {
     portalStudent,
     signOut,
     updateTeacherPhoto,
-    updateTeacherGender,
   } = useAuth();
   const navigate = useNavigate();
   // This same Google account may ALSO have a parent or student portal
@@ -66,11 +65,6 @@ export default function Topbar() {
       document.removeEventListener("keydown", onKeyDown);
     };
   }, [menuOpen]);
-
-  function handleGender(next: TeacherGender) {
-    if (next === gender) return;
-    updateTeacherGender(next).catch((err) => console.error("Could not save the teacher gender", err));
-  }
 
   async function handleSignOut() {
     await signOut();
@@ -126,33 +120,6 @@ export default function Topbar() {
               </button>
 
 
-
-              {/* male / female — picks the teacher illustration on the dashboard */}
-              <div
-                role="group"
-                aria-label={t("dashboard.genderLabel")}
-                className="flex items-center rounded-full border border-navy-100 bg-white p-1 shadow-[0_4px_12px_-8px_rgba(90,60,200,0.5)]"
-              >
-                {(["male", "female"] as const).map((g) => {
-                  const active = gender === g;
-                  const label = t(g === "male" ? "dashboard.genderMale" : "dashboard.genderFemale");
-                  return (
-                    <button
-                      key={g}
-                      type="button"
-                      onClick={() => handleGender(g)}
-                      aria-pressed={active}
-                      title={label}
-                      className={`flex h-8 items-center gap-1.5 rounded-full px-2.5 text-sm font-bold transition sm:px-3 ${
-                        active ? "bg-navy-700 text-white shadow" : "text-navy-500 hover:bg-navy-50"
-                      }`}
-                    >
-                      {g === "male" ? <Mars size={16} /> : <Venus size={16} />}
-                      <span className={active ? "hidden sm:inline" : "sr-only"}>{label}</span>
-                    </button>
-                  );
-                })}
-              </div>
 
               <div ref={menuRef} className="relative">
                 <button

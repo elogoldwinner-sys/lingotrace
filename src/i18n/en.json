@@ -715,7 +715,16 @@
     "done": "Done",
     "attendanceMarks": "Marks for attendance",
     "attendanceMarksHint": "When on, marking a student present or late adds a mark. Turn it off to record attendance without adding or deducting any marks.",
-    "saved": "Saved"
+    "saved": "Saved",
+    "personalTitle": "About me",
+    "personalHint": "Your own details and how LingoTrace greets you.",
+    "classTitle": "In my classes",
+    "classHint": "Marks, attendance and champions for the classes you teach.",
+    "genderTitle": "Gender",
+    "genderHint": "Sets your greeting (Mr. / Ms.) and the teacher picture on your dashboard.",
+    "genderPromptTitle": "Welcome! Which one are you?",
+    "genderPromptHint": "This sets your greeting and the teacher picture on your dashboard.",
+    "genderPromptLater": "You can change this any time in Teacher preferences."
   },
   "attendanceReport": {
     "title": "Attendance report",
