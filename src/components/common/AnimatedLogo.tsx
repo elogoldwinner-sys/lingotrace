@@ -1,9 +1,9 @@
-import { useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 /**
  * Sidebar mascot with a looping animation. One of six movements is picked at
- * random each time the component mounts (page refresh or fresh login), never
- * the same one as last time. The name beneath it always gets a letter wave.
+ * random each time the component mounts (page refresh or fresh login) and then
+ * switches to a different one after every 3 loops (never the same twice in a row). The name beneath it always gets a letter wave.
  * All motion is CSS-only (transform/opacity) and is
  * turned off by `prefers-reduced-motion` — see the "Animated sidebar logo"
  * block in index.css.
@@ -28,23 +28,45 @@ function pickDifferent<T extends string>(list: readonly T[], storageKey: string)
   return choice;
 }
 
-/** Picks this visit's movement once per mount (refresh / fresh login), never repeating the last one. */
+/** How many times a movement loops before the next one takes over. */
+const LOOPS_BEFORE_SWITCH = 3;
+
+/**
+ * Picks a movement on mount (refresh / fresh login) and, via `nextVariant`,
+ * a different one each time the current one has looped 3 times.
+ */
 export function useLogoAnimation() {
-  const [variant] = useState<LogoVariant>(() => pickDifferent(VARIANTS, "lt-logo-variant"));
-  return { variant };
+  const [variant, setVariant] = useState<LogoVariant>(() => pickDifferent(VARIANTS, "lt-logo-variant"));
+  // pickDifferent compares with what is stored, which is always the movement on screen.
+  const nextVariant = useCallback(() => setVariant(pickDifferent(VARIANTS, "lt-logo-variant")), []);
+  return { variant, nextVariant };
 }
 
 const STAR = "M12 0C13 7 17 11 24 12 17 13 13 17 12 24 11 17 7 13 0 12 7 11 11 7 12 0Z";
 
 export default function AnimatedLogo({
   variant,
+  onLoop,
   className = "",
 }: {
   variant: LogoVariant;
+  /** Called after the movement has looped 3 times (switch to the next one). */
+  onLoop?: () => void;
   /** Size comes from the parent via Tailwind width/height classes. */
   className?: string;
 }) {
   const src = `${import.meta.env.BASE_URL}logo-256.png`;
+  const count = useRef(0);
+  useEffect(() => {
+    count.current = 0;
+  }, [variant]);
+  const countLoop = () => {
+    count.current += 1;
+    if (count.current >= LOOPS_BEFORE_SWITCH) {
+      count.current = 0;
+      onLoop?.();
+    }
+  };
 
   return (
     <span
@@ -54,7 +76,7 @@ export default function AnimatedLogo({
     >
       {(variant === "float" || variant === "hop") && <span className="lt-shadow" />}
       {variant === "glow" && <span className="lt-halo" />}
-      <img src={src} alt="" draggable={false} className="lt-logo" />
+      <img src={src} alt="" draggable={false} className="lt-logo" onAnimationIteration={countLoop} />
       {variant === "shine" && <span className="lt-glint" />}
       {variant === "sparkle" && (
         <>

@@ -82,6 +82,7 @@ export default function Sidebar({ collapsed, mobileOpen, onToggle, onNavigate }:
           <div className="flex flex-col items-center gap-1 px-2 py-6 md:px-4">
             <AnimatedLogo
               variant={logoAnim.variant}
+              onLoop={logoAnim.nextVariant}
               className={`${mobileOpen ? "h-32 w-32" : "h-9 w-9"} ${collapsed ? "md:h-10 md:w-10" : "md:h-32 md:w-32"} transition-all duration-200`}
             />
             <span
