@@ -44,7 +44,9 @@
             } catch (err) {
               return;
             }
-            window.location.reload();
+            var u = new URL(window.location.href);
+            u.searchParams.set("_r", Date.now());
+            window.location.replace(u.toString());
           },
           true
         );
