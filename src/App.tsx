@@ -11,6 +11,7 @@ import PreferencesPage from "./pages/PreferencesPage";
 import ClassesPage from "./pages/ClassesPage";
 import StudentsPage from "./pages/StudentsPage";
 import AttendancePage from "./pages/AttendancePage";
+import ArchivePage from "./pages/ArchivePage";
 import SessionsPage from "./pages/SessionsPage";
 import NotesPage from "./pages/NotesPage";
 import ProjectsPage from "./pages/ProjectsPage";
@@ -63,7 +64,7 @@ export default function App() {
             <Route path="/students" element={<StudentsPage />} />
             <Route path="/attendance" element={<AttendancePage />} />
             <Route path="/sessions" element={<SessionsPage />} />
-            <Route path="/archive" element={<SessionsPage archived />} />
+            <Route path="/archive" element={<ArchivePage />} />
             <Route path="/notes" element={<NotesPage />} />
             <Route path="/projects" element={<ProjectsPage />} />
             <Route path="/linked-activities" element={<LinkedActivitiesPage />} />

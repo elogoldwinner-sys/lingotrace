@@ -170,7 +170,8 @@
     "selectedCount": "{{count}} selected",
     "markSelectedAs": "Mark selected as:",
     "clearSelection": "Clear",
-    "bulkError": "Couldn't update every student. Please try again."
+    "bulkError": "Couldn't update every student. Please try again.",
+    "archiveTitle": "Attendance archive"
   },
   "sessions": {
     "title": "Sessions",
@@ -733,5 +734,9 @@
     "downloadCsv": "Download CSV",
     "empty": "No attendance was recorded for this selection.",
     "rateNote": "Attendance rate = (present + late) ÷ (present + late + absent). Excused sessions are not counted against the student."
+  },
+  "archive": {
+    "sessions": "Sessions",
+    "attendance": "Attendance"
   }
 }

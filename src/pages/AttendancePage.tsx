@@ -64,7 +64,11 @@ function daysAgoISO(days: number) {
  * here always exactly matches the number of sessions, automatically,
  * including right after a bulk-generate.
  */
-export default function AttendancePage() {
+/**
+ * `archived` lists only the weeks older than last week (they move there automatically), with the
+ * same marking features; the normal page keeps the current and previous week plus the report.
+ */
+export default function AttendancePage({ archived = false }: { archived?: boolean }) {
   const { t } = useTranslation();
   const { user, profile } = useAuth();
   // Teacher preference: when off, marking attendance never adds or deducts marks.
@@ -167,6 +171,12 @@ export default function AttendancePage() {
       .sort((a, b) => b.key.localeCompare(a.key));
   }, [sessions]);
 
+  const keepFromKey = formatDate(addDays(startOfWeek(new Date(), { weekStartsOn: 0 }), -7), "yyyy-MM-dd");
+  const visibleWeeks = useMemo(
+    () => weekGroups.filter((w) => (archived ? w.key < keepFromKey : w.key >= keepFromKey)),
+    [weekGroups, archived, keepFromKey]
+  );
+
   // Reset the "latest week open" default whenever the selected class
   // changes, then apply it once the first batch of weeks for that class
   // has loaded.
@@ -177,10 +187,10 @@ export default function AttendancePage() {
 
   useEffect(() => {
     if (defaultedClassRef.current === selectedClassId) return;
-    if (weekGroups.length === 0) return;
-    setExpandedWeeks(new Set([weekGroups[0].key]));
+    if (visibleWeeks.length === 0) return;
+    setExpandedWeeks(new Set([visibleWeeks[0].key]));
     defaultedClassRef.current = selectedClassId;
-  }, [weekGroups, selectedClassId]);
+  }, [visibleWeeks, selectedClassId]);
 
   function toggleWeek(key: string) {
     setExpandedWeeks((prev) => {
@@ -313,7 +323,7 @@ export default function AttendancePage() {
 
   return (
     <div className="space-y-6">
-      <h1 className="text-2xl font-semibold text-navy">{t("attendance.title")}</h1>
+      <h1 className="text-2xl font-semibold text-navy">{t(archived ? "attendance.archiveTitle" : "attendance.title")}</h1>
 
       <ClassSelector classes={classes} selectedClassId={selectedClassId} onSelect={setSelectedClassId} />
 
@@ -329,9 +339,11 @@ export default function AttendancePage() {
 
             {sessions.length === 0 ? (
               <EmptyState message={t("sessions.noSessions")} icon="📝" />
+            ) : visibleWeeks.length === 0 ? (
+              <EmptyState message={t(archived ? "sessions.archiveEmpty" : "sessions.allArchived")} icon={archived ? "🗄️" : "📝"} />
             ) : (
               <div className="space-y-3">
-                {weekGroups.map((week) => {
+                {visibleWeeks.map((week) => {
                   const isWeekOpen = expandedWeeks.has(week.key);
                   const weekEnd = addDays(week.weekStart, 4);
                   const weekRange = `${formatDate(week.weekStart, "MMM d")} – ${formatDate(weekEnd, "MMM d, yyyy")}`;
@@ -479,6 +491,7 @@ export default function AttendancePage() {
             )}
           </div>
 
+          {!archived && (
           <div>
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-3">
               <h2 className="text-lg font-semibold text-navy">{t("attendance.report")}</h2>
@@ -603,6 +616,7 @@ export default function AttendancePage() {
               </table>
             </div>
           </div>
+          )}
         </div>
       )}
 
