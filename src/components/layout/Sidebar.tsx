@@ -1,6 +1,7 @@
 import { NavLink } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import Logo from "../common/Logo";
+import AnimatedLogo, { AnimatedName, useLogoAnimation } from "../common/AnimatedLogo";
 import { useTheme } from "../../contexts/ThemeContext";
 import sidebarOwl from "../../assets/kid-dashboard/sidebar-owl.webp";
 import {
@@ -58,7 +59,8 @@ interface SidebarProps {
  * pick a single JS value that can't know the current viewport width.
  */
 export default function Sidebar({ collapsed, mobileOpen, onToggle, onNavigate }: SidebarProps) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
+  const logoAnim = useLogoAnimation();
   const { theme } = useTheme();
   const isKid = theme === "kid";
 
@@ -74,18 +76,34 @@ export default function Sidebar({ collapsed, mobileOpen, onToggle, onNavigate }:
           isKid ? "bg-[#36207C] shadow-[6px_0_24px_-8px_rgba(54,32,124,0.45)]" : "bg-navy"
         } ${mobileOpen ? "w-64 shadow-2xl" : "w-14"} ${collapsed ? "md:w-16" : "md:w-64"}`}
       >
-        <div className={`flex items-center gap-2 px-3 md:px-6 ${isKid ? "py-7" : "py-6"}`}>
-          <Logo size={isKid ? 40 : 28} className={`shrink-0 ${isKid ? "drop-shadow-[0_2px_4px_rgba(0,0,0,0.25)]" : ""}`} />
-          <span
-            className={`font-serif truncate ${
-              isKid ? "text-[1.75rem] font-bold text-white" : "text-xl font-semibold tracking-wide"
-            } ${
-              mobileOpen ? "inline" : "hidden"
-            } ${collapsed ? "md:hidden" : "md:inline"}`}
-          >
-            {t("app.name")}
-          </span>
-        </div>
+        {isKid ? (
+          // Kid theme: big animated mascot with the name underneath. The logo shrinks back to a
+          // small icon whenever the sidebar is the narrow rail (collapsed / phone width).
+          <div className="flex flex-col items-center gap-1 px-2 py-6 md:px-4">
+            <AnimatedLogo
+              variant={logoAnim.variant}
+              className={`${mobileOpen ? "h-32 w-32" : "h-9 w-9"} ${collapsed ? "md:h-10 md:w-10" : "md:h-32 md:w-32"} transition-all duration-200`}
+            />
+            <span
+              className={`font-serif text-center text-[1.75rem] font-bold leading-tight text-white ${
+                mobileOpen ? "block" : "hidden"
+              } ${collapsed ? "md:hidden" : "md:block"}`}
+            >
+              <AnimatedName text={t("app.name")} isArabic={i18n.language === "ar"} />
+            </span>
+          </div>
+        ) : (
+          <div className="flex items-center gap-2 px-3 py-6 md:px-6">
+            <Logo size={28} className="shrink-0" />
+            <span
+              className={`font-serif truncate text-xl font-semibold tracking-wide ${
+                mobileOpen ? "inline" : "hidden"
+              } ${collapsed ? "md:hidden" : "md:inline"}`}
+            >
+              {t("app.name")}
+            </span>
+          </div>
+        )}
         {!isKid && <div className="h-px bg-gold/30 mx-3 md:mx-6" />}
         <nav className={`sidebar-scroll flex-1 px-2 space-y-1 md:px-3 overflow-y-auto ${isKid ? "py-2 md:px-4" : "py-6"}`}>
           {navItems.map(({ to, key, icon: Icon }) => (
