@@ -82,6 +82,8 @@ import ReasonPicker, { useSaveCustomReason } from "../components/common/ReasonPi
 
 interface BulkRow {
   name: string;
+  nameAr?: string;
+  nameEn?: string;
   parentName?: string;
   parentEmail?: string;
   error?: string;
@@ -159,6 +161,8 @@ export default function StudentsPage() {
   // Manual add-one-student
   const [addModalOpen, setAddModalOpen] = useState(false);
   const [addName, setAddName] = useState("");
+  const [addNameAr, setAddNameAr] = useState("");
+  const [addNameEn, setAddNameEn] = useState("");
   const [addParentName, setAddParentName] = useState("");
   const [addParentEmail, setAddParentEmail] = useState("");
   const [addSubmitting, setAddSubmitting] = useState(false);
@@ -190,6 +194,8 @@ export default function StudentsPage() {
   // Student name (edited by teacher from the detail panel)
   const [editingName, setEditingName] = useState(false);
   const [nameDraft, setNameDraft] = useState("");
+  const [nameArDraft, setNameArDraft] = useState("");
+  const [nameEnDraft, setNameEnDraft] = useState("");
   const [savingName, setSavingName] = useState(false);
 
   useEffect(() => {
@@ -348,10 +354,14 @@ export default function StudentsPage() {
       await createStudentManual({
         classId: selectedClassId,
         name: addName.trim(),
+        nameAr: addNameAr.trim() || undefined,
+        nameEn: addNameEn.trim() || undefined,
         parentName: addParentName.trim() || undefined,
         parentEmail: addParentEmail.trim() || undefined,
       });
       setAddName("");
+      setAddNameAr("");
+      setAddNameEn("");
       setAddParentName("");
       setAddParentEmail("");
       setAddModalOpen(false);
@@ -362,10 +372,10 @@ export default function StudentsPage() {
 
   function handleDownloadTemplate() {
     const csv = buildCsv(
-      ["name", "parentName", "parentEmail"],
+      ["name", "nameAr", "nameEn", "parentName", "parentEmail"],
       [
-        ["Amina Al-Sayed", "Fatima Al-Sayed", "fatima@example.com"],
-        ["Yusuf Al-Rashid", "", ""],
+        ["Amina Al-Sayed", "أمينة السيد", "Amina Al-Sayed", "Fatima Al-Sayed", "fatima@example.com"],
+        ["Yusuf Al-Rashid", "", "Yusuf Al-Rashid", "", ""],
       ]
     );
     downloadTextFile("lingotrace-students-template.csv", csv);
@@ -388,6 +398,8 @@ export default function StudentsPage() {
         }
         return {
           name,
+          nameAr: row["namear"] || row["name_ar"] || row["arabic name"] || undefined,
+          nameEn: row["nameen"] || row["name_en"] || row["english name"] || undefined,
           parentName: row["parentname"] || row["parent name"] || undefined,
           parentEmail: row["parentemail"] || row["parent email"] || undefined,
         };
@@ -405,7 +417,7 @@ export default function StudentsPage() {
     try {
       await createStudentsBulk(
         selectedClassId,
-        validRows.map((r) => ({ name: r.name, parentName: r.parentName, parentEmail: r.parentEmail }))
+        validRows.map((r) => ({ name: r.name, nameAr: r.nameAr, nameEn: r.nameEn, parentName: r.parentName, parentEmail: r.parentEmail }))
       );
       setBulkDone(true);
       setBulkRows([]);
@@ -538,6 +550,8 @@ export default function StudentsPage() {
   function startEditingName() {
     if (!detailStudent) return;
     setNameDraft(detailStudent.name);
+    setNameArDraft(detailStudent.nameAr || "");
+    setNameEnDraft(detailStudent.nameEn || "");
     setEditingName(true);
   }
 
@@ -548,7 +562,11 @@ export default function StudentsPage() {
     if (!trimmed) return;
     setSavingName(true);
     try {
-      await updateStudent(detailStudent.id, { name: trimmed });
+      const nameAr = nameArDraft.trim();
+      const nameEn = nameEnDraft.trim();
+      await updateStudent(detailStudent.id, { name: trimmed, nameAr, nameEn });
+      // Keep the open window in step with what was just saved.
+      setDetailStudent((prev) => (prev ? { ...prev, name: trimmed, nameAr, nameEn } : prev));
       setEditingName(false);
     } finally {
       setSavingName(false);
@@ -934,25 +952,41 @@ export default function StudentsPage() {
         {detailStudent && (
           <div className="space-y-5">
             {editingName ? (
-              <form onSubmit={handleSaveName} className="flex items-center gap-2">
-                <input
-                  autoFocus
-                  type="text"
-                  required
-                  value={nameDraft}
-                  onChange={(e) => setNameDraft(e.target.value)}
-                  className="input-field flex-1"
-                />
-                <button type="submit" disabled={savingName} className="btn-primary py-1.5 px-3 text-sm">
-                  {savingName ? t("common.loading") : t("common.save")}
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setEditingName(false)}
-                  className="btn-secondary py-1.5 px-3 text-sm"
-                >
-                  {t("common.cancel")}
-                </button>
+              <form onSubmit={handleSaveName} className="space-y-3">
+                <div>
+                  <label className="label-eyebrow block mb-1">{t("students.name")}</label>
+                  <input
+                    autoFocus
+                    type="text"
+                    required
+                    value={nameDraft}
+                    onChange={(e) => setNameDraft(e.target.value)}
+                    className="input-field"
+                  />
+                </div>
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <div>
+                    <label className="label-eyebrow block mb-1">{t("students.nameAr")}</label>
+                    <input dir="rtl" type="text" value={nameArDraft} onChange={(e) => setNameArDraft(e.target.value)} className="input-field" />
+                  </div>
+                  <div>
+                    <label className="label-eyebrow block mb-1">{t("students.nameEn")}</label>
+                    <input dir="ltr" type="text" value={nameEnDraft} onChange={(e) => setNameEnDraft(e.target.value)} className="input-field" />
+                  </div>
+                </div>
+                <p className="text-xs text-cream-600">{t("students.namesHint")}</p>
+                <div className="flex items-center gap-2">
+                  <button type="submit" disabled={savingName} className="btn-primary py-1.5 px-3 text-sm">
+                    {savingName ? t("common.loading") : t("common.save")}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setEditingName(false)}
+                    className="btn-secondary py-1.5 px-3 text-sm"
+                  >
+                    {t("common.cancel")}
+                  </button>
+                </div>
               </form>
             ) : (
               <button
@@ -1192,6 +1226,17 @@ export default function StudentsPage() {
               className="input-field"
             />
           </div>
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div>
+              <label className="label-eyebrow block mb-1.5">{t("students.nameAr")}</label>
+              <input dir="rtl" value={addNameAr} onChange={(e) => setAddNameAr(e.target.value)} className="input-field" />
+            </div>
+            <div>
+              <label className="label-eyebrow block mb-1.5">{t("students.nameEn")}</label>
+              <input dir="ltr" value={addNameEn} onChange={(e) => setAddNameEn(e.target.value)} className="input-field" />
+            </div>
+          </div>
+          <p className="-mt-2 text-xs text-cream-600">{t("students.namesHint")}</p>
           <div>
             <label className="label-eyebrow block mb-1.5">{t("students.parentName")}</label>
             <input

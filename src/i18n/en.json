@@ -149,7 +149,10 @@
     "editName": "Edit name",
     "group": "Group",
     "groupSet": "Put in group {{group}}",
-    "groupClear": "Remove from group"
+    "groupClear": "Remove from group",
+    "nameAr": "Name in Arabic (optional)",
+    "nameEn": "Name in English (optional)",
+    "namesHint": "Enter one or both. They are printed on the student’s numbered card — Arabic first if both are given."
   },
   "attendance": {
     "title": "Attendance",
@@ -724,7 +727,18 @@
     "genderHint": "Sets your greeting (Mr. / Ms.) and the teacher picture on your dashboard.",
     "genderPromptTitle": "Welcome! Which one are you?",
     "genderPromptHint": "This sets your greeting and the teacher picture on your dashboard.",
-    "genderPromptLater": "You can change this any time in Teacher preferences."
+    "genderPromptLater": "You can change this any time in Teacher preferences.",
+    "cardsTitle": "Numbered Heads cards",
+    "cardsHint": "Print or download the number cards for the Numbered Heads game.",
+    "classCardsTitle": "Class cards with student names",
+    "classCardsHint": "One card per student with their name on it. A student’s number is their place (1–4) in their group, the same number the draw uses.",
+    "noClasses": "No classes yet",
+    "cardsCount": "{{count}} card(s) ready.",
+    "cardsSkipped": "{{count}} student(s) have no card yet — they need a group (A, B, C…) with at most 4 students each.",
+    "classCardsZip": "Class cards",
+    "downloadClassCards": "Download all class cards (ZIP)",
+    "printClassCards": "Print class cards",
+    "blankCardsTitle": "Blank number cards (1–4)"
   },
   "attendanceReport": {
     "title": "Attendance report",

@@ -118,6 +118,9 @@ export interface StudentRecord {
   id: string;
   /** Comes directly from the student's Google account displayName at join time. */
   name: string;
+  /** Optional Arabic and/or English spelling of the same student's name (set by the teacher). Printed on the numbered cards; `name` stays the main display name. */
+  nameAr?: string;
+  nameEn?: string;
   classId: string;
   parentName?: string;
   parentEmail?: string;

@@ -7,6 +7,7 @@ import { getDefaultRankingPeriod } from "../lib/services/classRankingsService";
 import { subscribeToClasses } from "../lib/services/classesService";
 import { allBuiltIn, cloneScope, getPrefs, hasClassOverride, effectiveScope } from "../lib/reasonPrefs";
 import { useEffect } from "react";
+import NumberedCardsSettings from "../components/common/NumberedCardsSettings";
 import type { ClassRecord, ReasonPrefs, ReasonScope, TeacherGender } from "../types";
 
 const ALL = "__all__";
@@ -394,6 +395,8 @@ export default function PreferencesPage() {
 
         {error && <p className="text-sm text-red-600">{t("preferences.saveError")}</p>}
       </div>
+
+      <NumberedCardsSettings classes={classes} />
     </div>
   );
 }

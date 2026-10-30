@@ -108,11 +108,15 @@ export async function recordParentJoin(
 export async function createStudentManual(data: {
   classId: string;
   name: string;
+  nameAr?: string;
+  nameEn?: string;
   parentName?: string;
   parentEmail?: string;
 }) {
   return service.create({
     name: data.name,
+    nameAr: data.nameAr || undefined,
+    nameEn: data.nameEn || undefined,
     classId: data.classId,
     subject: await getClassSubject(data.classId),
     parentName: data.parentName || undefined,
@@ -128,7 +132,7 @@ export async function createStudentManual(data: {
  */
 export async function createStudentsBulk(
   classId: string,
-  rows: { name: string; parentName?: string; parentEmail?: string; subject?: string; teacherWhatsapp?: string }[]
+  rows: { name: string; nameAr?: string; nameEn?: string; parentName?: string; parentEmail?: string; subject?: string; teacherWhatsapp?: string }[]
 ) {
   const classSubject = await getClassSubject(classId);
   return service.createMany(
@@ -136,6 +140,8 @@ export async function createStudentsBulk(
       (row) =>
         ({
           name: row.name,
+          nameAr: row.nameAr || undefined,
+          nameEn: row.nameEn || undefined,
           classId,
           parentName: row.parentName || undefined,
           parentEmail: row.parentEmail || undefined,

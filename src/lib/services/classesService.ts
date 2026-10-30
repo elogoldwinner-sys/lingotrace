@@ -148,7 +148,7 @@ async function copyStudentsIntoSubject(parentClassId: string, subjectClassId: st
   const rows = mainSnap.docs
     .map((d) => d.data() as StudentRecord)
     .filter((s) => !existing.has(String(s.name).trim().toLowerCase()))
-    .map((s) => ({ name: s.name, parentName: s.parentName, parentEmail: s.parentEmail }));
+    .map((s) => ({ name: s.name, nameAr: s.nameAr, nameEn: s.nameEn, parentName: s.parentName, parentEmail: s.parentEmail }));
   if (rows.length > 0) await createStudentsBulk(subjectClassId, rows.map((r) => ({ ...r, subject, teacherWhatsapp })));
   return rows.length;
 }
