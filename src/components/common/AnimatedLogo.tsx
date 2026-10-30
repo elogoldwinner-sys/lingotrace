@@ -35,7 +35,7 @@ function pickDifferent<T extends string>(list: readonly T[], storageKey: string)
 }
 
 /** How many times a movement loops before the next one takes over. */
-const LOOPS_BEFORE_SWITCH = 3;
+const LOOPS_BEFORE_SWITCH = 6;
 
 /**
  * Picks a logo movement and a name effect on mount (refresh / fresh login) and,
