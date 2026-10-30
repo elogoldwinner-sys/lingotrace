@@ -77,7 +77,7 @@ import ClassStatsModal, { type StatsTab } from "../components/reports/ClassStats
 import CertificateModal from "../components/common/CertificateModal";
 import RichText from "../components/common/RichText";
 import { reasonsForAmount, POSITIVE_POINTS_REASONS } from "../lib/pointsReasons";
-import { ACTION_TONES } from "../lib/uiColors";
+import { SOLID_TONES } from "../lib/uiColors";
 import ReasonPicker, { useSaveCustomReason } from "../components/common/ReasonPicker";
 
 interface BulkRow {
@@ -595,13 +595,13 @@ export default function StudentsPage() {
           </button>
           <button
             onClick={() => setBulkModalOpen(true)}
-            className={`btn-secondary text-sm py-2 px-3 ${ACTION_TONES.teal}`}
+            className={`btn-secondary text-sm py-2 px-3 ${SOLID_TONES.teal}`}
             disabled={!selectedClassId}
           >
             <Upload size={16} />
             {t("students.bulkImport")}
           </button>
-          <button onClick={() => setReportModalOpen(true)} className={`btn-secondary text-sm py-2 px-3 ${ACTION_TONES.blue}`}>
+          <button onClick={() => setReportModalOpen(true)} className={`btn-secondary text-sm py-2 px-3 ${SOLID_TONES.blue}`}>
             <FileSpreadsheet size={16} />
             {t("pointsReport.button")}
           </button>
@@ -610,7 +610,7 @@ export default function StudentsPage() {
               setClassStatsTab("students");
               setClassStatsOpen(true);
             }}
-            className={`btn-secondary text-sm py-2 px-3 ${ACTION_TONES.emerald}`}
+            className={`btn-secondary text-sm py-2 px-3 ${SOLID_TONES.orange}`}
             disabled={!selectedClassId}
           >
             <BarChart3 size={16} />
@@ -621,7 +621,7 @@ export default function StudentsPage() {
               setClassStatsTab("classes");
               setClassStatsOpen(true);
             }}
-            className={`btn-secondary text-sm py-2 px-3 ${ACTION_TONES.orange}`}
+            className={`btn-secondary text-sm py-2 px-3 ${SOLID_TONES.lime}`}
             disabled={!selectedClassId}
           >
             <Scale size={16} />

@@ -87,7 +87,7 @@ export default function Sidebar({ collapsed, mobileOpen, onToggle, onNavigate }:
           </span>
         </div>
         {!isKid && <div className="h-px bg-gold/30 mx-3 md:mx-6" />}
-        <nav className={`flex-1 px-2 space-y-1 md:px-3 overflow-y-auto ${isKid ? "py-2 md:px-4" : "py-6"}`}>
+        <nav className={`sidebar-scroll flex-1 px-2 space-y-1 md:px-3 overflow-y-auto ${isKid ? "py-2 md:px-4" : "py-6"}`}>
           {navItems.map(({ to, key, icon: Icon }) => (
             <NavLink
               key={to}

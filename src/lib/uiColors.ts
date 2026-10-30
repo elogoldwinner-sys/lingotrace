@@ -13,6 +13,14 @@ export const ACTION_TONES = {
   amber: "!border-amber-300 !bg-amber-50 !text-amber-800 hover:!bg-amber-100 !shadow-[0_4px_0_#fcd34d]",
 } as const;
 
+/** Solid (filled) buttons — each a clearly different colour, for the main action row. Use with `btn-secondary`. */
+export const SOLID_TONES = {
+  teal: "!border-teal-800 !bg-teal-600 !text-white hover:!bg-teal-700 !shadow-[0_4px_0_#115e59]",
+  blue: "!border-blue-800 !bg-blue-600 !text-white hover:!bg-blue-700 !shadow-[0_4px_0_#1e40af]",
+  orange: "!border-orange-700 !bg-orange-500 !text-white hover:!bg-orange-600 !shadow-[0_4px_0_#c2410c]",
+  lime: "!border-lime-800 !bg-lime-700 !text-white hover:!bg-lime-800 !shadow-[0_4px_0_#3f6212]",
+} as const;
+
 /** One look per class: tinted outline when idle, solid fill when selected. */
 const CLASS_TONES = [
   { idle: "border-blue-300 text-blue-700 hover:bg-blue-50", active: "border-blue-600 bg-blue-600 text-white", dot: "bg-blue-500" },
