@@ -27,6 +27,36 @@
         }
       })(window.location);
     </script>
+    <!-- Self-heal after a new deploy: if a hashed /assets/ file from a stale cached page is gone (404), reload once to pick up the new index.html. -->
+    <script type="text/javascript">
+      (function () {
+        var KEY = "lt-asset-reload";
+        window.addEventListener(
+          "error",
+          function (e) {
+            var el = e.target;
+            if (!el || (el.tagName !== "LINK" && el.tagName !== "SCRIPT")) return;
+            var url = el.href || el.src || "";
+            if (url.indexOf("/assets/") === -1) return;
+            try {
+              if (sessionStorage.getItem(KEY)) return;
+              sessionStorage.setItem(KEY, "1");
+            } catch (err) {
+              return;
+            }
+            window.location.reload();
+          },
+          true
+        );
+        window.addEventListener("load", function () {
+          setTimeout(function () {
+            try {
+              sessionStorage.removeItem(KEY);
+            } catch (err) {}
+          }, 5000);
+        });
+      })();
+    </script>
   </head>
   <body>
     <div id="root"></div>
