@@ -17,9 +17,9 @@ export interface CardItem {
 /** Output is drawn at 2× the artwork's size so the school logo stays crisp when printed. */
 const OUT_SCALE = 2;
 /** School logo badge (bottom-right corner): centre and diameter as fractions of card width/height/width. */
-const BADGE = { cx: 0.775, cy: 0.838, d: 0.28 };
+const BADGE = { cx: 0.775, cy: 0.838, d: 0.22 };
 /** The logo fills this share of the badge's inner (white) circle. */
-const BADGE_LOGO_FILL = 0.74;
+const BADGE_LOGO_FILL = 0.9;
 const GOLD = { light: "#F6D66B", mid: "#D4A62A", dark: "#A87A12" };
 
 function loadImage(src: string, cors = false): Promise<HTMLImageElement> {
@@ -94,7 +94,7 @@ function drawLogoBadge(ctx: CanvasRenderingContext2D, canvas: HTMLCanvasElement,
   const cx = canvas.width * BADGE.cx;
   const cy = canvas.height * BADGE.cy;
   const R = (canvas.width * BADGE.d) / 2;
-  const ring = R * 0.09;
+  const ring = R * 0.07;
 
   ctx.save();
   // soft shadow so the badge lifts off the card
