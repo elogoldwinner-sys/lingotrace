@@ -16,8 +16,11 @@ export interface CardItem {
 
 /** Output is drawn at 2× the artwork's size so the school logo stays crisp when printed. */
 const OUT_SCALE = 2;
-/** Where the school logo goes: the clear bottom-right corner of the card (fractions of card width/height). */
-const LOGO_BOX = { x: 0.58, y: 0.765, w: 0.35, h: 0.17 };
+/** School logo badge (bottom-right corner): centre and diameter as fractions of card width/height/width. */
+const BADGE = { cx: 0.752, cy: 0.805, d: 0.33 };
+/** The logo fills this share of the badge's inner (white) circle. */
+const BADGE_LOGO_FILL = 0.74;
+const GOLD = { light: "#F6D66B", mid: "#D4A62A", dark: "#A87A12" };
 
 function loadImage(src: string, cors = false): Promise<HTMLImageElement> {
   return new Promise((resolve, reject) => {
@@ -86,7 +89,58 @@ function drawName(ctx: CanvasRenderingContext2D, canvas: HTMLCanvasElement, numb
   });
 }
 
-/** One card as a PNG canvas: transparent outside the rounded card, school logo on its own (no background plate). */
+/** The school logo inside a golden ring with a white disc behind it. */
+function drawLogoBadge(ctx: CanvasRenderingContext2D, canvas: HTMLCanvasElement, logo: HTMLImageElement) {
+  const cx = canvas.width * BADGE.cx;
+  const cy = canvas.height * BADGE.cy;
+  const R = (canvas.width * BADGE.d) / 2;
+  const ring = R * 0.09;
+
+  ctx.save();
+  // soft shadow so the badge lifts off the card
+  ctx.shadowColor = "rgba(0,0,0,0.22)";
+  ctx.shadowBlur = R * 0.12;
+  ctx.shadowOffsetY = R * 0.04;
+  ctx.beginPath();
+  ctx.arc(cx, cy, R, 0, Math.PI * 2);
+  ctx.fillStyle = GOLD.mid;
+  ctx.fill();
+  ctx.restore();
+
+  // golden ring (gradient) …
+  const grad = ctx.createLinearGradient(cx - R, cy - R, cx + R, cy + R);
+  grad.addColorStop(0, GOLD.light);
+  grad.addColorStop(0.5, GOLD.mid);
+  grad.addColorStop(1, GOLD.dark);
+  ctx.beginPath();
+  ctx.arc(cx, cy, R, 0, Math.PI * 2);
+  ctx.fillStyle = grad;
+  ctx.fill();
+
+  // … white disc inside the ring
+  const inner = R - ring;
+  ctx.beginPath();
+  ctx.arc(cx, cy, inner, 0, Math.PI * 2);
+  ctx.fillStyle = "#FFFFFF";
+  ctx.fill();
+  ctx.lineWidth = Math.max(1, R * 0.015);
+  ctx.strokeStyle = GOLD.dark;
+  ctx.stroke();
+
+  // logo, contained in the white disc
+  const box = inner * 2 * BADGE_LOGO_FILL;
+  const ratio = Math.min(box / logo.naturalWidth, box / logo.naturalHeight);
+  const w = logo.naturalWidth * ratio;
+  const h = logo.naturalHeight * ratio;
+  ctx.save();
+  ctx.beginPath();
+  ctx.arc(cx, cy, inner - ctx.lineWidth, 0, Math.PI * 2);
+  ctx.clip();
+  ctx.drawImage(logo, cx - w / 2, cy - h / 2, w, h);
+  ctx.restore();
+}
+
+/** One card as a PNG canvas: transparent outside the rounded card, school logo in a gold-ringed badge. */
 async function renderCard(art: CardArt, logo: HTMLImageElement | null, lines?: string[]): Promise<HTMLCanvasElement> {
   const card = await loadImage(art.url);
   const canvas = document.createElement("canvas");
@@ -95,16 +149,7 @@ async function renderCard(art: CardArt, logo: HTMLImageElement | null, lines?: s
   const ctx = canvas.getContext("2d")!;
   ctx.imageSmoothingQuality = "high";
   ctx.drawImage(card, 0, 0, canvas.width, canvas.height);
-  if (logo) {
-    const bw = canvas.width * LOGO_BOX.w;
-    const bh = canvas.height * LOGO_BOX.h;
-    const ratio = Math.min(bw / logo.naturalWidth, bh / logo.naturalHeight);
-    const w = logo.naturalWidth * ratio;
-    const h = logo.naturalHeight * ratio;
-    const x = canvas.width * LOGO_BOX.x + (bw - w) / 2;
-    const y = canvas.height * LOGO_BOX.y + (bh - h) / 2;
-    ctx.drawImage(logo, x, y, w, h);
-  }
+  if (logo) drawLogoBadge(ctx, canvas, logo);
   if (lines && lines.length > 0) drawName(ctx, canvas, art.number, lines);
   return canvas;
 }

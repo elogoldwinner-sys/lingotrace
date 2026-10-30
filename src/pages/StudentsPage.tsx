@@ -79,6 +79,7 @@ import RichText from "../components/common/RichText";
 import { reasonsForAmount, POSITIVE_POINTS_REASONS } from "../lib/pointsReasons";
 import { SOLID_TONES } from "../lib/uiColors";
 import ReasonPicker, { useSaveCustomReason } from "../components/common/ReasonPicker";
+import { studentDisplayName, primaryName } from "../lib/studentName";
 
 interface BulkRow {
   name: string;
@@ -100,7 +101,8 @@ function daysAgoISO(days: number) {
 }
 
 export default function StudentsPage() {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
+  const dn = (st: Parameters<typeof studentDisplayName>[0]) => studentDisplayName(st, i18n.language);
   const { user, profile, loading: authLoading } = useAuth();
   const [searchParams] = useSearchParams();
   const preselectedClassId = searchParams.get("classId") || "";
@@ -160,7 +162,6 @@ export default function StudentsPage() {
 
   // Manual add-one-student
   const [addModalOpen, setAddModalOpen] = useState(false);
-  const [addName, setAddName] = useState("");
   const [addNameAr, setAddNameAr] = useState("");
   const [addNameEn, setAddNameEn] = useState("");
   const [addParentName, setAddParentName] = useState("");
@@ -193,7 +194,6 @@ export default function StudentsPage() {
 
   // Student name (edited by teacher from the detail panel)
   const [editingName, setEditingName] = useState(false);
-  const [nameDraft, setNameDraft] = useState("");
   const [nameArDraft, setNameArDraft] = useState("");
   const [nameEnDraft, setNameEnDraft] = useState("");
   const [savingName, setSavingName] = useState(false);
@@ -348,18 +348,17 @@ export default function StudentsPage() {
 
   async function handleAddStudent(e: React.FormEvent) {
     e.preventDefault();
-    if (!selectedClassId || !addName.trim()) return;
+    if (!selectedClassId || !addNameEn.trim() || !addNameAr.trim()) return;
     setAddSubmitting(true);
     try {
       await createStudentManual({
         classId: selectedClassId,
-        name: addName.trim(),
-        nameAr: addNameAr.trim() || undefined,
-        nameEn: addNameEn.trim() || undefined,
+        name: primaryName(addNameEn, addNameAr),
+        nameAr: addNameAr.trim(),
+        nameEn: addNameEn.trim(),
         parentName: addParentName.trim() || undefined,
         parentEmail: addParentEmail.trim() || undefined,
       });
-      setAddName("");
       setAddNameAr("");
       setAddNameEn("");
       setAddParentName("");
@@ -372,10 +371,10 @@ export default function StudentsPage() {
 
   function handleDownloadTemplate() {
     const csv = buildCsv(
-      ["name", "nameAr", "nameEn", "parentName", "parentEmail"],
+      ["nameEn", "nameAr", "parentName", "parentEmail"],
       [
-        ["Amina Al-Sayed", "أمينة السيد", "Amina Al-Sayed", "Fatima Al-Sayed", "fatima@example.com"],
-        ["Yusuf Al-Rashid", "", "Yusuf Al-Rashid", "", ""],
+        ["Amina Al-Sayed", "أمينة السيد", "Fatima Al-Sayed", "fatima@example.com"],
+        ["Yusuf Al-Rashid", "يوسف الراشد", "", ""],
       ]
     );
     downloadTextFile("lingotrace-students-template.csv", csv);
@@ -392,17 +391,20 @@ export default function StudentsPage() {
       const text = String(reader.result || "");
       const parsed = parseCsv(text);
       const rows: BulkRow[] = parsed.map((row) => {
-        const name = row["name"] || row["student name"] || row["student"] || "";
-        if (!name) {
-          return { name: "", error: t("students.bulkErrorMissingName") };
+        const legacy = row["name"] || row["student name"] || row["student"] || "";
+        let nameEn = row["nameen"] || row["name_en"] || row["english name"] || "";
+        let nameAr = row["namear"] || row["name_ar"] || row["arabic name"] || "";
+        // Older files with a single "name" column: put it under the language it is written in.
+        if (legacy && !nameEn && !nameAr) {
+          if (/[\u0600-\u06FF]/.test(legacy)) nameAr = legacy;
+          else nameEn = legacy;
         }
-        return {
-          name,
-          nameAr: row["namear"] || row["name_ar"] || row["arabic name"] || undefined,
-          nameEn: row["nameen"] || row["name_en"] || row["english name"] || undefined,
-          parentName: row["parentname"] || row["parent name"] || undefined,
-          parentEmail: row["parentemail"] || row["parent email"] || undefined,
-        };
+        const name = primaryName(nameEn, nameAr);
+        const parentName = row["parentname"] || row["parent name"] || undefined;
+        const parentEmail = row["parentemail"] || row["parent email"] || undefined;
+        if (!name) return { name: "", error: t("students.bulkErrorMissingName") };
+        if (!nameEn || !nameAr) return { name, nameAr, nameEn, parentName, parentEmail, error: t("students.bulkErrorMissingBoth") };
+        return { name, nameAr, nameEn, parentName, parentEmail };
       });
       setBulkRows(rows);
     };
@@ -442,7 +444,7 @@ export default function StudentsPage() {
 
   async function handleResetStudent() {
     if (!detailStudent) return;
-    if (!window.confirm(t("students.confirmResetStudent", { name: detailStudent.name }))) return;
+    if (!window.confirm(t("students.confirmResetStudent", { name: dn(detailStudent) }))) return;
     setResettingStudent(true);
     setResetDone(false);
     try {
@@ -457,7 +459,7 @@ export default function StudentsPage() {
     if (!detailStudent) return;
     const parentUids = detailStudent.parentUids || [];
     if (parentUids.length === 0) return;
-    if (!window.confirm(t("students.confirmRemoveParentAccess", { name: detailStudent.name }))) return;
+    if (!window.confirm(t("students.confirmRemoveParentAccess", { name: dn(detailStudent) }))) return;
     setRemovingParentAccess(true);
     try {
       // Each removal only ever drops one entry from that parent's own
@@ -549,21 +551,23 @@ export default function StudentsPage() {
 
   function startEditingName() {
     if (!detailStudent) return;
-    setNameDraft(detailStudent.name);
-    setNameArDraft(detailStudent.nameAr || "");
-    setNameEnDraft(detailStudent.nameEn || "");
+    // Students without separate names yet (e.g. joined with Google): put the old name under its own language.
+    const old = detailStudent.name || "";
+    const oldIsArabic = /[\u0600-\u06FF]/.test(old);
+    setNameArDraft(detailStudent.nameAr || (oldIsArabic ? old : ""));
+    setNameEnDraft(detailStudent.nameEn || (oldIsArabic ? "" : old));
     setEditingName(true);
   }
 
   async function handleSaveName(e: React.FormEvent) {
     e.preventDefault();
     if (!detailStudent) return;
-    const trimmed = nameDraft.trim();
-    if (!trimmed) return;
+    const nameAr = nameArDraft.trim();
+    const nameEn = nameEnDraft.trim();
+    const trimmed = primaryName(nameEn, nameAr);
+    if (!nameAr || !nameEn) return;
     setSavingName(true);
     try {
-      const nameAr = nameArDraft.trim();
-      const nameEn = nameEnDraft.trim();
       await updateStudent(detailStudent.id, { name: trimmed, nameAr, nameEn });
       // Keep the open window in step with what was just saved.
       setDetailStudent((prev) => (prev ? { ...prev, name: trimmed, nameAr, nameEn } : prev));
@@ -735,9 +739,9 @@ export default function StudentsPage() {
                     {selectedIds.has(s.id) ? <CheckSquare size={20} /> : <Square size={20} />}
                   </span>
                 )}
-                <StudentAvatar photoURL={s.photoURL} name={s.name} size={52} rank={rankOf(ranking, s.id)} />
+                <StudentAvatar photoURL={s.photoURL} name={dn(s)} size={52} rank={rankOf(ranking, s.id)} />
                 <div className="flex-1">
-                  <p className="font-semibold text-navy">{s.name}</p>
+                  <p className="font-semibold text-navy">{dn(s)}</p>
                   {s.parentName && (
                     <p className="text-xs text-cream-600">{s.parentName}</p>
                   )}
@@ -829,7 +833,7 @@ export default function StudentsPage() {
         <AvatarPickerModal
           open={avatarPickerOpen}
           onClose={() => setAvatarPickerOpen(false)}
-          title={`${t("avatars.chooseAvatar")} — ${detailStudent.name}`}
+          title={`${t("avatars.chooseAvatar")} — ${dn(detailStudent)}`}
           pool={avatarPool(classGender)}
           taken={takenKeys(students.filter((x) => x.id !== detailStudent.id))}
           currentUrl={detailStudent.photoURL}
@@ -873,7 +877,7 @@ export default function StudentsPage() {
       <Modal
         open={!!pointsModalStudent}
         onClose={() => setPointsModalStudent(null)}
-        title={`${t("points.modalTitle")} — ${pointsModalStudent?.name || ""}`}
+        title={`${t("points.modalTitle")} — ${pointsModalStudent ? dn(pointsModalStudent) : ""}`}
       >
         <form
           onSubmit={handleAwardPoints}
@@ -946,32 +950,21 @@ export default function StudentsPage() {
       <Modal
         open={!!detailStudent}
         onClose={() => setDetailStudent(null)}
-        title={detailStudent?.name || ""}
+        title={detailStudent ? dn(detailStudent) : ""}
         widthClassName="max-w-2xl"
       >
         {detailStudent && (
           <div className="space-y-5">
             {editingName ? (
               <form onSubmit={handleSaveName} className="space-y-3">
-                <div>
-                  <label className="label-eyebrow block mb-1">{t("students.name")}</label>
-                  <input
-                    autoFocus
-                    type="text"
-                    required
-                    value={nameDraft}
-                    onChange={(e) => setNameDraft(e.target.value)}
-                    className="input-field"
-                  />
-                </div>
                 <div className="grid gap-3 sm:grid-cols-2">
                   <div>
                     <label className="label-eyebrow block mb-1">{t("students.nameAr")}</label>
-                    <input dir="rtl" type="text" value={nameArDraft} onChange={(e) => setNameArDraft(e.target.value)} className="input-field" />
+                    <input autoFocus required dir="rtl" type="text" value={nameArDraft} onChange={(e) => setNameArDraft(e.target.value)} className="input-field" />
                   </div>
                   <div>
                     <label className="label-eyebrow block mb-1">{t("students.nameEn")}</label>
-                    <input dir="ltr" type="text" value={nameEnDraft} onChange={(e) => setNameEnDraft(e.target.value)} className="input-field" />
+                    <input required dir="ltr" type="text" value={nameEnDraft} onChange={(e) => setNameEnDraft(e.target.value)} className="input-field" />
                   </div>
                 </div>
                 <p className="text-xs text-cream-600">{t("students.namesHint")}</p>
@@ -1017,7 +1010,7 @@ export default function StudentsPage() {
                 >
                   <StudentAvatar
                     photoURL={detailStudent.photoURL}
-                    name={detailStudent.name}
+                    name={dn(detailStudent)}
                     size={60}
                     rank={rankOf(ranking, detailStudent.id)}
                   />
@@ -1217,26 +1210,17 @@ export default function StudentsPage() {
 
       <Modal open={addModalOpen} onClose={() => setAddModalOpen(false)} title={t("students.addStudent")}>
         <form onSubmit={handleAddStudent} className="space-y-4">
-          <div>
-            <label className="label-eyebrow block mb-1.5">{t("students.name")}</label>
-            <input
-              required
-              value={addName}
-              onChange={(e) => setAddName(e.target.value)}
-              className="input-field"
-            />
-          </div>
           <div className="grid gap-4 sm:grid-cols-2">
             <div>
               <label className="label-eyebrow block mb-1.5">{t("students.nameAr")}</label>
-              <input dir="rtl" value={addNameAr} onChange={(e) => setAddNameAr(e.target.value)} className="input-field" />
+              <input required dir="rtl" value={addNameAr} onChange={(e) => setAddNameAr(e.target.value)} className="input-field" />
             </div>
             <div>
               <label className="label-eyebrow block mb-1.5">{t("students.nameEn")}</label>
-              <input dir="ltr" value={addNameEn} onChange={(e) => setAddNameEn(e.target.value)} className="input-field" />
+              <input required dir="ltr" value={addNameEn} onChange={(e) => setAddNameEn(e.target.value)} className="input-field" />
             </div>
           </div>
-          <p className="-mt-2 text-xs text-cream-600">{t("students.namesHint")}</p>
+          <p className="text-xs text-cream-600">{t("students.namesHint")}</p>
           <div>
             <label className="label-eyebrow block mb-1.5">{t("students.parentName")}</label>
             <input
@@ -1297,7 +1281,7 @@ export default function StudentsPage() {
               {bulkRows.map((row, idx) => (
                 <div key={idx} className="flex items-center justify-between px-3 py-2 text-sm">
                   <span className={row.error ? "text-red-600" : "text-navy"}>
-                    {row.name || t("students.bulkErrorMissingName")}
+                    {row.nameEn || row.nameAr ? [row.nameEn, row.nameAr].filter(Boolean).join(" — ") : t("students.bulkErrorMissingName")}
                   </span>
                   {row.error && <span className="text-xs text-red-600">{row.error}</span>}
                 </div>

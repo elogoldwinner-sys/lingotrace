@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { studentDisplayName } from "../../lib/studentName";
 import confetti from "canvas-confetti";
 import { RotateCcw } from "lucide-react";
 import SoundToggle from "./SoundToggle";
@@ -109,7 +110,7 @@ export default function NamesWheelModal({
   eligibleCount,
   onResetRound,
 }: NamesWheelModalProps) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const [rotation, setRotation] = useState(0);
   const [spinning, setSpinning] = useState(false);
   const [winnerId, setWinnerId] = useState<string | null>(null);
@@ -189,9 +190,9 @@ export default function NamesWheelModal({
         const a0 = i * seg;
         const a1 = (i + 1) * seg;
         const mid = (a0 + a1) / 2;
-        return { st, a0, a1, mid, fill: colorFor(i, n), ...fitName(st.name, n) };
+        return { st, a0, a1, mid, fill: colorFor(i, n), ...fitName(studentDisplayName(st, i18n.language), n) };
       }),
-    [students, seg, n]
+    [students, seg, n, i18n.language]
   );
 
   const winner = winnerId ? students.find((s) => s.id === winnerId) || null : null;
@@ -418,9 +419,9 @@ export default function NamesWheelModal({
             {winner && !spinning ? (
               <div className="nw-pop w-full overflow-hidden rounded-xl2 border-2 border-gold bg-gold-50 shadow-card">
                 <div className="flex items-center gap-3 px-4 py-2.5">
-                  <StudentAvatar photoURL={winner.photoURL} name={winner.name} size={52} />
+                  <StudentAvatar photoURL={winner.photoURL} name={studentDisplayName(winner, i18n.language)} size={52} />
                   <p className="min-w-0 flex-1 text-lg font-extrabold leading-tight text-navy [overflow-wrap:anywhere]">
-                    {t("sessions.wheelWinner", { name: winner.name })}
+                    {t("sessions.wheelWinner", { name: studentDisplayName(winner, i18n.language) })}
                   </p>
                   <button
                     type="button"

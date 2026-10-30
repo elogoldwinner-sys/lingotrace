@@ -135,10 +135,11 @@
     "confirmDeleteMany": "Remove {{count}} student(s) from the class? This can't be undone.",
     "confirmResetStudent": "Reset {{name}}'s points, badges, attendance and notes back to zero? This can't be undone.",
     "confirmResetClass": "Reset every student in \"{{className}}\" — points, badges, attendance and notes — back to zero? This can't be undone.",
-    "bulkImportHint": "Download the template, fill in one row per student, then upload it here. Only \"name\" is required.",
+    "bulkImportHint": "Download the template, fill in one row per student with the English name (nameEn) and the Arabic name (nameAr), then upload it here. Both are required.",
     "downloadTemplate": "Download template",
     "chooseFile": "Choose CSV file",
     "bulkErrorMissingName": "Missing name",
+    "bulkErrorMissingBoth": "Both English and Arabic names are required",
     "bulkImportDone": "Students added!",
     "importCount": "Add {{count}} student(s)",
     "parentPortalAccess": "Parent portal access",
@@ -150,9 +151,9 @@
     "group": "Group",
     "groupSet": "Put in group {{group}}",
     "groupClear": "Remove from group",
-    "nameAr": "Name in Arabic (optional)",
-    "nameEn": "Name in English (optional)",
-    "namesHint": "Enter one or both. They are printed on the student’s numbered card — Arabic first if both are given."
+    "nameAr": "Name in Arabic",
+    "nameEn": "Name in English",
+    "namesHint": "Both names are required. The student’s numbered card and the app show the Arabic name when the app is in Arabic, and the English name when it is in English."
   },
   "attendance": {
     "title": "Attendance",

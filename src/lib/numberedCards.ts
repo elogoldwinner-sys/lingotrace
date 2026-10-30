@@ -4,6 +4,7 @@ import card1 from "../assets/numbered-cards/card-1.png";
 import card2 from "../assets/numbered-cards/card-2.png";
 import card3 from "../assets/numbered-cards/card-3.png";
 import card4 from "../assets/numbered-cards/card-4.png";
+import { studentDisplayName } from "./studentName";
 
 const CARD_IMAGES: Record<number, string> = { 1: card1, 2: card2, 3: card3, 4: card4 };
 export const CARD_NUMBERS = [1, 2, 3, 4];
@@ -12,15 +13,11 @@ export const CARD_NUMBERS = [1, 2, 3, 4];
 export const CARD_ARTS: CardArt[] = CARD_NUMBERS.map((n) => ({ number: n, url: CARD_IMAGES[n] }));
 
 /**
- * What is written on a student's card: the Arabic and/or English name the
- * teacher entered (both → two lines, Arabic first), otherwise the student's
- * main name.
+ * What is written on a student's card: ONE name, in the language the user is
+ * using (Arabic UI → the Arabic name, English UI → the English name).
  */
-export function studentCardLines(student: StudentRecord): string[] {
-  const ar = student.nameAr?.trim();
-  const en = student.nameEn?.trim();
-  if (ar && en) return [ar, en];
-  return [ar || en || student.name.trim()];
+export function studentCardLines(student: StudentRecord, lang?: string): string[] {
+  return [studentDisplayName(student, lang)];
 }
 
 export interface ClassCardsPlan {
@@ -34,7 +31,7 @@ export interface ClassCardsPlan {
  * student's number is their position (1–4) in their group's name-sorted
  * list, so the card a student holds matches the number that is drawn.
  */
-export function planClassCards(students: StudentRecord[]): ClassCardsPlan {
+export function planClassCards(students: StudentRecord[], lang?: string): ClassCardsPlan {
   const items: CardItem[] = [];
   const skipped: StudentRecord[] = students.filter((s) => !s.group);
   const used = new Map<string, number>();
@@ -47,7 +44,7 @@ export function planClassCards(students: StudentRecord[]): ClassCardsPlan {
         skipped.push(student);
         return;
       }
-      const lines = studentCardLines(student);
+      const lines = studentCardLines(student, lang);
       // File names: "A-1 Name.png"; a repeated name gets a counter so nothing is overwritten.
       const base = `${group}-${art.number} ${lines.join(" ")}`.replace(/[\\/:*?"<>|]+/g, " ").replace(/\s+/g, " ").trim();
       const count = (used.get(base) || 0) + 1;

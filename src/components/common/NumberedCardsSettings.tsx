@@ -11,12 +11,11 @@ import type { ClassRecord, StudentRecord } from "../../types";
  * Teacher preferences → Numbered Heads cards. Two things live here:
  *  - the four blank number cards (print / ZIP), previously inside the
  *    Numbered Heads window, and
- *  - one card per student of a class with their name written on it (Arabic
- *    and/or English, whichever the teacher entered), all downloadable as a
+ *  - one card per student of a class with their name written on it (in the app language), all downloadable as a
  *    single ZIP or printed in one go.
  */
 export default function NumberedCardsSettings({ classes }: { classes: ClassRecord[] }) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const { profile } = useAuth();
   const logoUrl = profile?.schoolLogoURL;
 
@@ -38,7 +37,7 @@ export default function NumberedCardsSettings({ classes }: { classes: ClassRecor
     return subscribeToStudents(classId, setStudents);
   }, [classId]);
 
-  const plan = useMemo(() => planClassCards(students), [students]);
+  const plan = useMemo(() => planClassCards(students, i18n.language), [students, i18n.language]);
   const className = classes.find((c) => c.id === classId)?.name || "";
 
   async function run(key: string, action: () => Promise<{ logoApplied: boolean }>) {

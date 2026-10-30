@@ -7,6 +7,7 @@ import { awardPoints, awardPointsToMany } from "../../lib/services/pointsService
 import { POINTS_REASON_ICONS } from "../../lib/pointsReasons";
 import type { PointsReason } from "../../types";
 import { unlockSound } from "../../lib/sounds";
+import { studentDisplayName } from "../../lib/studentName";
 import card1 from "../../assets/numbered-cards/card-1.png";
 import card2 from "../../assets/numbered-cards/card-2.png";
 import card3 from "../../assets/numbered-cards/card-3.png";
@@ -76,7 +77,7 @@ export default function NumberedHeadsModal({
   /** Called after marks are saved (used for the on-screen "Perfect!" reinforcement). */
   onMarkSaved?: (amount: number) => void;
 }) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const [round, setRound] = useState<Round | null>(null);
   const [drawnNumbers, setDrawnNumbers] = useState<number[]>([]);
   const [lastNumber, setLastNumber] = useState<number | null>(null);
@@ -246,7 +247,7 @@ export default function NumberedHeadsModal({
                       >
                         {i + 1}
                       </span>
-                      <span className="truncate">{s.name}</span>
+                      <span className="truncate">{studentDisplayName(s, i18n.language)}</span>
                     </li>
                   );
                 })}
@@ -255,7 +256,7 @@ export default function NumberedHeadsModal({
               {target ? (
                 <div className="space-y-2">
                   <p className="text-center text-xs text-cream-600">
-                    {t("numberedHeads.addMarkFor", { name: target.name })}
+                    {t("numberedHeads.addMarkFor", { name: studentDisplayName(target, i18n.language) })}
                   </p>
                   <div className="flex flex-wrap items-center justify-center gap-2">
                     {QUICK_MARKS.map((m) => (
