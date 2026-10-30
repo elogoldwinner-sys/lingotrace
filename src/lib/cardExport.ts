@@ -17,7 +17,7 @@ export interface CardItem {
 /** Output is drawn at 2× the artwork's size so the school logo stays crisp when printed. */
 const OUT_SCALE = 2;
 /** School logo badge (bottom-right corner): centre and diameter as fractions of card width/height/width. */
-const BADGE = { cx: 0.752, cy: 0.805, d: 0.33 };
+const BADGE = { cx: 0.775, cy: 0.838, d: 0.28 };
 /** The logo fills this share of the badge's inner (white) circle. */
 const BADGE_LOGO_FILL = 0.74;
 const GOLD = { light: "#F6D66B", mid: "#D4A62A", dark: "#A87A12" };
