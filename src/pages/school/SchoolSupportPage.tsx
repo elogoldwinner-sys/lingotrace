@@ -6,7 +6,7 @@ import Spinner from "../../components/common/Spinner";
 import TicketThread, { StatusPill, TICKET_CATEGORIES, fmtDateTime, useTicketLabels } from "../../components/support/ticketUi";
 import { useAuth } from "../../contexts/AuthContext";
 import { useSchool } from "../../contexts/SchoolContext";
-import { FEATURE_BY_KEY, type FeatureKey } from "../../lib/features";
+import { FEATURE_BY_KEY, LIMIT_KEYS, LIMIT_META, type FeatureKey, type LimitKey } from "../../lib/features";
 import { createTicket, subscribeSchoolTickets } from "../../lib/services/ticketsService";
 import type { Ticket, TicketCategory } from "../../types";
 
@@ -52,6 +52,21 @@ export default function SchoolSupportPage() {
     setParams(next, { replace: true });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [wantedFeature]);
+
+  // Arrived from a reached limit → open the form asking for a higher cap.
+  const wantedLimit = params.get("limit") as LimitKey | null;
+  useEffect(() => {
+    if (!wantedLimit || !LIMIT_KEYS.includes(wantedLimit)) return;
+    setComposing(true);
+    setCategory("billing");
+    setFeatureKey(undefined);
+    setSubject(`${t("tk.limitSubject", "Please raise our limit")}: ${t(`adm.limit.${wantedLimit}`, LIMIT_META[wantedLimit].label)}`);
+    setMessage(t("tk.limitBody", "Hello, we have reached this limit at our school. Please raise it and let us know the next steps."));
+    const next = new URLSearchParams(params);
+    next.delete("limit");
+    setParams(next, { replace: true });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [wantedLimit]);
 
   if (!staff || !school || !isPrincipal || !user) return <Navigate to="/school" replace />;
   const me = { uid: user.uid, name: user.displayName || school.principalName || user.email || "" };

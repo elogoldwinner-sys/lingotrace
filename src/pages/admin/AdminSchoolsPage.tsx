@@ -4,7 +4,7 @@ import { Link } from "react-router-dom";
 import { Search } from "lucide-react";
 import Spinner from "../../components/common/Spinner";
 import { useAuth } from "../../contexts/AuthContext";
-import { allFeaturesOff, allFeaturesOn, FEATURE_KEYS } from "../../lib/features";
+import { allFeaturesOff, allFeaturesOn, FEATURE_KEYS, FREE_LIMITS, UNLIMITED_LIMITS } from "../../lib/features";
 import { saveEntitlements } from "../../lib/services/entitlementsService";
 import { toMillis } from "../../lib/timestamps";
 import { isActiveTicket, useAdminData } from "./useAdminData";
@@ -49,7 +49,7 @@ export default function AdminSchoolsPage() {
     setMsg("");
     try {
       for (const s of targets) {
-        await saveEntitlements(s, { plan: kind, features: kind === "paid" ? allFeaturesOn() : allFeaturesOff() }, user.email, `${label} (bulk)`);
+        await saveEntitlements(s, { plan: kind, features: kind === "paid" ? allFeaturesOn() : allFeaturesOff(), limits: kind === "paid" ? UNLIMITED_LIMITS : FREE_LIMITS }, user.email, `${label} (bulk)`);
       }
       setPicked(new Set());
       await reload();

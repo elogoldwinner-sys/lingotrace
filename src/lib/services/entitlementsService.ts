@@ -13,7 +13,7 @@ import {
 } from "firebase/firestore";
 import { db } from "../firebase";
 import { toMillis } from "../timestamps";
-import { allFeaturesOff, FEATURE_KEYS, type FeatureMap } from "../features";
+import { allFeaturesOff, FEATURE_KEYS, FREE_LIMITS, LIMIT_KEYS, type FeatureMap, type LimitMap } from "../features";
 import type { AdminLogEntry, SchoolEntitlements, SchoolPlan } from "../../types";
 
 /** The plain default: free plan, nothing extra switched on. */
@@ -21,6 +21,7 @@ export const defaultEntitlements = (schoolId: string): SchoolEntitlements => ({
   schoolId,
   plan: "free",
   features: allFeaturesOff(),
+  limits: { ...FREE_LIMITS },
 });
 
 function normalise(schoolId: string, data: Record<string, unknown> | undefined): SchoolEntitlements {
@@ -28,10 +29,19 @@ function normalise(schoolId: string, data: Record<string, unknown> | undefined):
   const raw = (data.features || {}) as Record<string, unknown>;
   const features = allFeaturesOff();
   for (const k of FEATURE_KEYS) features[k] = raw[k] === true;
+  // A missing limits map means "basic limits"; an explicit null means unlimited.
+  const rawLimits = (data.limits || {}) as Record<string, unknown>;
+  const limits = { ...FREE_LIMITS } as LimitMap;
+  for (const k of LIMIT_KEYS) {
+    const v = rawLimits[k];
+    if (v === null) limits[k] = null;
+    else if (typeof v === "number" && v >= 0) limits[k] = Math.floor(v);
+  }
   return {
     schoolId,
     plan: data.plan === "paid" ? "paid" : "free",
     features,
+    limits,
     updatedAt: data.updatedAt ? toMillis(data.updatedAt as never) : undefined,
     updatedBy: typeof data.updatedBy === "string" ? data.updatedBy : undefined,
   };
@@ -59,7 +69,7 @@ export async function listAllEntitlements(): Promise<Record<string, SchoolEntitl
 /** Admin only (enforced by the security rules). Writes the whole set so the doc never holds stale keys. */
 export async function saveEntitlements(
   school: { id: string; name: string },
-  input: { plan: SchoolPlan; features: FeatureMap },
+  input: { plan: SchoolPlan; features: FeatureMap; limits: LimitMap },
   adminEmail: string,
   logDetail: string
 ) {
@@ -68,6 +78,7 @@ export async function saveEntitlements(
     schoolId: school.id,
     plan: input.plan,
     features,
+    limits: Object.fromEntries(LIMIT_KEYS.map((k) => [k, input.limits[k] ?? null])),
     updatedAt: serverTimestamp(),
     updatedBy: adminEmail,
   });

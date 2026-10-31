@@ -3,7 +3,7 @@ import { useTranslation } from "react-i18next";
 import { Link } from "react-router-dom";
 import { Plus, Trash2, Link2, Check, UserPlus, RefreshCw, Pencil } from "lucide-react";
 import { useAuth } from "../contexts/AuthContext";
-import { useSchool } from "../contexts/SchoolContext";
+import { useLimit, useSchool } from "../contexts/SchoolContext";
 import { GRADES, SECTIONS, classKeyOf } from "../lib/school/scope";
 import {
   subscribeToClassesAndSubjects,
@@ -30,6 +30,7 @@ export default function ClassesPage() {
   const { user, profile } = useAuth();
   const { membership, school } = useSchool();
   // A teacher who asked to join a school picks a grade + section (and a subject from the principal's list) for every class.
+  const maxClasses = useLimit("maxClassesPerTeacher");
   const inSchool = !!membership && !!school && membership.schoolId === school.id && membership.status !== "rejected";
   const schoolSubjects = inSchool ? school!.subjects : [];
   const [placeEdit, setPlaceEdit] = useState<ClassRecord | null>(null);
@@ -186,6 +187,7 @@ export default function ClassesPage() {
   async function handleCreate(e: React.FormEvent) {
     e.preventDefault();
     if (!user) return;
+    if (classLimitReached) return;
     setSubmitting(true);
     try {
       if (!newAvatarGender) return;
@@ -236,6 +238,10 @@ export default function ClassesPage() {
     }
   }
 
+  // Only the classes this teacher runs themselves count towards the school's per-teacher cap.
+  const myClassCount = classes.filter((c) => c.teacherId === user?.uid).length;
+  const classLimitReached = maxClasses !== null && myClassCount >= maxClasses;
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -245,12 +251,21 @@ export default function ClassesPage() {
             setNewSubject(inSchool ? membership?.subject || "" : "");
             setModalOpen(true);
           }}
-          className="btn-primary"
+          disabled={classLimitReached}
+          title={classLimitReached ? t("limits.classesReached", { defaultValue: "Your school's plan allows {{n}} classes per teacher. Ask your principal to request more.", n: maxClasses }) : undefined}
+          className="btn-primary disabled:cursor-not-allowed disabled:opacity-50"
         >
           <Plus size={16} />
           {t("classes.newClass")}
         </button>
       </div>
+
+      {maxClasses !== null && (
+        <p className={`rounded-lg border px-3 py-2 text-sm font-semibold ${classLimitReached ? "border-gold/40 bg-gold-50 text-navy" : "border-cream-400 bg-cream-100 text-navy"}`}>
+          {t("limits.classesUsage", "Classes in your school's plan")}: {myClassCount}/{maxClasses}
+          {classLimitReached && ` — ${t("limits.classesReached", { defaultValue: "Your school's plan allows {{n}} classes per teacher. Ask your principal to request more.", n: maxClasses })}`}
+        </p>
+      )}
 
       {inviteError && (
         <div className="rounded-lg bg-red-50 border border-red-200 px-3 py-2 text-sm text-red-700">

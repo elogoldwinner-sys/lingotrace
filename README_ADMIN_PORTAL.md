@@ -16,9 +16,14 @@
 | Exams & Games | Sidebar item faded, page inert; rules block creating/editing assignments |
 | Numbered Heads Together | Button in live session faded; numbered-cards settings faded |
 | Edit mark reasons | Preferences reasons card faded; "Add my own" faded; everyone gets the standard reasons |
+| Certificates | The "Certificate" button on the Students page is faded (certificates already issued stay visible in the student/parent portals) |
 
 Basic features (everything else) always work. Teachers who are not part of a school are not limited.
 The plan label (Free/Paid) is only a label; the switches decide access.
+
+## Limits (Admin → a school → Limits)
+Teachers in the school (principal can't approve more), classes per teacher (New class disabled), students per class (Add / bulk import disabled). Blank = "Unlimited". Basic plan defaults: 5 / 6 / 40 (`FREE_LIMITS` in `src/lib/features.ts`); the Paid preset sets all to unlimited.
+Limits only stop NEW additions; nothing existing is removed. Firestore rules can't count documents, so limits are enforced in the app, not in the rules. Students who join through a class invite link are not counted against the cap. When a principal hits the teacher cap, a "Request access" link opens a pre-filled ticket.
 
 ## Tickets
 Principal → School portal → **Support** (new ticket, follow replies, close). Locked features have a "Request access" badge that opens a pre-filled ticket. Admin → **Tickets** (filters, search, reply, change status). Red dots show unread on both sides.

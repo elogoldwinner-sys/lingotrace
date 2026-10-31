@@ -13,6 +13,7 @@ export const FEATURE_KEYS = [
   "examsGames",
   "numberedHeads",
   "editReasons",
+  "certificates",
 ] as const;
 
 export type FeatureKey = (typeof FEATURE_KEYS)[number];
@@ -70,6 +71,12 @@ export const FEATURES: FeatureMeta[] = [
     description: "Teachers can hide built-in reasons and add their own for giving / deducting marks.",
     audience: "teachers",
   },
+  {
+    key: "certificates",
+    label: "Certificates",
+    description: "Teachers can create and download student certificates.",
+    audience: "teachers",
+  },
 ];
 
 export const FEATURE_BY_KEY = Object.fromEntries(FEATURES.map((f) => [f.key, f])) as Record<FeatureKey, FeatureMeta>;
@@ -81,3 +88,23 @@ export const allFeaturesOn = (): Record<FeatureKey, boolean> =>
 /** Everything off — the basic (free) plan. */
 export const allFeaturesOff = (): Record<FeatureKey, boolean> =>
   Object.fromEntries(FEATURE_KEYS.map((k) => [k, false])) as Record<FeatureKey, boolean>;
+
+/* ───────────────────────── Numeric limits ───────────────────────── */
+
+/**
+ * Per-school caps the admin can set. `null` = unlimited. They only stop NEW additions — nothing that already exists
+ * is ever removed. Firestore rules cannot count documents, so these are enforced in the app (see useLimit).
+ */
+export const LIMIT_KEYS = ["maxTeachers", "maxClassesPerTeacher", "maxStudentsPerClass"] as const;
+export type LimitKey = (typeof LIMIT_KEYS)[number];
+export type LimitMap = Record<LimitKey, number | null>;
+
+export const LIMIT_META: Record<LimitKey, { label: string; description: string }> = {
+  maxTeachers: { label: "Teachers in the school", description: "How many teachers the principal can approve." },
+  maxClassesPerTeacher: { label: "Classes per teacher", description: "How many classes each teacher can create." },
+  maxStudentsPerClass: { label: "Students per class", description: "How many students a teacher can add to one class." },
+};
+
+/** What a school on the basic plan gets (also used when a school has no plan record yet). */
+export const FREE_LIMITS: LimitMap = { maxTeachers: 5, maxClassesPerTeacher: 6, maxStudentsPerClass: 40 };
+export const UNLIMITED_LIMITS: LimitMap = { maxTeachers: null, maxClassesPerTeacher: null, maxStudentsPerClass: null };

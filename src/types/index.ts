@@ -1,4 +1,4 @@
-import type { FeatureMap } from "../lib/features";
+import type { FeatureMap, LimitMap } from "../lib/features";
 export type UserRole = "teacher" | "admin" | "student" | "parent";
 
 export interface UserProfile {
@@ -587,6 +587,8 @@ export interface SchoolEntitlements {
   schoolId: string;
   plan: SchoolPlan;
   features: FeatureMap;
+  /** Numeric caps; null = unlimited. */
+  limits: LimitMap;
   updatedAt?: number;
   updatedBy?: string;
 }

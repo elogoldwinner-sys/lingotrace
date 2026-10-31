@@ -1,9 +1,9 @@
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Navigate } from "react-router-dom";
+import { Link, Navigate } from "react-router-dom";
 import { Check, X, Trash2 } from "lucide-react";
 import Spinner from "../../components/common/Spinner";
-import { useSchool } from "../../contexts/SchoolContext";
+import { useLimit, useSchool } from "../../contexts/SchoolContext";
 import { useSchoolData } from "../../components/school/SchoolDataContext";
 import { detachTeacherClasses, removeMembership, setMembershipStatus, syncClassesToSchool } from "../../lib/services/schoolService";
 import type { SchoolTeacher } from "../../types";
@@ -16,6 +16,7 @@ export default function SchoolTeachersPage() {
   const [busyId, setBusyId] = useState("");
   const [error, setError] = useState("");
   const isPrincipal = staff?.role === "principal";
+  const maxTeachers = useLimit("maxTeachers");
 
   if (staff?.role !== "principal" && staff?.role !== "departmentHead") return <Navigate to="/school" replace />;
   if (loading) return <Spinner />;
@@ -47,12 +48,28 @@ export default function SchoolTeachersPage() {
 
   const pending = teachers.filter((m) => m.status === "pending");
   const approved = teachers.filter((m) => m.status === "approved").sort((a, b) => a.name.localeCompare(b.name));
+  const teacherLimitReached = maxTeachers !== null && approved.length >= maxTeachers;
   const countClasses = (uid: string) => classes.filter((c) => c.teacherId === uid).length;
 
   return (
     <div className="space-y-6">
       <h1 className="text-2xl font-semibold text-navy">{t("sp.teachersTitle", "Teachers")}</h1>
       {error && <p className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">{error}</p>}
+
+      {maxTeachers !== null && (
+        <p className={`rounded-lg border px-3 py-2 text-sm font-semibold ${teacherLimitReached ? "border-gold/40 bg-gold-50 text-navy" : "border-cream-400 bg-cream-100 text-navy"}`}>
+          {t("sp.teacherUsage", "Teachers in your plan")}: {approved.length}/{maxTeachers}
+          {teacherLimitReached && isPrincipal && (
+            <>
+              {" — "}
+              {t("sp.teacherLimitReached", "limit reached, you can't approve more teachers.")}{" "}
+              <Link to="/school/support?limit=maxTeachers" className="underline">
+                {t("feat.requestAccess", "Request access")}
+              </Link>
+            </>
+          )}
+        </p>
+      )}
 
       {isPrincipal && (
         <section className="space-y-2">
@@ -70,7 +87,7 @@ export default function SchoolTeachersPage() {
                   </p>
                 </div>
                 <div className="flex gap-2">
-                  <button className="btn-primary px-3 py-1.5 text-sm" disabled={busyId === m.uid} onClick={() => act(m, "approve")}>
+                  <button className="btn-primary px-3 py-1.5 text-sm disabled:cursor-not-allowed" disabled={busyId === m.uid || teacherLimitReached} title={teacherLimitReached ? t("sp.teacherLimitReached", "limit reached, you can't approve more teachers.") : undefined} onClick={() => act(m, "approve")}>
                     <Check size={14} />
                     {t("sp.approve", "Approve")}
                   </button>

@@ -6,7 +6,7 @@ import Spinner from "../../components/common/Spinner";
 import Switch from "../../components/common/Switch";
 import { StatusPill, fmtDateTime } from "../../components/support/ticketUi";
 import { useAuth } from "../../contexts/AuthContext";
-import { allFeaturesOff, allFeaturesOn, FEATURES, type FeatureKey } from "../../lib/features";
+import { allFeaturesOff, allFeaturesOn, FEATURES, FREE_LIMITS, LIMIT_KEYS, LIMIT_META, UNLIMITED_LIMITS, type FeatureKey, type LimitKey, type LimitMap } from "../../lib/features";
 import { getAdminNote, getEntitlements, listAdminLog, saveAdminNote, saveEntitlements } from "../../lib/services/entitlementsService";
 import { getSchool, listMemberships, listStaff } from "../../lib/services/schoolService";
 import { subscribeAllTickets } from "../../lib/services/ticketsService";
@@ -64,14 +64,14 @@ export default function AdminSchoolDetailPage() {
     return subscribeAllTickets((all) => setTickets(all.filter((x) => x.schoolId === id)));
   }, [load, id]);
 
-  async function apply(plan: SchoolPlan, features: SchoolEntitlements["features"], detail: string) {
+  async function apply(plan: SchoolPlan, features: SchoolEntitlements["features"], detail: string, limits: LimitMap = ent!.limits) {
     if (!school || !user?.email) return;
     const before = ent;
     setBusy(true);
     setError("");
-    setEnt({ ...(ent as SchoolEntitlements), plan, features }); // optimistic; rolled back below if the write fails
+    setEnt({ ...(ent as SchoolEntitlements), plan, features, limits }); // optimistic; rolled back below if the write fails
     try {
-      await saveEntitlements(school, { plan, features }, user.email, detail);
+      await saveEntitlements(school, { plan, features, limits }, user.email, detail);
       setLog(await listAdminLog(id).catch(() => log));
     } catch (err) {
       console.error("Admin: saving the plan failed", err);
@@ -129,11 +129,11 @@ export default function AdminSchoolDetailPage() {
           <div className="flex flex-wrap items-center justify-between gap-2 pb-2">
             <h2 className="label-eyebrow">{t("adm.featuresTitle", "Features for this school")}</h2>
             <div className="flex flex-wrap gap-2">
-              <button className="btn-primary py-1.5 text-xs" disabled={busy} onClick={() => apply("paid", allFeaturesOn(), t("adm.presetPaid", "Paid preset (everything on)"))}>
+              <button className="btn-primary py-1.5 text-xs" disabled={busy} onClick={() => apply("paid", allFeaturesOn(), t("adm.presetPaid", "Paid preset (everything on)"), UNLIMITED_LIMITS)}>
                 <Unlock size={13} />
                 {t("adm.presetPaid", "Paid preset (everything on)")}
               </button>
-              <button className="btn-secondary py-1.5 text-xs" disabled={busy} onClick={() => apply("free", allFeaturesOff(), t("adm.presetFree", "Free preset (basic only)"))}>
+              <button className="btn-secondary py-1.5 text-xs" disabled={busy} onClick={() => apply("free", allFeaturesOff(), t("adm.presetFree", "Free preset (basic only)"), FREE_LIMITS)}>
                 <Lock size={13} />
                 {t("adm.presetFree", "Free preset (basic only)")}
               </button>
@@ -176,6 +176,24 @@ export default function AdminSchoolDetailPage() {
                 </div>
               );
             })}
+          </div>
+          <div className="mt-4 border-t border-cream-300 pt-3">
+            <h3 className="label-eyebrow mb-1">{t("adm.limitsTitle", "Limits")}</h3>
+            <p className="mb-2 text-xs text-cream-600">
+              {t("adm.limitsHelp", "Caps only stop new additions — nothing that already exists is removed. Leave “Unlimited” ticked for no cap.")}
+            </p>
+            {LIMIT_KEYS.map((k) => (
+              <LimitRow
+                key={k}
+                limitKey={k}
+                value={ent.limits[k]}
+                disabled={busy}
+                label={t(`adm.limit.${k}`, LIMIT_META[k].label)}
+                hint={t(`adm.limitHint.${k}`, LIMIT_META[k].description)}
+                unlimitedLabel={t("adm.unlimited", "Unlimited")}
+                onSave={(v) => apply(ent.plan, ent.features, `${t(`adm.limit.${k}`, LIMIT_META[k].label)}: ${v === null ? t("adm.unlimited", "Unlimited") : v}`, { ...ent.limits, [k]: v })}
+              />
+            ))}
           </div>
           <p className="pt-2 text-xs text-cream-600">
             {t("adm.disableNote", "Switching a feature off fades it for the school straight away. Staff added earlier keep their record but can't sign in to the school portal while their role is off.")}
@@ -266,6 +284,61 @@ export default function AdminSchoolDetailPage() {
             ))
           )}
         </section>
+      </div>
+    </div>
+  );
+}
+
+/** One cap: a number box + "Unlimited" tick, saved with the button (so typing doesn't write on every key). */
+function LimitRow({
+  limitKey,
+  value,
+  disabled,
+  label,
+  hint,
+  unlimitedLabel,
+  onSave,
+}: {
+  limitKey: LimitKey;
+  value: number | null;
+  disabled: boolean;
+  label: string;
+  hint: string;
+  unlimitedLabel: string;
+  onSave: (v: number | null) => void;
+}) {
+  const { t } = useTranslation();
+  const [unlimited, setUnlimited] = useState(value === null);
+  const [num, setNum] = useState(value === null ? "" : String(value));
+  useEffect(() => {
+    setUnlimited(value === null);
+    setNum(value === null ? "" : String(value));
+  }, [value]);
+  const parsed = unlimited ? null : Math.max(0, Math.floor(Number(num)));
+  const dirty = unlimited ? value !== null : num !== "" && Number.isFinite(parsed) && parsed !== value;
+  return (
+    <div className="flex flex-wrap items-center justify-between gap-3 py-2">
+      <div className="min-w-0">
+        <p className="font-semibold text-navy">{label}</p>
+        <p className="text-xs text-cream-600">{hint}</p>
+      </div>
+      <div className="flex items-center gap-2">
+        <input
+          type="number"
+          min={0}
+          aria-label={limitKey}
+          className="input-field w-24 py-1.5"
+          value={num}
+          disabled={unlimited || disabled}
+          onChange={(e) => setNum(e.target.value)}
+        />
+        <label className="flex items-center gap-1 text-xs font-semibold text-navy">
+          <input type="checkbox" checked={unlimited} disabled={disabled} onChange={(e) => setUnlimited(e.target.checked)} />
+          {unlimitedLabel}
+        </label>
+        <button className="btn-secondary py-1 text-xs" disabled={!dirty || disabled} onClick={() => onSave(parsed)}>
+          {t("common.save")}
+        </button>
       </div>
     </div>
   );

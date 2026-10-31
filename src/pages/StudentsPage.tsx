@@ -76,6 +76,7 @@ import { avatarPool, takenKeys } from "../lib/avatars";
 import StudentReportModal from "../components/reports/StudentReportModal";
 import ClassStatsModal, { type StatsTab } from "../components/reports/ClassStatsModal";
 import FeatureGate from "../components/common/FeatureGate";
+import { useLimit } from "../contexts/SchoolContext";
 import CertificateModal from "../components/common/CertificateModal";
 import RichText from "../components/common/RichText";
 import { reasonsForAmount, POSITIVE_POINTS_REASONS } from "../lib/pointsReasons";
@@ -113,6 +114,7 @@ export default function StudentsPage() {
   const [classes, setClasses] = useState<ClassRecord[]>([]);
   const [selectedClassId, setSelectedClassId] = useState(preselectedClassId);
   const [students, setStudents] = useState<StudentRecord[]>([]);
+  const maxStudents = useLimit("maxStudentsPerClass");
   const [loading, setLoading] = useState(true);
   const [ranking, setRanking] = useState<ClassRanking | null>(null);
   const [rankingError, setRankingError] = useState(false);
@@ -352,6 +354,7 @@ export default function StudentsPage() {
   async function handleAddStudent(e: React.FormEvent) {
     e.preventDefault();
     if (!selectedClassId || !addNameEn.trim() || !addNameAr.trim()) return;
+    if (maxStudents !== null && students.length >= maxStudents) return;
     setAddSubmitting(true);
     try {
       await createStudentManual({
@@ -414,10 +417,13 @@ export default function StudentsPage() {
     reader.readAsText(file);
   }
 
+  const bulkOverLimit = maxStudents !== null && students.length + bulkRows.filter((r) => r.name && !r.error).length > maxStudents;
+
   async function handleBulkImport() {
     if (!selectedClassId) return;
     const validRows = bulkRows.filter((r) => r.name && !r.error);
     if (validRows.length === 0) return;
+    if (maxStudents !== null && students.length + validRows.length > maxStudents) return;
     setBulkSubmitting(true);
     try {
       await createStudentsBulk(
@@ -614,14 +620,14 @@ export default function StudentsPage() {
       <div className="flex flex-col gap-3">
         <h1 className="whitespace-nowrap text-2xl font-semibold text-navy">{t("students.title")}</h1>
         <div className="grid w-full grid-cols-2 gap-2 sm:flex sm:flex-wrap [&>button]:w-full [&>button]:justify-center sm:[&>button]:w-auto">
-          <button onClick={() => setAddModalOpen(true)} className="btn-primary text-sm py-2 px-3" disabled={!selectedClassId}>
+          <button onClick={() => setAddModalOpen(true)} className="btn-primary text-sm py-2 px-3 disabled:cursor-not-allowed" disabled={!selectedClassId || (maxStudents !== null && students.length >= maxStudents)}>
             <Plus size={16} />
             {t("students.addStudent")}
           </button>
           <button
             onClick={() => setBulkModalOpen(true)}
-            className={`btn-secondary text-sm py-2 px-3 ${SOLID_TONES.teal}`}
-            disabled={!selectedClassId}
+            className={`btn-secondary text-sm py-2 px-3 disabled:cursor-not-allowed ${SOLID_TONES.teal}`}
+            disabled={!selectedClassId || (maxStudents !== null && students.length >= maxStudents)}
           >
             <Upload size={16} />
             {t("students.bulkImport")}
@@ -659,6 +665,13 @@ export default function StudentsPage() {
 
       <ClassSelector classes={classes} selectedClassId={selectedClassId} onSelect={setSelectedClassId} />
 
+      {maxStudents !== null && selectedClassId && (
+        <p className={`rounded-lg border px-3 py-2 text-sm font-semibold ${students.length >= maxStudents ? "border-gold/40 bg-gold-50 text-navy" : "border-cream-400 bg-cream-100 text-navy"}`}>
+          {t("limits.studentsUsage", "Students in this class")}: {students.length}/{maxStudents}
+          {students.length >= maxStudents && ` — ${t("limits.studentsReached", { defaultValue: "Your school's plan allows {{n}} students per class. Ask your principal to request more.", n: maxStudents })}`}
+        </p>
+      )}
+
       <WeeklyChampions
         ranking={ranking}
         classLabel={classes.find((c) => c.id === selectedClassId)?.name}
@@ -694,14 +707,16 @@ export default function StudentsPage() {
               <span className="text-sm text-cream-600">
                 {t("students.selectedCount", { count: selectedIds.size })}
               </span>
-              <button
-                onClick={() => setCertificateOpen(true)}
-                disabled={selectedIds.size === 0}
-                className="inline-flex items-center gap-1.5 rounded-lg bg-gold px-3 py-2 text-sm font-semibold text-white transition-colors hover:bg-gold-600 disabled:opacity-50"
-              >
-                <Award size={14} />
-                {t("certificate.button")}
-              </button>
+              <FeatureGate feature="certificates" as="span">
+                <button
+                  onClick={() => setCertificateOpen(true)}
+                  disabled={selectedIds.size === 0}
+                  className="inline-flex items-center gap-1.5 rounded-lg bg-gold px-3 py-2 text-sm font-semibold text-white transition-colors hover:bg-gold-600 disabled:opacity-50"
+                >
+                  <Award size={14} />
+                  {t("certificate.button")}
+                </button>
+              </FeatureGate>
               <button
                 onClick={handleDeleteSelected}
                 disabled={selectedIds.size === 0 || bulkDeleting}
@@ -1296,6 +1311,11 @@ export default function StudentsPage() {
 
           {bulkDone && <p className="text-sm text-green-700">{t("students.bulkImportDone")}</p>}
 
+          {bulkOverLimit && (
+            <p className="rounded-lg border border-gold/40 bg-gold-50 px-3 py-2 text-sm font-semibold text-navy">
+              {t("limits.bulkOver", { defaultValue: "This file would take the class over your plan's limit of {{n}} students.", n: maxStudents })}
+            </p>
+          )}
           {!bulkDone && (
             <div className="flex justify-end gap-2">
               <button type="button" onClick={closeBulkModal} className="btn-secondary">
@@ -1304,8 +1324,8 @@ export default function StudentsPage() {
               <button
                 type="button"
                 onClick={handleBulkImport}
-                disabled={bulkSubmitting || bulkRows.filter((r) => r.name && !r.error).length === 0}
-                className="btn-primary"
+                disabled={bulkSubmitting || bulkRows.filter((r) => r.name && !r.error).length === 0 || bulkOverLimit}
+                className="btn-primary disabled:cursor-not-allowed"
               >
                 {bulkSubmitting ? t("common.loading") : t("students.importCount", {
                   count: bulkRows.filter((r) => r.name && !r.error).length,

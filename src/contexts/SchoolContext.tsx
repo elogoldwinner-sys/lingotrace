@@ -1,7 +1,7 @@
 import { createContext, useCallback, useContext, useEffect, useRef, useState, type ReactNode } from "react";
 import { useAuth } from "./AuthContext";
 import { getEntitlements } from "../lib/services/entitlementsService";
-import type { FeatureKey } from "../lib/features";
+import type { FeatureKey, LimitKey } from "../lib/features";
 import {
   getMembership,
   getSchool,
@@ -121,6 +121,18 @@ export function useFeature(key: FeatureKey): boolean {
   const governed = !!school && (!!staff || (membership?.status === "approved" && membership.schoolId === school.id));
   if (!governed) return true;
   return entitlements?.features[key] === true;
+}
+
+/**
+ * The cap the admin set for this person's school (null = unlimited). Teachers outside a school are never capped.
+ * While loading nothing is capped. Enforced in the app only — Firestore rules can't count documents.
+ */
+export function useLimit(key: LimitKey): number | null {
+  const { school, staff, membership, entitlements, loading } = useSchool();
+  if (loading) return null;
+  const governed = !!school && (!!staff || (membership?.status === "approved" && membership.schoolId === school.id));
+  if (!governed) return null;
+  return entitlements ? entitlements.limits[key] : null;
 }
 
 /** Is the current person governed by a school plan at all, and are they its principal? (Decides the lock tooltip.) */

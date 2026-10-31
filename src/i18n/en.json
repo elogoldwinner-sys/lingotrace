@@ -949,7 +949,9 @@
     "transferConfirm": "Transfer the principal role to {{email}}? You will lose principal access to {{school}} immediately.",
     "transferError": "Couldn't transfer the role. Check the Gmail — it may already be used for another school.",
     "editGradeSection": "Change grade / section",
-    "setGradeSection": "Set grade and section"
+    "setGradeSection": "Set grade and section",
+    "teacherUsage": "Teachers in your plan",
+    "teacherLimitReached": "limit reached, you can't approve more teachers."
   },
   "feat": {
     "locked": "Locked",
@@ -989,6 +991,10 @@
     "editReasons": {
       "label": "Edit mark reasons",
       "description": "Teachers can hide built-in reasons and add their own for giving / deducting marks."
+    },
+    "certificates": {
+      "label": "Certificates",
+      "description": "Teachers can create and download student certificates."
     }
   },
   "adm": {
@@ -1050,7 +1056,20 @@
     "filterAll": "All",
     "filterUnread": "Needs reply",
     "backToList": "All tickets",
-    "pickTicket": "Choose a ticket to read and reply."
+    "pickTicket": "Choose a ticket to read and reply.",
+    "limitsTitle": "Limits",
+    "limitsHelp": "Caps only stop new additions — nothing that already exists is removed. Leave “Unlimited” ticked for no cap.",
+    "unlimited": "Unlimited",
+    "limit": {
+      "maxTeachers": "Teachers in the school",
+      "maxClassesPerTeacher": "Classes per teacher",
+      "maxStudentsPerClass": "Students per class"
+    },
+    "limitHint": {
+      "maxTeachers": "How many teachers the principal can approve.",
+      "maxClassesPerTeacher": "How many classes each teacher can create.",
+      "maxStudentsPerClass": "How many students a teacher can add to one class."
+    }
   },
   "tk": {
     "cat": {
@@ -1084,6 +1103,15 @@
     "none": "You haven't sent any tickets yet.",
     "pick": "Choose a ticket to read the conversation.",
     "requestSubject": "Please enable",
-    "requestBody": "Hello, we would like to use this feature at our school. Please enable it for us and let us know the next steps."
+    "requestBody": "Hello, we would like to use this feature at our school. Please enable it for us and let us know the next steps.",
+    "limitSubject": "Please raise our limit",
+    "limitBody": "Hello, we have reached this limit at our school. Please raise it and let us know the next steps."
+  },
+  "limits": {
+    "classesUsage": "Classes in your school's plan",
+    "classesReached": "Your school's plan allows {{n}} classes per teacher. Ask your principal to request more.",
+    "studentsUsage": "Students in this class",
+    "studentsReached": "Your school's plan allows {{n}} students per class. Ask your principal to request more.",
+    "bulkOver": "This file would take the class over your plan's limit of {{n}} students."
   }
 }
