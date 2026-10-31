@@ -6,6 +6,7 @@ import Modal from "../common/Modal";
 import Spinner from "../common/Spinner";
 import { db } from "../../lib/firebase";
 import { useAuth } from "../../contexts/AuthContext";
+import { useSubjectCompareAllowed } from "../../contexts/SchoolContext";
 import {
   bucketize,
   describePeriod,
@@ -478,6 +479,8 @@ export default function ClassStatsModal({
 }) {
   const { t } = useTranslation();
   const { user, profile } = useAuth();
+  // The school principal can switch "compare across subjects" off for the school's teachers.
+  const subjectCompareAllowed = useSubjectCompareAllowed();
   const [tab, setTab] = useState<StatsTab>(initialTab);
   const [classId, setClassId] = useState(defaultClassId);
   const [compareIds, setCompareIds] = useState<Set<string>>(new Set());
@@ -495,7 +498,7 @@ export default function ClassStatsModal({
 
   useEffect(() => {
     if (!open) return;
-    setTab(initialTab);
+    setTab(initialTab === "subjects" && !subjectCompareAllowed ? "students" : initialTab);
     setClassId(defaultClassId || classes[0]?.id || "");
     setCompareIds(new Set(classes.map((c) => c.id)));
     setStudentKey("");
@@ -563,7 +566,7 @@ export default function ClassStatsModal({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, user, classes]);
 
-  const hasSubjects = !!data && data.groups.length > 0;
+  const hasSubjects = subjectCompareAllowed && !!data && data.groups.length > 0;
   const group = data?.groups.find((g) => g.main.id === groupId) || data?.groups.find((g) => g.main.id === defaultClassId) || data?.groups[0];
   const cls = classes.find((c) => c.id === classId);
   const valid = isPeriodValid(period);

@@ -3,6 +3,8 @@ import { useTranslation } from "react-i18next";
 import { Link } from "react-router-dom";
 import { Plus, Trash2, Link2, Check, UserPlus, RefreshCw, Pencil } from "lucide-react";
 import { useAuth } from "../contexts/AuthContext";
+import { useSchool } from "../contexts/SchoolContext";
+import { GRADES, SECTIONS, classKeyOf } from "../lib/school/scope";
 import {
   subscribeToClassesAndSubjects,
   createClass,
@@ -25,6 +27,12 @@ import Spinner from "../components/common/Spinner";
 export default function ClassesPage() {
   const { t } = useTranslation();
   const { user, profile } = useAuth();
+  const { membership, school } = useSchool();
+  // A teacher who asked to join a school picks a grade + section (and a subject from the principal's list) for every class.
+  const inSchool = !!membership && !!school && membership.schoolId === school.id && membership.status !== "rejected";
+  const schoolSubjects = inSchool ? school!.subjects : [];
+  const [newGrade, setNewGrade] = useState("");
+  const [newSection, setNewSection] = useState("");
   const [classes, setClasses] = useState<ClassRecord[]>([]);
   const [studentCounts, setStudentCounts] = useState<Record<string, number>>({});
   const [loading, setLoading] = useState(true);
@@ -151,13 +159,26 @@ export default function ClassesPage() {
     setSubmitting(true);
     try {
       if (!newAvatarGender) return;
+      if (inSchool && (!newGrade || !newSection)) return;
+      const gradeNum = inSchool ? Number(newGrade) : undefined;
       await createClass({
         name,
         description,
         teacherId: user.uid,
         subject: newSubject.trim() || undefined,
         avatarGender: newAvatarGender,
+        ...(inSchool && gradeNum
+          ? {
+              grade: gradeNum,
+              section: newSection,
+              classKey: classKeyOf(gradeNum, newSection),
+              // The school link is only allowed once the principal approved the teacher.
+              ...(membership?.status === "approved" ? { schoolId: membership.schoolId } : {}),
+            }
+          : {}),
       });
+      setNewGrade("");
+      setNewSection("");
       setName("");
       setNewSubject("");
       setNewAvatarGender("");
@@ -189,7 +210,13 @@ export default function ClassesPage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-semibold text-navy">{t("classes.title")}</h1>
-        <button onClick={() => setModalOpen(true)} className="btn-primary">
+        <button
+          onClick={() => {
+            setNewSubject(inSchool ? membership?.subject || "" : "");
+            setModalOpen(true);
+          }}
+          className="btn-primary"
+        >
           <Plus size={16} />
           {t("classes.newClass")}
         </button>
@@ -254,9 +281,12 @@ export default function ClassesPage() {
                   <Trash2 size={16} />
                 </button>
               </div>
-              <span className="pill bg-gold-50 text-gold w-fit">
-                {studentCounts[c.id] || 0} {t("classes.students")}
-              </span>
+              <div className="flex flex-wrap gap-1.5">
+                <span className="pill bg-gold-50 text-gold w-fit">
+                  {studentCounts[c.id] || 0} {t("classes.students")}
+                </span>
+                {c.classKey && <span className="pill bg-navy-50 text-navy w-fit">{t("sp.gradeSection", { defaultValue: "Grade {{key}}", key: c.classKey })}</span>}
+              </div>
               <div className="flex gap-2 pt-1 border-t border-cream-400/70 mt-1">
                 <button
                   onClick={() => handleCopyInvite(c)}
@@ -326,14 +356,50 @@ export default function ClassesPage() {
               className="input-field"
             />
           </div>
+          {inSchool && (
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="label-eyebrow block mb-1.5">{t("sp.grade", "Grade")}</label>
+                <select required className="input-field w-full" value={newGrade} onChange={(e) => setNewGrade(e.target.value)}>
+                  <option value="">—</option>
+                  {GRADES.map((g) => (
+                    <option key={g} value={g}>
+                      {g}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="label-eyebrow block mb-1.5">{t("sp.section", "Section")}</label>
+                <select required className="input-field w-full" value={newSection} onChange={(e) => setNewSection(e.target.value)}>
+                  <option value="">—</option>
+                  {SECTIONS.map((x) => (
+                    <option key={x} value={x}>
+                      {x}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+          )}
           <div>
             <label className="label-eyebrow block mb-1.5">{t("classes.subjectOptional")}</label>
-            <input
-              value={newSubject}
-              onChange={(e) => setNewSubject(e.target.value)}
-              placeholder={t("classes.subjectPlaceholder")}
-              className="input-field"
-            />
+            {schoolSubjects.length > 0 ? (
+              <select value={newSubject} onChange={(e) => setNewSubject(e.target.value)} className="input-field w-full">
+                {schoolSubjects.map((x) => (
+                  <option key={x} value={x}>
+                    {x}
+                  </option>
+                ))}
+              </select>
+            ) : (
+              <input
+                value={newSubject}
+                onChange={(e) => setNewSubject(e.target.value)}
+                placeholder={t("classes.subjectPlaceholder")}
+                className="input-field"
+              />
+            )}
           </div>
           <div>
             <label className="label-eyebrow block mb-1.5">{t("avatars.classTypeLabel")}</label>
@@ -353,7 +419,7 @@ export default function ClassesPage() {
             <button type="button" onClick={() => setModalOpen(false)} className="btn-secondary">
               {t("common.cancel")}
             </button>
-            <button type="submit" disabled={submitting || !newAvatarGender} className="btn-primary disabled:opacity-50">
+            <button type="submit" disabled={submitting || !newAvatarGender || (inSchool && (!newGrade || !newSection))} className="btn-primary disabled:opacity-50">
               {t("common.save")}
             </button>
           </div>
@@ -364,12 +430,23 @@ export default function ClassesPage() {
           <p className="text-sm text-cream-600">{subjectEdit?.name}</p>
           <div>
             <label className="label-eyebrow block mb-1.5">{t("classes.subjectName")}</label>
-            <input
-              value={subjectEditValue}
-              onChange={(e) => setSubjectEditValue(e.target.value)}
-              placeholder={t("classes.subjectPlaceholder")}
-              className="input-field"
-            />
+            {schoolSubjects.length > 0 ? (
+              <select value={subjectEditValue} onChange={(e) => setSubjectEditValue(e.target.value)} className="input-field w-full">
+                <option value="">—</option>
+                {schoolSubjects.map((x) => (
+                  <option key={x} value={x}>
+                    {x}
+                  </option>
+                ))}
+              </select>
+            ) : (
+              <input
+                value={subjectEditValue}
+                onChange={(e) => setSubjectEditValue(e.target.value)}
+                placeholder={t("classes.subjectPlaceholder")}
+                className="input-field"
+              />
+            )}
             <p className="text-xs text-cream-600 mt-1.5">{t("classes.subjectHelp")}</p>
           </div>
           <div className="flex justify-end gap-2">
@@ -392,13 +469,24 @@ export default function ClassesPage() {
           <p className="text-sm text-cream-600">{teacherForClass?.name}</p>
           <div>
             <label className="label-eyebrow block mb-1.5">{t("classes.subjectName")}</label>
-            <input
-              required
-              value={subjectName}
-              onChange={(e) => setSubjectName(e.target.value)}
-              placeholder={t("classes.subjectPlaceholder")}
-              className="input-field"
-            />
+            {schoolSubjects.length > 0 ? (
+              <select required value={subjectName} onChange={(e) => setSubjectName(e.target.value)} className="input-field w-full">
+                <option value="">—</option>
+                {schoolSubjects.map((x) => (
+                  <option key={x} value={x}>
+                    {x}
+                  </option>
+                ))}
+              </select>
+            ) : (
+              <input
+                required
+                value={subjectName}
+                onChange={(e) => setSubjectName(e.target.value)}
+                placeholder={t("classes.subjectPlaceholder")}
+                className="input-field"
+              />
+            )}
           </div>
           <div>
             <label className="label-eyebrow block mb-1.5">{t("classes.teacherGmail")}</label>

@@ -265,6 +265,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const currentUser = auth.currentUser;
     if (!currentUser) return;
     await setDoc(doc(db, "teachers", currentUser.uid), { whatsappNumber }, { merge: true });
+    // Keep the copy the school's department heads see in sync (no-op if the teacher hasn't joined a school).
+    updateDoc(doc(db, "schoolTeachers", currentUser.uid), { whatsapp: whatsappNumber }).catch(() => {});
     setProfile((prev) =>
       prev
         ? { ...prev, whatsappNumber }

@@ -3,6 +3,7 @@ import { Outlet } from "react-router-dom";
 import Sidebar from "./Sidebar";
 import Topbar from "./Topbar";
 import GenderPromptModal from "../common/GenderPromptModal";
+import TeacherSchoolGate from "../school/TeacherSchoolGate";
 
 const DESKTOP_COLLAPSE_KEY = "lingotrace-sidebar-collapsed";
 
@@ -54,6 +55,7 @@ export default function AppLayout() {
       >
         <Topbar />
         <main className="min-w-0 flex-1 px-3 py-5 sm:px-4 sm:py-6 md:px-8 md:py-8">
+          <TeacherSchoolGate />
           <Outlet />
         </main>
       </div>

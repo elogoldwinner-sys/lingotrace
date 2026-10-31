@@ -1,5 +1,6 @@
 import { Navigate } from "react-router-dom";
 import { useAuth } from "../../contexts/AuthContext";
+import { useSchool } from "../../contexts/SchoolContext";
 import Spinner from "../common/Spinner";
 import type { ReactNode } from "react";
 
@@ -11,8 +12,9 @@ import type { ReactNode } from "react";
  */
 export default function ProtectedRoute({ children }: { children: ReactNode }) {
   const { user, profile, portalParent, portalStudent, loading } = useAuth();
+  const { staff, loading: schoolLoading } = useSchool();
 
-  if (loading) {
+  if (loading || schoolLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-cream">
         <Spinner />
@@ -25,6 +27,7 @@ export default function ProtectedRoute({ children }: { children: ReactNode }) {
   }
 
   if (!profile) {
+    if (staff) return <Navigate to="/school" replace />;
     if (portalParent) return <Navigate to="/portal/parent" replace />;
     if (portalStudent) return <Navigate to="/portal/student" replace />;
   }

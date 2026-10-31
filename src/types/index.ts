@@ -107,6 +107,12 @@ export interface ClassRecord {
   teacherEmail?: string;
   /** Which avatar collection this class's students choose from. Set once (at creation, or one time for older classes) and then locked. */
   avatarGender?: "boys" | "girls" | "mixed";
+  /** School this class belongs to (set once the teacher's membership is approved). */
+  schoolId?: string;
+  /** Grade number (e.g. 5) and section letter (e.g. "A"); `classKey` is "5-A". */
+  grade?: number;
+  section?: string;
+  classKey?: string;
   createdAt: number;
 }
 
@@ -461,5 +467,109 @@ export interface CertificateRecord {
   badgeIds: string[];
   /** Auth uid of the issuing teacher. */
   issuedBy: string;
+  createdAt: number;
+}
+
+/* ───────────────────────── Schools & staff portals ───────────────────────── */
+
+/** Who can sign in to the school portal. A teacher is NOT a staff role — teachers use the normal portal. */
+export type StaffRole = "principal" | "departmentHead" | "counselor" | "supervisor" | "coordinator";
+
+/** Roles a department head can hand out (they see only their own subject). */
+export const HEAD_ADDED_ROLES: StaffRole[] = ["supervisor", "coordinator"];
+
+export interface School {
+  /** Doc id === the principal's auth uid (one school per principal). */
+  id: string;
+  name: string;
+  logoURL?: string;
+  principalUid: string;
+  principalName: string;
+  principalEmail: string;
+  /** Subjects the principal approved; teachers pick from this list. */
+  subjects: string[];
+  /** When false, teachers of this school cannot use "compare across subjects" in Class statistics. Default true. */
+  allowSubjectCompare?: boolean;
+  createdAt: number;
+}
+
+/** Signature / stamp images, kept apart from the (publicly listable) school doc. */
+export interface SchoolAssets {
+  signatureURL?: string;
+  stampURL?: string;
+}
+
+/**
+ * What a signed-in account may see in the school portal. Doc id is the
+ * person's lower-cased Gmail (so the security rules can find it from the
+ * sign-in token), which means one school role per Gmail.
+ *
+ * Scope: principal = whole school; departmentHead = every class of their
+ * `subject`; counselor = the chosen grades / classes (all subjects);
+ * supervisor & coordinator (added by a department head) = the head's subject
+ * limited to the chosen grades / classes.
+ */
+export interface StaffAccess {
+  id: string;
+  email: string;
+  schoolId: string;
+  role: StaffRole;
+  /** Free job title shown to the person (e.g. "Grade 5 coordinator"). */
+  jobTitle?: string;
+  displayName?: string;
+  subject?: string;
+  /** True = no grade/class limit (counselor / supervisor / coordinator only). */
+  allClasses?: boolean;
+  grades?: number[];
+  classKeys?: string[];
+  addedByUid: string;
+  addedByRole: StaffRole;
+  createdAt: number;
+}
+
+export type TeacherMembershipStatus = "pending" | "approved" | "rejected";
+
+/** A teacher's request to belong to a school (doc id = teacher uid). Only the principal can approve it. */
+export interface SchoolTeacher {
+  id: string;
+  uid: string;
+  schoolId: string;
+  name: string;
+  email: string;
+  whatsapp?: string;
+  subject: string;
+  status: TeacherMembershipStatus;
+  /** The teacher's existing classes and the grade/section they chose for each — applied once approved. */
+  classMap?: Record<string, { grade: number; section: string }>;
+  createdAt: number;
+}
+
+export type AuditAction = "report_opened" | "report_printed" | "feedback_sent" | "teacher_approved" | "teacher_rejected" | "teacher_removed" | "settings_changed";
+
+export interface AuditEntry {
+  id: string;
+  actorUid: string;
+  actorName: string;
+  actorEmail: string;
+  actorRole: StaffRole;
+  action: AuditAction;
+  /** Human-readable target, e.g. "Class 5-A · English" or "Student: Omar (5-A)". */
+  target: string;
+  /** Period of the report, when relevant. */
+  period?: string;
+  createdAt: number;
+}
+
+export interface FeedbackLogEntry {
+  id: string;
+  authorUid: string;
+  authorName: string;
+  authorRole: StaffRole;
+  channel: "email" | "whatsapp";
+  /** What the feedback is about, e.g. "Grade 5", "Class 5-A", "2 students (5-A)". */
+  targetLabel: string;
+  recipientType: "teachers" | "parents";
+  recipients: string[];
+  message: string;
   createdAt: number;
 }

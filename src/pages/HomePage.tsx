@@ -51,6 +51,12 @@ export default function HomePage() {
             <p className="text-sm text-cream-600">{t("home.parentPortalDesc")}</p>
           </Link>
         </div>
+        <p className="mt-8 text-sm text-cream-600">
+          {t("sp.areYouSchoolStaff", "School principal, department head or counselor?")}{" "}
+          <Link to="/school-login" className="font-semibold text-gold hover:underline">
+            {t("sp.schoolPortalLink", "School portal")}
+          </Link>
+        </p>
       </div>
     </div>
   );

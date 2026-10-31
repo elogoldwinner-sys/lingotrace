@@ -64,6 +64,10 @@ export async function createClass(data: {
   color?: string;
   subject?: string;
   avatarGender?: "boys" | "girls" | "mixed";
+  schoolId?: string;
+  grade?: number;
+  section?: string;
+  classKey?: string;
 }) {
   return service.create({ ...data, studentIds: [] } as Omit<ClassRecord, "id" | "createdAt">);
 }
@@ -117,6 +121,11 @@ export async function addSubjectTeacher(data: {
     teacherEmail: normalizeEmail(data.teacherEmail),
     // A subject starts with the same avatar collection as its main class.
     ...(data.mainClass.avatarGender ? { avatarGender: data.mainClass.avatarGender } : {}),
+    // A subject class lives in the same school / grade / section as its main class.
+    ...(data.mainClass.schoolId ? { schoolId: data.mainClass.schoolId } : {}),
+    ...(data.mainClass.grade != null && data.mainClass.section
+      ? { grade: data.mainClass.grade, section: data.mainClass.section, classKey: data.mainClass.classKey }
+      : {}),
   } as Omit<ClassRecord, "id" | "createdAt">);
 }
 

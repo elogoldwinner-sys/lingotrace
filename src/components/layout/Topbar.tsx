@@ -3,6 +3,7 @@ import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
 import { LogOut, Globe, Camera, ChevronDown, Repeat } from "lucide-react";
 import { useAuth } from "../../contexts/AuthContext";
+import { useSchool } from "../../contexts/SchoolContext";
 import { uploadToCloudinary } from "../../lib/cloudinary";
 import { ACTION_TONES } from "../../lib/uiColors";
 import ThemeToggle from "../common/ThemeToggle";
@@ -35,6 +36,7 @@ export default function Topbar() {
     updateTeacherPhoto,
   } = useAuth();
   const navigate = useNavigate();
+  const { staff } = useSchool();
   // This same Google account may ALSO have a parent or student portal
   // profile (e.g. a teacher who joined a class as a parent too) — when it
   // does, offer a one-click switch instead of forcing a separate login.
@@ -162,6 +164,20 @@ export default function Topbar() {
                       <Camera size={16} />
                       {t("auth.changePhoto")}
                     </button>
+                    {staff && (
+                      <button
+                        type="button"
+                        role="menuitem"
+                        onClick={() => {
+                          setMenuOpen(false);
+                          navigate("/school");
+                        }}
+                        className="flex w-full items-center gap-2 rounded-xl px-3 py-2.5 text-sm font-bold text-navy-700 hover:bg-navy-50"
+                      >
+                        <Repeat size={16} />
+                        {t("sp.switchSchool", "School portal")}
+                      </button>
+                    )}
                     {otherPortalPath && (
                       <button
                         type="button"
@@ -246,6 +262,16 @@ export default function Topbar() {
               </span>
             </button>
 
+            {staff && (
+              <button
+                onClick={() => navigate("/school")}
+                className="flex items-center gap-1.5 rounded-lg border border-gold/40 px-3 py-1.5 text-xs font-semibold text-navy hover:bg-gold-50"
+                title={t("sp.switchSchool", "School portal")}
+              >
+                <Repeat size={14} />
+                <span className="hidden lg:inline">{t("sp.switchSchool", "School portal")}</span>
+              </button>
+            )}
             {otherPortalPath && (
               <button
                 onClick={() => navigate(otherPortalPath)}

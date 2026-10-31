@@ -32,6 +32,67 @@ service cloud.firestore {
         );
     }
 
+
+    // ---- School portal helpers (principal / department head / counselor …) ----
+
+    // The school's id is its principal's uid, so "am I the principal of this school" is a path check.
+    function isSchoolPrincipal(schoolId) {
+      return isSignedIn() && schoolId == request.auth.uid &&
+        exists(/databases/$(database)/documents/schools/$(schoolId));
+    }
+
+    // Staff access docs are keyed by the person's lower-cased verified Gmail.
+    function hasStaff() {
+      return isSignedIn() && request.auth.token.email != null &&
+        request.auth.token.email_verified == true &&
+        exists(/databases/$(database)/documents/staffAccess/$(request.auth.token.email.lower()));
+    }
+
+    function staffSchool() {
+      return get(/databases/$(database)/documents/staffAccess/$(request.auth.token.email.lower())).data.schoolId;
+    }
+
+    // May this staff member read a class with the given data?
+    //  principal            -> every class of the school
+    //  departmentHead       -> classes whose subject is theirs
+    //  counselor            -> classes in their grades / class keys (any subject)
+    //  supervisor/coordinator -> their head's subject AND their grades / class keys
+    // Call only after hasStaff().
+    function staffMaySeeClassData(c) {
+      let a = get(/databases/$(database)/documents/staffAccess/$(request.auth.token.email.lower())).data;
+      let inScope = a.get('allClasses', false) == true ||
+        c.get('grade', -1) in a.get('grades', []) ||
+        c.get('classKey', '') in a.get('classKeys', []);
+      let subjectOk = c.get('subject', '') == a.get('subject', '');
+      return c.get('schoolId', '') != '' && c.get('schoolId', '') == a.schoolId && (
+        a.role == 'principal' ||
+        (a.role == 'departmentHead' && subjectOk) ||
+        (a.role == 'counselor' && inScope) ||
+        ((a.role == 'supervisor' || a.role == 'coordinator') && subjectOk && inScope)
+      );
+    }
+
+    function staffMaySeeClass(classId) {
+      return hasStaff() &&
+        staffMaySeeClassData(get(/databases/$(database)/documents/classes/$(classId)).data);
+    }
+
+    // A teacher may stamp a school on a class only if the principal approved them for that school.
+    function approvedTeacherOf(schoolId) {
+      return isSignedIn() &&
+        exists(/databases/$(database)/documents/schoolTeachers/$(request.auth.uid)) &&
+        get(/databases/$(database)/documents/schoolTeachers/$(request.auth.uid)).data.schoolId == schoolId &&
+        get(/databases/$(database)/documents/schoolTeachers/$(request.auth.uid)).data.status == 'approved';
+    }
+
+    // A department head may hand out supervisor / coordinator access, limited to their own subject.
+    function headMayGrant(d) {
+      let a = get(/databases/$(database)/documents/staffAccess/$(request.auth.token.email.lower())).data;
+      return a.role == 'departmentHead' && d.schoolId == a.schoolId &&
+        d.role in ['supervisor', 'coordinator'] && d.subject == a.subject &&
+        d.addedByUid == request.auth.uid;
+    }
+
     // Each teacher can read/write only their own profile document
     match /teachers/{uid} {
       allow read, write: if isSignedIn() && request.auth.uid == uid;
@@ -97,16 +158,23 @@ service cloud.firestore {
         resource.data.teacherId == request.auth.uid ||
         resource.data.get('ownerId', '') == request.auth.uid ||
         (resource.data.teacherId == '' && isInvitedCoTeacher(resource.data))
-      );
+      ) || (hasStaff() && staffMaySeeClassData(resource.data));
       // The avatar collection (Boys / Girls / Mixed) can be set once and never changed after.
-      allow update: if isSignedIn() &&
+      // A school link (schoolId) can only be set by a teacher the principal approved; a principal may only CLEAR it
+      // (when removing a teacher from the school).
+      allow update: if (isSignedIn() &&
         (!('avatarGender' in resource.data) ||
-          request.resource.data.get('avatarGender', '') == resource.data.avatarGender) && (
+          request.resource.data.get('avatarGender', '') == resource.data.avatarGender) &&
+        (request.resource.data.get('schoolId', '') == resource.data.get('schoolId', '') ||
+          request.resource.data.get('schoolId', '') == '' ||
+          approvedTeacherOf(request.resource.data.schoolId)) && (
         resource.data.teacherId == request.auth.uid ||
         (resource.data.teacherId == '' && isInvitedCoTeacher(resource.data) &&
           request.resource.data.diff(resource.data).affectedKeys().hasOnly(["teacherId"]) &&
           request.resource.data.teacherId == request.auth.uid)
-      );
+      )) || (isSchoolPrincipal(resource.data.get('schoolId', '')) &&
+        request.resource.data.diff(resource.data).affectedKeys().hasOnly(["schoolId"]) &&
+        request.resource.data.get('schoolId', '') == '');
       allow delete: if isSignedIn() && (
         resource.data.teacherId == request.auth.uid ||
         resource.data.get('ownerId', '') == request.auth.uid
@@ -117,7 +185,8 @@ service cloud.firestore {
           request.resource.data.ownerId == request.auth.uid &&
           request.resource.data.teacherEmail is string &&
           ownsClass(request.resource.data.parentClassId))
-      );
+      ) && (request.resource.data.get('schoolId', '') == '' ||
+          approvedTeacherOf(request.resource.data.schoolId));
     }
 
     // Students belong to a class. The teacher who owns the class has full
@@ -128,6 +197,7 @@ service cloud.firestore {
     // is readable by anyone who knows its classId, not just invite holders.
     match /students/{studentId} {
       allow get: if ownsClass(resource.data.classId) ||
+        staffMaySeeClass(resource.data.classId) ||
         isLinkedStudent(studentId) || isLinkedParent(studentId);
       allow list: if true;
       allow update: if ownsClass(resource.data.classId) ||
@@ -176,15 +246,19 @@ service cloud.firestore {
     // classroom teacher compare points across subjects (Class statistics →
     // "Across subjects"). Only reads are granted — the co-teacher alone can
     // still create, edit or delete their own points.
+    // A school principal can switch this comparison off for the school's teachers (schools/{id}.allowSubjectCompare).
     function isSubjectOwner(classId) {
-      return isSignedIn() &&
-        get(/databases/$(database)/documents/classes/$(classId)).data.get('ownerId', '') == request.auth.uid;
+      let c = get(/databases/$(database)/documents/classes/$(classId)).data;
+      return isSignedIn() && c.get('ownerId', '') == request.auth.uid &&
+        (c.get('schoolId', '') == '' ||
+          get(/databases/$(database)/documents/schools/$(c.schoolId)).data.get('allowSubjectCompare', true) != false);
     }
 
     // Points transactions are owned by the teacher who awarded them. The
     // student they're about, or that student's parent, may also read them.
     match /pointsTransactions/{txnId} {
       allow read: if (isSignedIn() && resource.data.awardedBy == request.auth.uid) ||
+        staffMaySeeClass(resource.data.classId) ||
         isLinkedStudent(resource.data.studentId) || isLinkedParent(resource.data.studentId) ||
         isSubjectOwner(resource.data.classId);
       allow update, delete: if isSignedIn() && resource.data.awardedBy == request.auth.uid;
@@ -304,6 +378,83 @@ service cloud.firestore {
         ownsClass(request.resource.data.classId);
       allow delete: if isSignedIn() && resource.data.awardedBy == request.auth.uid;
       allow update: if false;
+    }
+
+    // ---- Schools, staff portals, approvals, audit trail, feedback log ----
+
+    // The school's public face (name, logo, approved subjects, settings). Any signed-in teacher can read it
+    // (needed to pick their school when signing up). Only its principal can write it.
+    match /schools/{schoolId} {
+      allow read: if isSignedIn();
+      allow create: if isSignedIn() && schoolId == request.auth.uid &&
+        request.resource.data.principalUid == request.auth.uid;
+      allow update: if isSignedIn() && schoolId == request.auth.uid &&
+        request.resource.data.principalUid == request.auth.uid;
+      allow delete: if false;
+
+      // Who opened / printed which report, approvals… Append-only; only the principal can read it.
+      match /audit/{entryId} {
+        allow read: if isSchoolPrincipal(schoolId);
+        allow create: if hasStaff() && staffSchool() == schoolId &&
+          request.resource.data.actorUid == request.auth.uid;
+        allow update, delete: if false;
+      }
+
+      // Feedback sent by staff (only when they chose to record it). The principal reads all; authors read their own.
+      match /feedback/{entryId} {
+        allow read: if isSchoolPrincipal(schoolId) ||
+          (isSignedIn() && resource.data.authorUid == request.auth.uid);
+        allow create: if hasStaff() && staffSchool() == schoolId &&
+          request.resource.data.authorUid == request.auth.uid;
+        allow update, delete: if false;
+      }
+    }
+
+    // Signature and stamp images — kept out of the publicly readable school doc.
+    match /schoolAssets/{schoolId} {
+      allow read: if isSchoolPrincipal(schoolId) || (hasStaff() && staffSchool() == schoolId);
+      allow write: if isSchoolPrincipal(schoolId);
+    }
+
+    // Who may use the school portal, and with what scope (doc id = lower-cased Gmail).
+    match /staffAccess/{email} {
+      allow get: if isSignedIn() && request.auth.token.email != null &&
+        (request.auth.token.email.lower() == email || isSchoolPrincipal(resource.data.schoolId));
+      allow list: if isSignedIn() &&
+        (isSchoolPrincipal(resource.data.schoolId) || resource.data.addedByUid == request.auth.uid);
+      allow create: if isSignedIn() && request.resource.data.email == email && (
+        (isSchoolPrincipal(request.resource.data.schoolId) &&
+          request.resource.data.addedByUid == request.auth.uid) ||
+        (hasStaff() && headMayGrant(request.resource.data)));
+      allow update: if isSignedIn() && request.resource.data.email == email &&
+        request.resource.data.schoolId == resource.data.schoolId &&
+        request.resource.data.role == resource.data.role && (
+        isSchoolPrincipal(resource.data.schoolId) ||
+        (hasStaff() && resource.data.addedByUid == request.auth.uid && headMayGrant(request.resource.data)));
+      allow delete: if isSignedIn() && (
+        isSchoolPrincipal(resource.data.schoolId) ||
+        (hasStaff() && resource.data.addedByUid == request.auth.uid && resource.data.role in ['supervisor', 'coordinator']));
+    }
+
+    // A teacher's request to join a school (doc id = the teacher's uid). It can only be CREATED as "pending";
+    // only the principal can change the status to approved / rejected.
+    match /schoolTeachers/{uid} {
+      allow get: if isSignedIn() && (request.auth.uid == uid ||
+        isSchoolPrincipal(resource.data.schoolId) ||
+        (hasStaff() && staffSchool() == resource.data.schoolId));
+      allow list: if isSignedIn() && (isSchoolPrincipal(resource.data.schoolId) ||
+        (hasStaff() && staffSchool() == resource.data.schoolId));
+      allow create: if isSignedIn() && request.auth.uid == uid &&
+        request.resource.data.uid == uid && request.resource.data.status == 'pending' &&
+        exists(/databases/$(database)/documents/schools/$(request.resource.data.schoolId));
+      allow update: if isSignedIn() && (
+        (isSchoolPrincipal(resource.data.schoolId) &&
+          request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'subject'])) ||
+        (request.auth.uid == uid && (
+          request.resource.data.diff(resource.data).affectedKeys().hasOnly(['whatsapp', 'name', 'email', 'classMap']) ||
+          (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['subject', 'status', 'classMap', 'schoolId']) &&
+            request.resource.data.status == 'pending'))));
+      allow delete: if isSignedIn() && (request.auth.uid == uid || isSchoolPrincipal(resource.data.schoolId));
     }
   }
 }

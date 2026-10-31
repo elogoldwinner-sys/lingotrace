@@ -80,6 +80,12 @@ export default function LoginPage() {
           </button>
 
           <p className="mt-6 text-center text-sm text-cream-600">
+            {t("sp.areYouSchoolStaff", "School principal, department head or counselor?")}{" "}
+            <Link to="/school-login" className="font-semibold text-gold hover:underline">
+              {t("sp.schoolPortalLink", "School portal")}
+            </Link>
+          </p>
+          <p className="mt-2 text-center text-sm text-cream-600">
             {t("auth.areYouAStudent")}{" "}
             <Link to="/portal-login" className="font-semibold text-gold hover:underline">
               {t("auth.portalLoginLink")}
