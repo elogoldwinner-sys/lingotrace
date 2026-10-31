@@ -1,6 +1,7 @@
 import { createContext, useCallback, useContext, useEffect, useRef, useState, type ReactNode } from "react";
 import { useAuth } from "./AuthContext";
-import { getEntitlements, subscribeEntitlements } from "../lib/services/entitlementsService";
+import { useLocation } from "react-router-dom";
+import { subscribeEntitlements } from "../lib/services/entitlementsService";
 import type { FeatureKey, LimitKey } from "../lib/features";
 import {
   getMembership,
@@ -20,10 +21,10 @@ interface SchoolContextValue {
   school: School | null;
   /** Signature / stamp images (staff only). */
   assets: SchoolAssets;
-  /** What the platform admin has switched on for the school (basic plan when nothing is set). */
-  entitlements: SchoolEntitlements | null;
-  /** Set when the plan could not be read (e.g. "permission-denied"): the school is then treated as basic. */
-  entitlementsError: string | null;
+  /** Plans (what the platform admin switched on) of the schools this person is connected to, by school id. */
+  plans: Record<string, SchoolEntitlements>;
+  /** Per school id: why its plan could not be read (e.g. "permission-denied"); such a school is treated as basic. */
+  planErrors: Record<string, string>;
   loading: boolean;
   refresh: () => Promise<void>;
 }
@@ -36,8 +37,8 @@ export function SchoolProvider({ children }: { children: ReactNode }) {
   const [membership, setMembership] = useState<SchoolTeacher | null>(null);
   const [school, setSchool] = useState<School | null>(null);
   const [assets, setAssets] = useState<SchoolAssets>({});
-  const [entitlements, setEntitlements] = useState<SchoolEntitlements | null>(null);
-  const [entitlementsError, setEntitlementsError] = useState<string | null>(null);
+  const [plans, setPlans] = useState<Record<string, SchoolEntitlements>>({});
+  const [planErrors, setPlanErrors] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(true);
   const token = useRef(0);
 
@@ -48,7 +49,6 @@ export function SchoolProvider({ children }: { children: ReactNode }) {
       setMembership(null);
       setSchool(null);
       setAssets({});
-      setEntitlements(null);
       setLoading(false);
       return;
     }
@@ -57,17 +57,15 @@ export function SchoolProvider({ children }: { children: ReactNode }) {
       getMembership(user.uid).catch(() => null),
     ]);
     const schoolId = staffDoc?.schoolId || memberDoc?.schoolId;
-    const [schoolDoc, assetDoc, entDoc] = await Promise.all([
+    const [schoolDoc, assetDoc] = await Promise.all([
       schoolId ? getSchool(schoolId).catch(() => null) : Promise.resolve(null),
       staffDoc ? getSchoolAssets(staffDoc.schoolId) : Promise.resolve({}),
-      schoolId ? getEntitlements(schoolId) : Promise.resolve(null),
     ]);
     if (mine !== token.current) return;
     setStaff(staffDoc);
     setMembership(memberDoc);
     setSchool(schoolDoc);
     setAssets(assetDoc);
-    setEntitlements(entDoc);
     setLoading(false);
   }, [user]);
 
@@ -77,23 +75,32 @@ export function SchoolProvider({ children }: { children: ReactNode }) {
     load();
   }, [authLoading, load]);
 
-  // Live plan: the moment the admin changes a switch, everyone signed in at that school sees it (no reload needed).
-  // If the plan can't be read we say why (shown on the lock badges) and fall back to the basic plan.
-  const planSchoolId = school?.id;
+  // Live plans. A Gmail can be connected to TWO schools (staff of one, an approved teacher in another), so we follow the
+  // plan of each. The moment the admin changes a switch it reaches everyone signed in; if a plan can't be read we say
+  // why (shown on the lock badges) and treat that school as basic.
+  const staffSchoolId = staff?.schoolId || "";
+  const memberSchoolId = membership?.status === "approved" ? membership.schoolId : "";
   useEffect(() => {
-    if (!planSchoolId) return;
-    return subscribeEntitlements(
-      planSchoolId,
-      (fresh) => {
-        setEntitlements(fresh);
-        setEntitlementsError(null);
-      },
-      (err) => {
-        console.error(`Couldn't read the plan of school ${planSchoolId}`, err);
-        setEntitlementsError((err as { code?: string }).code || "unknown");
-      }
+    const ids = Array.from(new Set([staffSchoolId, memberSchoolId].filter(Boolean)));
+    const unsubs = ids.map((id) =>
+      subscribeEntitlements(
+        id,
+        (fresh) => {
+          setPlans((prev) => ({ ...prev, [id]: fresh }));
+          setPlanErrors((prev) => {
+            if (!(id in prev)) return prev;
+            const { [id]: _gone, ...rest } = prev;
+            return rest;
+          });
+        },
+        (err) => {
+          console.error(`Couldn't read the plan of school ${id}`, err);
+          setPlanErrors((prev) => ({ ...prev, [id]: (err as { code?: string }).code || "unknown" }));
+        }
+      )
     );
-  }, [planSchoolId]);
+    return () => unsubs.forEach((u) => u());
+  }, [staffSchoolId, memberSchoolId]);
 
   // A teacher waiting for approval picks the decision up as soon as they come back to the tab.
   useEffect(() => {
@@ -116,7 +123,7 @@ export function SchoolProvider({ children }: { children: ReactNode }) {
   }, [profile, membership, school]);
 
   return (
-    <SchoolContext.Provider value={{ staff, membership, school, assets, entitlements, entitlementsError, loading, refresh: load }}>
+    <SchoolContext.Provider value={{ staff, membership, school, assets, plans, planErrors, loading, refresh: load }}>
       {children}
     </SchoolContext.Provider>
   );
@@ -129,38 +136,43 @@ export function useSchool() {
 }
 
 /**
- * Is a platform-admin-controlled feature available to this person?
- *  - Someone who belongs to a school (school-portal staff, or a teacher the principal approved) gets exactly what the
- *    admin switched on for that school.
- *  - A teacher who is not part of a school is not governed by a school plan and keeps everything.
- *  - While the school is still loading we don't lock anything (the security rules are the real gate for writes).
- * This hides / fades UI; data that must not be written without the feature is also checked in firestore.rules.
+ * Which school's plan applies right now, and what is it?
+ *  - In the school portal (/school…) it is the school this person WORKS FOR (their staff access).
+ *  - Everywhere else (the teacher portal) it is the school the principal APPROVED them as a teacher of.
+ *  A person connected to two schools therefore gets each portal governed by the right school. A teacher who is not
+ *  an approved member of any school is not governed by a plan and keeps everything.
  */
+function usePlan(): { governed: boolean; pending: boolean; plan: SchoolEntitlements | null; error: string | null; inSchoolPortal: boolean } {
+  const { staff, membership, plans, planErrors, loading } = useSchool();
+  const { pathname } = useLocation();
+  const inSchoolPortal = pathname.startsWith("/school");
+  const id = inSchoolPortal ? staff?.schoolId || "" : membership?.status === "approved" ? membership.schoolId : "";
+  if (!id) return { governed: false, pending: false, plan: null, error: null, inSchoolPortal };
+  const plan = plans[id] || null;
+  const error = planErrors[id] || null;
+  // Until the first answer arrives we don't lock anything (the security rules are the real gate for writes).
+  return { governed: true, pending: loading || (!plan && !error), plan, error, inSchoolPortal };
+}
+
+/** Is a platform-admin-controlled feature available to this person? Fades UI; rules also guard the data that matters. */
 export function useFeature(key: FeatureKey): boolean {
-  const { school, staff, membership, entitlements, loading } = useSchool();
-  if (loading) return true;
-  const governed = !!school && (!!staff || (membership?.status === "approved" && membership.schoolId === school.id));
-  if (!governed) return true;
-  return entitlements?.features[key] === true;
+  const { governed, pending, plan } = usePlan();
+  if (!governed || pending) return true;
+  return plan?.features[key] === true;
 }
 
-/**
- * The cap the admin set for this person's school (null = unlimited). Teachers outside a school are never capped.
- * While loading nothing is capped. Enforced in the app only — Firestore rules can't count documents.
- */
+/** The cap the admin set for this person's school (null = unlimited). Enforced in the app only — rules can't count. */
 export function useLimit(key: LimitKey): number | null {
-  const { school, staff, membership, entitlements, loading } = useSchool();
-  if (loading) return null;
-  const governed = !!school && (!!staff || (membership?.status === "approved" && membership.schoolId === school.id));
-  if (!governed) return null;
-  return entitlements ? entitlements.limits[key] : null;
+  const { governed, pending, plan } = usePlan();
+  if (!governed || pending || !plan) return null;
+  return plan.limits[key];
 }
 
-/** Is the current person governed by a school plan at all, and are they its principal? (Decides the lock tooltip.) */
-export function useFeatureAudience(): { governed: boolean; isPrincipal: boolean } {
-  const { school, staff, membership } = useSchool();
-  const governed = !!school && (!!staff || membership?.status === "approved");
-  return { governed, isPrincipal: staff?.role === "principal" };
+/** Decides the lock tooltip: is the person a principal in the school portal, and could the plan not be read? */
+export function useFeatureAudience(): { governed: boolean; isPrincipal: boolean; planError: string | null } {
+  const { staff } = useSchool();
+  const { governed, error, inSchoolPortal } = usePlan();
+  return { governed, isPrincipal: inSchoolPortal && staff?.role === "principal", planError: error };
 }
 
 /** Teachers: may the school's teachers use "compare across subjects"? (Default yes; always yes outside a school.) */

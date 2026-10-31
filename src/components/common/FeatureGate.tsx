@@ -2,14 +2,13 @@ import type { ReactNode } from "react";
 import { Link } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { Lock } from "lucide-react";
-import { useFeature, useFeatureAudience, useSchool } from "../../contexts/SchoolContext";
+import { useFeature, useFeatureAudience } from "../../contexts/SchoolContext";
 import { FEATURE_BY_KEY, type FeatureKey } from "../../lib/features";
 
 /** Small lock pill. For a principal it links to the support page with the ticket pre-filled; for anyone else it's a hint. */
 export function LockBadge({ feature, className = "", compact = false }: { feature: FeatureKey; className?: string; compact?: boolean }) {
   const { t } = useTranslation();
-  const { isPrincipal } = useFeatureAudience();
-  const { entitlementsError } = useSchool();
+  const { isPrincipal, planError: entitlementsError } = useFeatureAudience();
   const name = t(`feat.${feature}.label`, FEATURE_BY_KEY[feature].label);
   const hint = entitlementsError
     ? `${t("feat.planError", "Couldn't load your school's plan")} (${entitlementsError}). ${t("feat.planErrorHelp", "Reload the page; if it persists, contact the administrator.")}`
@@ -59,8 +58,7 @@ export default function FeatureGate({
   notice?: boolean;
 }) {
   const { t } = useTranslation();
-  const { isPrincipal } = useFeatureAudience();
-  const { entitlementsError } = useSchool();
+  const { isPrincipal, planError: entitlementsError } = useFeatureAudience();
   const enabled = useFeature(feature);
   if (enabled) return <>{children}</>;
   const Tag = as;
