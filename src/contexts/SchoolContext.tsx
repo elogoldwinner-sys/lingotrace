@@ -66,6 +66,14 @@ export function SchoolProvider({ children }: { children: ReactNode }) {
     load();
   }, [authLoading, load]);
 
+  // A teacher waiting for approval picks the decision up as soon as they come back to the tab.
+  useEffect(() => {
+    if (membership?.status !== "pending") return;
+    const onFocus = () => load();
+    window.addEventListener("focus", onFocus);
+    return () => window.removeEventListener("focus", onFocus);
+  }, [membership?.status, load]);
+
   // Once the principal approves a teacher, attach that teacher's classes to the school (once per session).
   useEffect(() => {
     if (!profile || !membership || !school || membership.status !== "approved" || membership.schoolId !== school.id) return;

@@ -5,7 +5,7 @@ import { Check, X, Trash2 } from "lucide-react";
 import Spinner from "../../components/common/Spinner";
 import { useSchool } from "../../contexts/SchoolContext";
 import { useSchoolData } from "../../components/school/SchoolDataContext";
-import { detachTeacherClasses, removeMembership, setMembershipStatus } from "../../lib/services/schoolService";
+import { detachTeacherClasses, removeMembership, setMembershipStatus, syncClassesToSchool } from "../../lib/services/schoolService";
 import type { SchoolTeacher } from "../../types";
 
 /** Principal: approve / reject / remove teachers. Department head: the teachers of their subject (read-only). */
@@ -32,6 +32,7 @@ export default function SchoolTeachersPage() {
         audit("teacher_removed", `${m.name} (${m.subject})`);
       } else {
         await setMembershipStatus(m.uid, action === "approve" ? "approved" : "rejected");
+        if (action === "approve") await syncClassesToSchool({ ...m, status: "approved" }, school).catch((err) => console.error("Attaching classes failed", err));
         if (action === "reject") await detachTeacherClasses(school.id, m.uid).catch(() => {});
         audit(action === "approve" ? "teacher_approved" : "teacher_rejected", `${m.name} (${m.subject})`);
       }

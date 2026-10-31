@@ -89,6 +89,15 @@ service cloud.firestore {
         get(/databases/$(database)/documents/schoolTeachers/$(request.auth.uid)).data.status == 'approved';
     }
 
+    // True when this signed-in user is the principal of the school that has APPROVED the given teacher.
+    // Lets the principal see and school-stamp (grade / section / subject) that teacher's classes.
+    function principalOfTeacher(teacherId) {
+      return teacherId != '' &&
+        exists(/databases/$(database)/documents/schoolTeachers/$(teacherId)) &&
+        get(/databases/$(database)/documents/schoolTeachers/$(teacherId)).data.status == 'approved' &&
+        isSchoolPrincipal(get(/databases/$(database)/documents/schoolTeachers/$(teacherId)).data.schoolId);
+    }
+
     // A department head may hand out supervisor / coordinator access, limited to their own subject.
     function headMayGrant(d) {
       let a = get(/databases/$(database)/documents/staffAccess/$(request.auth.token.email.lower())).data;
@@ -162,7 +171,8 @@ service cloud.firestore {
         resource.data.teacherId == request.auth.uid ||
         resource.data.get('ownerId', '') == request.auth.uid ||
         (resource.data.teacherId == '' && isInvitedCoTeacher(resource.data))
-      ) || (hasStaff() && staffMaySeeClassData(resource.data));
+      ) || (hasStaff() && staffMaySeeClassData(resource.data)) ||
+        principalOfTeacher(resource.data.teacherId);
       // The avatar collection (Boys / Girls / Mixed) can be set once and never changed after.
       // A school link (schoolId) can only be set by a teacher the principal approved; a principal may only CLEAR it
       // (when removing a teacher from the school).
@@ -178,7 +188,11 @@ service cloud.firestore {
           request.resource.data.teacherId == request.auth.uid)
       )) || (isSchoolPrincipal(resource.data.get('schoolId', '')) &&
         request.resource.data.diff(resource.data).affectedKeys().hasOnly(["schoolId"]) &&
-        request.resource.data.get('schoolId', '') == '');
+        request.resource.data.get('schoolId', '') == '') ||
+      // The principal can attach an approved teacher's classes to the school (grade / section / subject).
+      (principalOfTeacher(resource.data.teacherId) &&
+        request.resource.data.diff(resource.data).affectedKeys().hasOnly(["schoolId", "grade", "section", "classKey", "subject"]) &&
+        request.resource.data.schoolId == get(/databases/$(database)/documents/schoolTeachers/$(resource.data.teacherId)).data.schoolId);
       allow delete: if isSignedIn() && (
         resource.data.teacherId == request.auth.uid ||
         resource.data.get('ownerId', '') == request.auth.uid

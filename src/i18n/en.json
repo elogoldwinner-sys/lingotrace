@@ -946,6 +946,8 @@
     "transferButton": "Transfer principal role",
     "transferSame": "That is your own email. Enter the new principal's Gmail.",
     "transferConfirm": "Transfer the principal role to {{email}}? You will lose principal access to {{school}} immediately.",
-    "transferError": "Couldn't transfer the role. Check the Gmail — it may already be used for another school."
+    "transferError": "Couldn't transfer the role. Check the Gmail — it may already be used for another school.",
+    "editGradeSection": "Change grade / section",
+    "setGradeSection": "Set grade and section"
   }
 }

@@ -3,6 +3,7 @@ import { useAuth } from "../../contexts/AuthContext";
 import { useSchool } from "../../contexts/SchoolContext";
 import {
   listMemberships,
+  syncClassesToSchool,
   loadClassPoints,
   loadClassStudents,
   loadScopedClasses,
@@ -49,13 +50,30 @@ export function SchoolDataProvider({ children }: { children: ReactNode }) {
       ]);
       setClasses(cls);
       setTeachers(mem);
+      // Principal: make sure every approved teacher's classes carry the school / grade / section / subject
+      // (older classes, or teachers who haven't reopened the app since being approved). Once per teacher per session.
+      if (staff.role === "principal" && school) {
+        let changed = 0;
+        for (const m of mem.filter((x) => x.status === "approved")) {
+          const key = `lt-principal-sync:${school.id}:${m.uid}:${school.subjects.join("|")}`;
+          if (sessionStorage.getItem(key)) continue;
+          sessionStorage.setItem(key, "1");
+          try {
+            changed += await syncClassesToSchool(m, school);
+          } catch (err) {
+            console.error("Couldn't attach a teacher's classes", err);
+            sessionStorage.removeItem(key);
+          }
+        }
+        if (changed > 0) setClasses(await loadScopedClasses(staff));
+      }
     } catch (err) {
       console.error("Couldn't load the school's classes", err);
       setError(true);
     } finally {
       setLoading(false);
     }
-  }, [staff]);
+  }, [staff, school]);
 
   useEffect(() => {
     reload();

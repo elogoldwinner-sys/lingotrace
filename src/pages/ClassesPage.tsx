@@ -8,6 +8,7 @@ import { GRADES, SECTIONS, classKeyOf } from "../lib/school/scope";
 import {
   subscribeToClassesAndSubjects,
   createClass,
+  updateClass,
   deleteClass,
   setClassSubject,
   addSubjectTeacher,
@@ -31,6 +32,9 @@ export default function ClassesPage() {
   // A teacher who asked to join a school picks a grade + section (and a subject from the principal's list) for every class.
   const inSchool = !!membership && !!school && membership.schoolId === school.id && membership.status !== "rejected";
   const schoolSubjects = inSchool ? school!.subjects : [];
+  const [placeEdit, setPlaceEdit] = useState<ClassRecord | null>(null);
+  const [placeGrade, setPlaceGrade] = useState("");
+  const [placeSection, setPlaceSection] = useState("");
   const [newGrade, setNewGrade] = useState("");
   const [newSection, setNewSection] = useState("");
   const [classes, setClasses] = useState<ClassRecord[]>([]);
@@ -148,6 +152,32 @@ export default function ClassesPage() {
     } catch {
       setInviteError(t("classes.addTeacherError"));
       setSubjectEdit(null);
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  async function handleSavePlace(e: React.FormEvent) {
+    e.preventDefault();
+    if (!placeEdit || !membership || !placeGrade || !placeSection) return;
+    setSubmitting(true);
+    try {
+      const g = Number(placeGrade);
+      await updateClass(placeEdit.id, {
+        grade: g,
+        section: placeSection,
+        classKey: classKeyOf(g, placeSection),
+        ...(membership.status === "approved"
+          ? {
+              schoolId: membership.schoolId,
+              subject: placeEdit.subject && schoolSubjects.includes(placeEdit.subject) ? placeEdit.subject : membership.subject,
+            }
+          : {}),
+      });
+      setPlaceEdit(null);
+    } catch {
+      setInviteError(t("classes.addTeacherError"));
+      setPlaceEdit(null);
     } finally {
       setSubmitting(false);
     }
@@ -286,6 +316,20 @@ export default function ClassesPage() {
                   {studentCounts[c.id] || 0} {t("classes.students")}
                 </span>
                 {c.classKey && <span className="pill bg-navy-50 text-navy w-fit">{t("sp.gradeSection", { defaultValue: "Grade {{key}}", key: c.classKey })}</span>}
+                {inSchool && !c.parentClassId && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setPlaceEdit(c);
+                      setPlaceGrade(c.grade ? String(c.grade) : "");
+                      setPlaceSection(c.section || "");
+                    }}
+                    className="pill w-fit border border-gold/50 bg-white text-gold hover:bg-gold-50"
+                  >
+                    <Pencil size={11} className="me-1 inline" />
+                    {c.classKey ? t("sp.editGradeSection", "Change grade / section") : t("sp.setGradeSection", "Set grade and section")}
+                  </button>
+                )}
               </div>
               <div className="flex gap-2 pt-1 border-t border-cream-400/70 mt-1">
                 <button
@@ -420,6 +464,43 @@ export default function ClassesPage() {
               {t("common.cancel")}
             </button>
             <button type="submit" disabled={submitting || !newAvatarGender || (inSchool && (!newGrade || !newSection))} className="btn-primary disabled:opacity-50">
+              {t("common.save")}
+            </button>
+          </div>
+        </form>
+      </Modal>
+      <Modal open={!!placeEdit} onClose={() => setPlaceEdit(null)} title={t("sp.setGradeSection", "Set grade and section")}>
+        <form onSubmit={handleSavePlace} className="space-y-4">
+          <p className="text-sm text-cream-600">{placeEdit?.name}</p>
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="label-eyebrow block mb-1.5">{t("sp.grade", "Grade")}</label>
+              <select required className="input-field w-full" value={placeGrade} onChange={(e) => setPlaceGrade(e.target.value)}>
+                <option value="">—</option>
+                {GRADES.map((g) => (
+                  <option key={g} value={g}>
+                    {g}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="label-eyebrow block mb-1.5">{t("sp.section", "Section")}</label>
+              <select required className="input-field w-full" value={placeSection} onChange={(e) => setPlaceSection(e.target.value)}>
+                <option value="">—</option>
+                {SECTIONS.map((x) => (
+                  <option key={x} value={x}>
+                    {x}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
+          <div className="flex justify-end gap-2">
+            <button type="button" onClick={() => setPlaceEdit(null)} className="btn-secondary">
+              {t("common.cancel")}
+            </button>
+            <button type="submit" disabled={submitting || !placeGrade || !placeSection} className="btn-primary disabled:opacity-50">
               {t("common.save")}
             </button>
           </div>
