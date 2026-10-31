@@ -4,6 +4,7 @@ import { Printer, Download } from "lucide-react";
 import { format as formatDate, parseISO, startOfWeek } from "date-fns";
 import Modal from "../common/Modal";
 import { useAuth } from "../../contexts/AuthContext";
+import { useEffectiveSchoolLogo } from "../../contexts/SchoolContext";
 import { buildCsv, downloadTextFile } from "../../lib/csv";
 import { PrintPortal, printReport, ReportHeader, PrintedOn } from "./reportParts";
 import type { AttendanceRecord, AttendanceStatus, StudentRecord } from "../../types";
@@ -102,6 +103,7 @@ export default function AttendanceReportModal({
 }) {
   const { t } = useTranslation();
   const { profile } = useAuth();
+  const { logo: schoolLogo } = useEffectiveSchoolLogo();
   const [scope, setScope] = useState(initialStudentId || ALL);
   const [start, setStart] = useState(initialStart);
   const [end, setEnd] = useState(initialEnd);
@@ -180,7 +182,7 @@ export default function AttendanceReportModal({
     <div className="lt-report">
       <ReportHeader
         title={t("attendanceReport.title")}
-        logo={profile?.schoolLogoURL}
+        logo={schoolLogo}
         lines={[
           { label: t("attendanceReport.class"), value: className },
           { label: t("attendanceReport.subject"), value: subject },

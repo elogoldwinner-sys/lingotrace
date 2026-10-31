@@ -1,6 +1,6 @@
 import { useTranslation } from "react-i18next";
 import { Link } from "react-router-dom";
-import { GraduationCap, Heart } from "lucide-react";
+import { Building2, GraduationCap, Heart } from "lucide-react";
 import Logo from "../components/common/Logo";
 import ThemeToggle from "../components/common/ThemeToggle";
 import KidHome from "../components/home/KidHome";
@@ -51,12 +51,18 @@ export default function HomePage() {
             <p className="text-sm text-cream-600">{t("home.parentPortalDesc")}</p>
           </Link>
         </div>
-        <p className="mt-8 text-sm text-cream-600">
-          {t("sp.areYouSchoolStaff", "School principal, department head or counselor?")}{" "}
-          <Link to="/school-login" className="font-semibold text-gold hover:underline">
-            {t("sp.schoolPortalLink", "School portal")}
-          </Link>
-        </p>
+        <Link
+          to="/school-login"
+          className="card mt-6 flex items-center justify-center gap-3 p-5 hover:shadow-md hover:border-gold/40 border border-transparent transition"
+        >
+          <div className="flex h-11 w-11 items-center justify-center rounded-full bg-navy text-gold">
+            <Building2 size={22} />
+          </div>
+          <div className="text-start">
+            <h2 className="text-base font-semibold text-navy">{t("sp.schoolPortalLink", "School portal")}</h2>
+            <p className="text-xs text-cream-600">{t("sp.homeSchoolDesc", "For principals, department heads and counselors")}</p>
+          </div>
+        </Link>
       </div>
     </div>
   );

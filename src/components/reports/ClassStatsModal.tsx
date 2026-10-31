@@ -6,6 +6,7 @@ import Modal from "../common/Modal";
 import Spinner from "../common/Spinner";
 import { db } from "../../lib/firebase";
 import { useAuth } from "../../contexts/AuthContext";
+import { useEffectiveSchoolLogo } from "../../contexts/SchoolContext";
 import { useSubjectCompareAllowed } from "../../contexts/SchoolContext";
 import {
   bucketize,
@@ -479,6 +480,7 @@ export default function ClassStatsModal({
 }) {
   const { t } = useTranslation();
   const { user, profile } = useAuth();
+  const { logo: schoolLogo } = useEffectiveSchoolLogo();
   // The school principal can switch "compare across subjects" off for the school's teachers.
   const subjectCompareAllowed = useSubjectCompareAllowed();
   const [tab, setTab] = useState<StatsTab>(initialTab);
@@ -580,7 +582,7 @@ export default function ClassStatsModal({
 
   if (!open) return null;
 
-  const common = { period, kind, logo: profile?.schoolLogoURL, teacherName: profile?.displayName || "" };
+  const common = { period, kind, logo: schoolLogo, teacherName: profile?.displayName || "" };
   const txns = valid && data ? data.txns : [];
   let sheet: React.ReactNode = null;
   let printTitle = "";

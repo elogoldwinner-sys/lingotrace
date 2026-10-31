@@ -6,6 +6,7 @@ import Modal from "../common/Modal";
 import Spinner from "../common/Spinner";
 import { db } from "../../lib/firebase";
 import { useAuth } from "../../contexts/AuthContext";
+import { useEffectiveSchoolLogo } from "../../contexts/SchoolContext";
 import {
   byReason,
   bucketize,
@@ -139,6 +140,7 @@ export default function StudentReportModal({
 }) {
   const { t } = useTranslation();
   const { user, profile } = useAuth();
+  const { logo: schoolLogo } = useEffectiveSchoolLogo();
   const [all, setAll] = useState<Txn[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(false);
@@ -193,7 +195,7 @@ export default function StudentReportModal({
       kind={kind}
       txns={txns}
       firstAt={firstAt}
-      logo={profile?.schoolLogoURL}
+      logo={schoolLogo}
       teacherName={profile?.displayName || ""}
     />
   );

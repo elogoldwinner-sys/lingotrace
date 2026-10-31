@@ -937,6 +937,7 @@
       "grade": "A grade",
       "class": "A class",
       "students": "Student(s)"
-    }
+    },
+    "homeSchoolDesc": "For principals, department heads and counselors"
   }
 }

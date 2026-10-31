@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Download, Printer, Shuffle } from "lucide-react";
-import { useAuth } from "../../contexts/AuthContext";
+import { useEffectiveSchoolLogo } from "../../contexts/SchoolContext";
 import { subscribeToStudents } from "../../lib/services/studentsService";
 import { downloadCardItemsZip, downloadCardsZip, printCardItems, printCards } from "../../lib/cardExport";
 import { CARD_ARTS, planClassCards } from "../../lib/numberedCards";
@@ -16,8 +16,8 @@ import type { ClassRecord, StudentRecord } from "../../types";
  */
 export default function NumberedCardsSettings({ classes }: { classes: ClassRecord[] }) {
   const { t, i18n } = useTranslation();
-  const { profile } = useAuth();
-  const logoUrl = profile?.schoolLogoURL;
+  const { logo: schoolLogo } = useEffectiveSchoolLogo();
+  const logoUrl = schoolLogo;
 
   const [classId, setClassId] = useState("");
   const [students, setStudents] = useState<StudentRecord[]>([]);

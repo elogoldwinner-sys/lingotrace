@@ -24,6 +24,7 @@ import {
 } from "lucide-react";
 import { deleteField } from "firebase/firestore";
 import { useAuth } from "../contexts/AuthContext";
+import { useEffectiveSchoolLogo } from "../contexts/SchoolContext";
 import { subscribeToClasses, updateClass } from "../lib/services/classesService";
 import {
   subscribeToStudents,
@@ -104,6 +105,7 @@ export default function StudentsPage() {
   const { t, i18n } = useTranslation();
   const dn = (st: Parameters<typeof studentDisplayName>[0]) => studentDisplayName(st, i18n.language);
   const { user, profile, loading: authLoading } = useAuth();
+  const { logo: schoolLogo } = useEffectiveSchoolLogo();
   const [searchParams] = useSearchParams();
   const preselectedClassId = searchParams.get("classId") || "";
 
@@ -144,13 +146,13 @@ export default function StudentsPage() {
 
   // Students added or joined after the logo was uploaded get it copied on as soon as the teacher sees them.
   useEffect(() => {
-    const logo = profile?.schoolLogoURL;
+    const logo = schoolLogo;
     if (!logo) return;
     const missing = students.filter((s) => s.schoolLogoURL !== logo && !healedLogoRef.current.has(`${s.id}|${logo}`));
     if (missing.length === 0) return;
     missing.forEach((s) => healedLogoRef.current.add(`${s.id}|${logo}`));
     applySchoolLogoToStudents(missing, logo).catch((err) => console.error("School logo copy failed", err));
-  }, [students, profile?.schoolLogoURL]);
+  }, [students, schoolLogo]);
   const [detailAttendance, setDetailAttendance] = useState<AttendanceRecord[]>([]);
   const [detailNotes, setDetailNotes] = useState<NoteRecord[]>([]);
   const [detailSessions, setDetailSessions] = useState<SessionRecord[]>([]);

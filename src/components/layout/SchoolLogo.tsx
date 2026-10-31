@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { ImagePlus, X } from "lucide-react";
 import { useAuth } from "../../contexts/AuthContext";
+import { useEffectiveSchoolLogo } from "../../contexts/SchoolContext";
 import { uploadToCloudinary } from "../../lib/cloudinary";
 import { syncSchoolLogoForTeacher } from "../../lib/services/studentsService";
 
@@ -18,7 +19,8 @@ export default function SchoolLogo({ size = 48 }: { size?: number }) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
-  const logo = profile?.schoolLogoURL;
+  // Teachers of a school (approved by the principal) show the school's own logo and cannot change it.
+  const { logo, locked } = useEffectiveSchoolLogo();
 
   // Once per browser session (and per logo), make sure every student record carries the current logo,
   // so students who joined or were added after the upload still show it in the parent portal.
@@ -62,6 +64,14 @@ export default function SchoolLogo({ size = 48 }: { size?: number }) {
     } finally {
       setBusy(false);
     }
+  }
+
+  if (locked && logo) {
+    return (
+      <div className="relative shrink-0" style={{ width: size, height: size }}>
+        <img src={logo} alt={t("school.logoAlt")} className="h-full w-full rounded-full border-2 border-gold/60 bg-white object-cover shadow-sm" />
+      </div>
+    );
   }
 
   return (

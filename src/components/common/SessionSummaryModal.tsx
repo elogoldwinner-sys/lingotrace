@@ -4,6 +4,7 @@ import { Printer } from "lucide-react";
 import Modal from "./Modal";
 import Spinner from "./Spinner";
 import { useAuth } from "../../contexts/AuthContext";
+import { useEffectiveSchoolLogo } from "../../contexts/SchoolContext";
 import { getSessionTransactions } from "../../lib/services/pointsService";
 import { toMillis } from "../../lib/timestamps";
 import { PrintPortal, printReport, ReportHeader, StatCards, PrintedOn } from "../reports/reportParts";
@@ -35,6 +36,7 @@ export default function SessionSummaryModal({
 }) {
   const { t } = useTranslation();
   const { profile } = useAuth();
+  const { logo: schoolLogo } = useEffectiveSchoolLogo();
   const [txns, setTxns] = useState<PointsTransaction[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(false);
@@ -90,7 +92,7 @@ export default function SessionSummaryModal({
     <div className="lt-report">
       <ReportHeader
         title={t("sessionSummary.title")}
-        logo={profile?.schoolLogoURL}
+        logo={schoolLogo}
         lines={[
           { label: t("sessionSummary.session"), value: session.title },
           { label: t("sessionSummary.date"), value: session.date },

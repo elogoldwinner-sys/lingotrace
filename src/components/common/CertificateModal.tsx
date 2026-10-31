@@ -10,7 +10,7 @@ import {
   toRenderData,
 } from "../../lib/services/certificatesService";
 import { downloadCertificates } from "../../lib/certificate";
-import { useAuth } from "../../contexts/AuthContext";
+import { useEffectiveSchoolLogo } from "../../contexts/SchoolContext";
 import { formatNoteDate } from "../../lib/timestamps";
 import type { CertificateRecord, StudentRecord } from "../../types";
 
@@ -42,7 +42,7 @@ export default function CertificateModal({
   teacherId: string;
 }) {
   const { t, i18n } = useTranslation();
-  const { profile } = useAuth();
+  const { logo: schoolLogo } = useEffectiveSchoolLogo();
   const [reason, setReason] = useState("");
   const [busy, setBusy] = useState<"" | "issue" | "download">("");
   const [progress, setProgress] = useState("");
@@ -105,7 +105,7 @@ export default function CertificateModal({
     try {
       const records = await prepare();
       await downloadCertificates(
-        records.map((r) => toRenderData(r, profile?.schoolLogoURL)),
+        records.map((r) => toRenderData(r, schoolLogo)),
         t("certificate.zipName", { className }),
         (done, total) => setProgress(total > 1 ? t("certificate.preparing", { done, total }) : "")
       );

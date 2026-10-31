@@ -97,3 +97,15 @@ export function useSubjectCompareAllowed() {
   if (!school || !membership || membership.status !== "approved") return true;
   return school.allowSubjectCompare !== false;
 }
+
+/**
+ * The logo to show and print for this teacher. Once the principal has approved the teacher, the SCHOOL's logo
+ * (set by the principal) is used everywhere and the teacher can no longer change it; otherwise the teacher's own logo.
+ */
+export function useEffectiveSchoolLogo(): { logo: string | undefined; locked: boolean } {
+  const { school, membership } = useSchool();
+  const { profile } = useAuth();
+  const member = !!school && !!membership && membership.status === "approved" && membership.schoolId === school.id;
+  if (member && school!.logoURL) return { logo: school!.logoURL, locked: true };
+  return { logo: profile?.schoolLogoURL, locked: false };
+}
