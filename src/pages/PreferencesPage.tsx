@@ -8,6 +8,7 @@ import { subscribeToClasses } from "../lib/services/classesService";
 import { allBuiltIn, cloneScope, getPrefs, hasClassOverride, effectiveScope } from "../lib/reasonPrefs";
 import { useEffect } from "react";
 import NumberedCardsSettings from "../components/common/NumberedCardsSettings";
+import FeatureGate from "../components/common/FeatureGate";
 import type { ClassRecord, ReasonPrefs, ReasonScope, TeacherGender } from "../types";
 
 const ALL = "__all__";
@@ -285,6 +286,7 @@ export default function PreferencesPage() {
         {periodMsg && <p className={`text-sm font-semibold ${periodMsg.ok ? "text-green-700" : "text-red-600"}`}>{periodMsg.text}</p>}
       </form>
 
+      <FeatureGate feature="editReasons" notice>
       <div className="card space-y-4 p-5">
         <div>
           <p className="mb-1 text-base font-semibold text-navy">{t("preferences.reasonsTitle")}</p>
@@ -395,8 +397,11 @@ export default function PreferencesPage() {
 
         {error && <p className="text-sm text-red-600">{t("preferences.saveError")}</p>}
       </div>
+      </FeatureGate>
 
-      <NumberedCardsSettings classes={classes} />
+      <FeatureGate feature="numberedHeads">
+        <NumberedCardsSettings classes={classes} />
+      </FeatureGate>
     </div>
   );
 }

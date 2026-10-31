@@ -1,0 +1,31 @@
+# Admin portal, plan features and support tickets
+
+## Deploy
+1. Copy these files over your project (same folders).
+2. `firebase deploy --only firestore:rules` — **required.** The admin address in `firestore.rules` (`isAdmin()`) and in `src/lib/admin.ts` is `elo.gold.winner@gmail.com`.
+3. Sign in at `/admin-login` with that Google account → `/admin`.
+4. **Existing schools start on the basic plan** (every controlled feature off). Open Admin → Schools, tick the schools and press "Paid preset" to give them everything, or switch features one by one.
+
+## What the admin controls (Admin → Schools → a school)
+| Switch | Effect when OFF |
+|---|---|
+| Department heads & counselors | Principal's "Add staff" is faded; existing heads/counselors see "account paused"; rules block creating them and reading class data as them |
+| Supervisors & coordinators | Same, for the department head's "Add staff" |
+| Comparing classes | Faded in School portal → Compare, teacher's Class statistics tab and "Compare" button |
+| Comparing classes across subjects | Faded in the same places; rules block the cross-subject points read |
+| Exams & Games | Sidebar item faded, page inert; rules block creating/editing assignments |
+| Numbered Heads Together | Button in live session faded; numbered-cards settings faded |
+| Edit mark reasons | Preferences reasons card faded; "Add my own" faded; everyone gets the standard reasons |
+
+Basic features (everything else) always work. Teachers who are not part of a school are not limited.
+The plan label (Free/Paid) is only a label; the switches decide access.
+
+## Tickets
+Principal → School portal → **Support** (new ticket, follow replies, close). Locked features have a "Request access" badge that opens a pre-filled ticket. Admin → **Tickets** (filters, search, reply, change status). Red dots show unread on both sides.
+
+## Enforcement honesty
+Rules enforce: creating staff, reading class data as paused staff, cross-subject points, creating exam/game links, tickets, and that only the admin can write plans. UI-only (data is the teacher's own): Numbered Heads, Edit reasons, Comparing classes in a teacher's own Class statistics.
+The admin can read schools, teachers/staff lists and tickets — not classes, students or points.
+
+## Not tested here
+No emulator or `npm install` was possible in the build sandbox. Please run `npm run build` and test the rules (Rules Playground / emulator) after deploying.

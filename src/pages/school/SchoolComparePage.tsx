@@ -2,7 +2,9 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { format, subDays } from "date-fns";
 import Spinner from "../../components/common/Spinner";
-import { useSchool } from "../../contexts/SchoolContext";
+import { useFeature, useSchool } from "../../contexts/SchoolContext";
+import FeatureGate from "../../components/common/FeatureGate";
+import type { FeatureKey } from "../../lib/features";
 import { useAuth } from "../../contexts/AuthContext";
 import { useSchoolData } from "../../components/school/SchoolDataContext";
 import { SchoolPrintedOn, SchoolSignBlock } from "../../components/school/SchoolReportParts";
@@ -33,6 +35,13 @@ export default function SchoolComparePage() {
   const { user, profile } = useAuth();
   const { classes, loading, teacherName, getStudents, getTxns, audit } = useSchoolData();
   const [mode, setMode] = useState<Mode>("classes");
+  // The platform admin switches "compare classes" / "compare across subjects" on per school; comparing students is basic.
+  const classesOn = useFeature("compareClasses");
+  const subjectsOn = useFeature("compareSubjects");
+  const modeFeature: Partial<Record<Mode, FeatureKey>> = { classes: "compareClasses", subjects: "compareSubjects" };
+  useEffect(() => {
+    if ((mode === "classes" && !classesOn) || (mode === "subjects" && !subjectsOn)) setMode(classesOn ? "classes" : subjectsOn ? "subjects" : "students");
+  }, [mode, classesOn, subjectsOn]);
   const [subject, setSubject] = useState("");
   const [picked, setPicked] = useState<Set<string>>(new Set());
   const [sectionKey, setSectionKey] = useState("");
@@ -214,16 +223,26 @@ export default function SchoolComparePage() {
       <h1 className="text-2xl font-semibold text-navy">{t("sp.compareTitle", "Compare")}</h1>
       <div className="card space-y-4 p-4">
         <div className="flex flex-wrap gap-2">
-          {(["classes", "subjects", "students"] as Mode[]).map((m) => (
-            <button
-              key={m}
-              type="button"
-              onClick={() => setMode(m)}
-              className={`rounded-lg px-3 py-2 text-sm font-bold transition ${mode === m ? "bg-navy text-white shadow" : "bg-cream-300/50 text-navy hover:bg-cream-300"}`}
-            >
-              {t(`sp.mode.${m}`, m === "classes" ? "Classes in a subject" : m === "subjects" ? "Subjects of a class" : "Students")}
-            </button>
-          ))}
+          {(["classes", "subjects", "students"] as Mode[]).map((m) => {
+            const btn = (
+              <button
+                key={m}
+                type="button"
+                onClick={() => setMode(m)}
+                className={`rounded-lg px-3 py-2 text-sm font-bold transition ${mode === m ? "bg-navy text-white shadow" : "bg-cream-300/50 text-navy hover:bg-cream-300"}`}
+              >
+                {t(`sp.mode.${m}`, m === "classes" ? "Classes in a subject" : m === "subjects" ? "Subjects of a class" : "Students")}
+              </button>
+            );
+            const feature = modeFeature[m];
+            return feature ? (
+              <FeatureGate key={m} feature={feature} as="span">
+                {btn}
+              </FeatureGate>
+            ) : (
+              btn
+            );
+          })}
         </div>
 
         <ReportControls

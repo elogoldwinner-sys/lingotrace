@@ -1,3 +1,4 @@
+import type { FeatureMap } from "../lib/features";
 export type UserRole = "teacher" | "admin" | "student" | "parent";
 
 export interface UserProfile {
@@ -571,5 +572,62 @@ export interface FeedbackLogEntry {
   recipientType: "teachers" | "parents";
   recipients: string[];
   message: string;
+  createdAt: number;
+}
+
+/* ───────────────────────── Platform admin: plans, tickets ───────────────────────── */
+
+export type SchoolPlan = "free" | "paid";
+
+/**
+ * What the platform admin has switched on for a school (doc id = schoolId). Lives in its OWN collection because a
+ * principal may edit the school document itself — only the admin can write this one. Missing doc / missing key = off.
+ */
+export interface SchoolEntitlements {
+  schoolId: string;
+  plan: SchoolPlan;
+  features: FeatureMap;
+  updatedAt?: number;
+  updatedBy?: string;
+}
+
+export type TicketStatus = "open" | "in_progress" | "resolved" | "closed";
+export type TicketCategory = "complaint" | "feature_request" | "technical" | "billing" | "other";
+
+/** A support ticket issued by a school principal; the admin answers it in the admin portal (doc id = auto). */
+export interface Ticket {
+  id: string;
+  schoolId: string;
+  schoolName: string;
+  createdByUid: string;
+  createdByName: string;
+  createdByEmail: string;
+  category: TicketCategory;
+  subject: string;
+  /** Set when the ticket was started from a locked feature ("Request access"). */
+  featureKey?: string;
+  status: TicketStatus;
+  unreadByAdmin: boolean;
+  unreadByPrincipal: boolean;
+  createdAt: number;
+  lastMessageAt: number;
+  messageCount: number;
+}
+
+export interface TicketMessage {
+  id: string;
+  authorUid: string;
+  authorName: string;
+  authorRole: "principal" | "admin";
+  text: string;
+  createdAt: number;
+}
+
+export interface AdminLogEntry {
+  id: string;
+  schoolId: string;
+  schoolName: string;
+  action: string;
+  detail: string;
   createdAt: number;
 }

@@ -1,3 +1,4 @@
+import FeatureGate from "../components/common/FeatureGate";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Plus, Trash2, ExternalLink, Award } from "lucide-react";
@@ -241,6 +242,7 @@ export default function LinkedActivitiesPage() {
     source === "gatway" ? "https://gatway.app/exam/take/..." : "https://play.lingobite.app/play/...";
 
   return (
+    <FeatureGate feature="examsGames" notice>
     <div className="flex flex-col gap-6">
       <div className="flex items-center justify-between">
         <h1 className="text-xl font-bold text-navy">{t("linked.title")}</h1>
@@ -357,5 +359,6 @@ export default function LinkedActivitiesPage() {
         </div>
       </Modal>
     </div>
+    </FeatureGate>
   );
 }

@@ -75,6 +75,7 @@ import ClassTypeCard from "../components/avatars/ClassTypeCard";
 import { avatarPool, takenKeys } from "../lib/avatars";
 import StudentReportModal from "../components/reports/StudentReportModal";
 import ClassStatsModal, { type StatsTab } from "../components/reports/ClassStatsModal";
+import FeatureGate from "../components/common/FeatureGate";
 import CertificateModal from "../components/common/CertificateModal";
 import RichText from "../components/common/RichText";
 import { reasonsForAmount, POSITIVE_POINTS_REASONS } from "../lib/pointsReasons";
@@ -640,17 +641,19 @@ export default function StudentsPage() {
             <BarChart3 size={16} />
             {t("reports.classStats")}
           </button>
-          <button
-            onClick={() => {
-              setClassStatsTab("classes");
-              setClassStatsOpen(true);
-            }}
-            className={`btn-secondary text-sm py-2 px-3 ${SOLID_TONES.lime}`}
-            disabled={!selectedClassId}
-          >
-            <Scale size={16} />
-            {t("reports.compareButton")}
-          </button>
+          <FeatureGate feature="compareClasses" as="span">
+            <button
+              onClick={() => {
+                setClassStatsTab("classes");
+                setClassStatsOpen(true);
+              }}
+              className={`btn-secondary text-sm py-2 px-3 ${SOLID_TONES.lime}`}
+              disabled={!selectedClassId}
+            >
+              <Scale size={16} />
+              {t("reports.compareButton")}
+            </button>
+          </FeatureGate>
         </div>
       </div>
 

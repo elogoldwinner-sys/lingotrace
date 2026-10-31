@@ -4,6 +4,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { ArrowLeft, Building2 } from "lucide-react";
 import { useAuth, isDismissedPopupError } from "../../contexts/AuthContext";
 import { useSchool } from "../../contexts/SchoolContext";
+import { isAdminEmail } from "../../lib/admin";
 import Logo from "../../components/common/Logo";
 import Spinner from "../../components/common/Spinner";
 
@@ -81,6 +82,11 @@ export default function SchoolLoginPage() {
               <p className="text-sm text-cream-600">
                 {t("sp.noAccessHelp", "Staff: ask your principal (or department head) to add this Gmail address. Principal: create your school below.")}
               </p>
+              {isAdminEmail(user.email) && (
+                <Link to="/admin" className="btn-gold flex w-full justify-center">
+                  {t("adm.openAdmin", "Open the admin portal")}
+                </Link>
+              )}
               <Link to="/school/setup" className="btn-primary flex w-full justify-center">
                 {t("sp.createSchool", "I'm a school principal — create my school")}
               </Link>

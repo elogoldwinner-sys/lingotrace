@@ -3,6 +3,7 @@ import { useTranslation } from "react-i18next";
 import Logo from "../common/Logo";
 import AnimatedLogo, { AnimatedName, useLogoAnimation } from "../common/AnimatedLogo";
 import { useTheme } from "../../contexts/ThemeContext";
+import { useFeature } from "../../contexts/SchoolContext";
 import sidebarOwl from "../../assets/kid-dashboard/sidebar-owl.webp";
 import {
   LayoutDashboard,
@@ -15,6 +16,7 @@ import {
   Archive,
   FolderCheck,
   GraduationCap,
+  Lock,
   ChevronsLeft,
   ChevronsRight,
 } from "lucide-react";
@@ -63,6 +65,7 @@ export default function Sidebar({ collapsed, mobileOpen, onToggle, onNavigate }:
   const logoAnim = useLogoAnimation();
   const { theme } = useTheme();
   const isKid = theme === "kid";
+  const examsOn = useFeature("examsGames");
 
   return (
     <>
@@ -112,7 +115,24 @@ export default function Sidebar({ collapsed, mobileOpen, onToggle, onNavigate }:
         )}
         {!isKid && <div className="h-px bg-gold/30 mx-3 md:mx-6" />}
         <nav className={`sidebar-scroll flex-1 px-2 space-y-1 md:px-3 overflow-y-auto ${isKid ? "py-2 md:px-4" : "py-6"}`}>
-          {navItems.map(({ to, key, icon: Icon }) => (
+          {navItems.map(({ to, key, icon: Icon }) =>
+            key === "linkedActivities" && !examsOn ? (
+              // Not included in the school's plan: still listed, but faded and not clickable.
+              <div
+                key={to}
+                aria-disabled="true"
+                title={t("feat.lockedTeacher", "Not enabled for your school. Ask your principal to request it.")}
+                className={`flex cursor-not-allowed items-center gap-3 py-1.5 opacity-45 ${
+                  isKid ? "rounded-full text-base font-bold text-white/85" : "rounded-lg text-sm font-medium text-cream-200/80"
+                } ${mobileOpen ? `justify-start ${isKid ? "px-4" : "px-3"}` : "justify-center px-0"} ${
+                  collapsed ? "md:justify-center md:px-0" : `md:justify-start ${isKid ? "md:px-4" : "md:px-3"}`
+                }`}
+              >
+                <Icon size={isKid ? 20 : 17} strokeWidth={2.2} className="shrink-0" />
+                <span className={`truncate ${mobileOpen ? "inline" : "hidden"} ${collapsed ? "md:hidden" : "md:inline"}`}>{t(`nav.${key}`)}</span>
+                <Lock size={12} className={`ms-auto shrink-0 ${mobileOpen ? "inline" : "hidden"} ${collapsed ? "md:hidden" : "md:inline"}`} />
+              </div>
+            ) : (
             <NavLink
               key={to}
               to={to}
@@ -143,7 +163,8 @@ export default function Sidebar({ collapsed, mobileOpen, onToggle, onNavigate }:
                 {t(`nav.${key}`)}
               </span>
             </NavLink>
-          ))}
+            )
+          )}
         </nav>
         {isKid && (
           // Owl on a stack of books with purple clouds; fades into the sidebar colour at the top.

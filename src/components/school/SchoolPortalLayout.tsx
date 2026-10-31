@@ -1,11 +1,12 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { NavLink, Navigate, Outlet, useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
-import { Globe, LogOut, Repeat, Building2 } from "lucide-react";
+import { Globe, LogOut, Repeat, Building2, Lock } from "lucide-react";
 import { useAuth } from "../../contexts/AuthContext";
-import { useSchool } from "../../contexts/SchoolContext";
+import { useFeature, useSchool } from "../../contexts/SchoolContext";
 import Spinner from "../common/Spinner";
 import { updateSchool } from "../../lib/services/schoolService";
+import { subscribeUnreadCount } from "../../lib/services/ticketsService";
 import { SchoolDataProvider } from "./SchoolDataContext";
 import type { StaffRole } from "../../types";
 
@@ -18,6 +19,7 @@ const TABS: { to: string; key: string; label: string; roles: StaffRole[] }[] = [
   { to: "/school/staff", key: "staff", label: "Staff", roles: ["principal", "departmentHead"] },
   { to: "/school/audit", key: "audit", label: "Audit trail", roles: ["principal"] },
   { to: "/school/settings", key: "settings", label: "Settings", roles: ["principal"] },
+  { to: "/school/support", key: "support", label: "Support", roles: ["principal"] },
 ];
 
 /** Shell of the principal / department head / counselor portal: school header + role-based tabs. */
@@ -27,6 +29,16 @@ export default function SchoolPortalLayout() {
   const { staff, school, loading, refresh } = useSchool();
   const navigate = useNavigate();
   const synced = useRef(false);
+  const leadershipOn = useFeature("leadership");
+  const supervisorsOn = useFeature("supervisors");
+  const [unreadTickets, setUnreadTickets] = useState(0);
+  const principalSchoolId = staff?.role === "principal" ? school?.id : undefined;
+
+  // Principal: a dot on the Support tab when the admin has answered.
+  useEffect(() => {
+    if (!principalSchoolId) return;
+    return subscribeUnreadCount("principal", principalSchoolId, setUnreadTickets);
+  }, [principalSchoolId]);
 
   // After a principal-role transfer the school only knows the new principal's Gmail; on their first sign-in,
   // record their real name and account id.
@@ -50,6 +62,10 @@ export default function SchoolPortalLayout() {
 
   const tabs = TABS.filter((x) => x.roles.includes(staff.role));
   const roleText = staff.jobTitle || t(`sp.role.${staff.role}`, staff.role);
+  // The admin switched this kind of account off for the school: the person keeps their record but can't use the portal.
+  const paused =
+    ((staff.role === "departmentHead" || staff.role === "counselor") && !leadershipOn) ||
+    ((staff.role === "supervisor" || staff.role === "coordinator") && !supervisorsOn);
 
   return (
     <SchoolDataProvider>
@@ -121,7 +137,7 @@ export default function SchoolPortalLayout() {
             </div>
           </div>
           <nav className="mx-auto mt-3 flex max-w-6xl flex-wrap gap-1.5">
-            {tabs.map((tab) => (
+            {(paused ? [] : tabs).map((tab) => (
               <NavLink
                 key={tab.key}
                 to={tab.to}
@@ -133,12 +149,25 @@ export default function SchoolPortalLayout() {
                 }
               >
                 {t(`sp.tab.${tab.key}`, tab.label)}
+                {tab.key === "support" && unreadTickets > 0 && (
+                  <span className="ms-1.5 rounded-full bg-red-600 px-1.5 text-[11px] font-bold leading-5 text-white">{unreadTickets}</span>
+                )}
               </NavLink>
             ))}
           </nav>
         </header>
         <main className="mx-auto max-w-6xl px-3 py-5 sm:px-6 sm:py-8">
-          <Outlet />
+          {paused ? (
+            <div className="card mx-auto max-w-lg space-y-2 p-6 text-center">
+              <Lock className="mx-auto text-gold" size={28} />
+              <h1 className="text-xl font-semibold text-navy">{t("feat.pausedTitle", "This account is paused")}</h1>
+              <p className="text-sm text-cream-600">
+                {t("feat.pausedBody", "Your school's plan doesn't include this kind of account right now. Please contact your principal.")}
+              </p>
+            </div>
+          ) : (
+            <Outlet />
+          )}
         </main>
       </div>
     </SchoolDataProvider>

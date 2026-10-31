@@ -2,8 +2,10 @@ import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Plus } from "lucide-react";
 import { useAuth } from "../../contexts/AuthContext";
+import { useFeature } from "../../contexts/SchoolContext";
+import FeatureGate from "./FeatureGate";
 import { POINTS_REASON_ICONS } from "../../lib/pointsReasons";
-import { cloneScope, effectiveScope, getPrefs, hasClassOverride, visibleBuiltIn } from "../../lib/reasonPrefs";
+import { cloneScope, effectiveScope, emptyScope, getPrefs, hasClassOverride, visibleBuiltIn } from "../../lib/reasonPrefs";
 import type { PointsReason } from "../../types";
 
 const MAX_CUSTOM_LENGTH = 60;
@@ -56,7 +58,10 @@ export default function ReasonPicker({
   const { profile } = useAuth();
   const [typing, setTyping] = useState(false);
   const positive = amount >= 0;
-  const scope = effectiveScope(getPrefs(profile), classId);
+  // When the school's plan doesn't include editing reasons, everyone gets the standard built-in list
+  // (the teacher's own hidden / custom reasons are kept but not applied).
+  const canEditReasons = useFeature("editReasons");
+  const scope = canEditReasons ? effectiveScope(getPrefs(profile), classId) : emptyScope();
   const saved = (positive ? scope.positive : scope.negative).custom;
   const builtIn = visibleBuiltIn(positive, scope);
   const chip = (active: boolean) =>
@@ -116,17 +121,19 @@ export default function ReasonPicker({
             {text}
           </button>
         ))}
-        <button
-          type="button"
-          onClick={() => {
-            setTyping(true);
-            onChange("custom", "");
-          }}
-          className={chip(typing)}
-        >
-          <Plus size={14} />
-          {t("points.addOwnReason")}
-        </button>
+        <FeatureGate feature="editReasons" as="span">
+          <button
+            type="button"
+            onClick={() => {
+              setTyping(true);
+              onChange("custom", "");
+            }}
+            className={chip(typing)}
+          >
+            <Plus size={14} />
+            {t("points.addOwnReason")}
+          </button>
+        </FeatureGate>
       </div>
       {typing && (
         <div className="mt-2 space-y-1.5">

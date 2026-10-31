@@ -29,6 +29,13 @@ import SchoolTeachersPage from "./pages/school/SchoolTeachersPage";
 import SchoolStaffPage from "./pages/school/SchoolStaffPage";
 import SchoolAuditPage from "./pages/school/SchoolAuditPage";
 import SchoolSettingsPage from "./pages/school/SchoolSettingsPage";
+import SchoolSupportPage from "./pages/school/SchoolSupportPage";
+import AdminLoginPage from "./pages/admin/AdminLoginPage";
+import AdminLayout from "./pages/admin/AdminLayout";
+import AdminOverviewPage from "./pages/admin/AdminOverviewPage";
+import AdminSchoolsPage from "./pages/admin/AdminSchoolsPage";
+import AdminSchoolDetailPage from "./pages/admin/AdminSchoolDetailPage";
+import AdminTicketsPage from "./pages/admin/AdminTicketsPage";
 import SubmitProjectPage from "./pages/SubmitProjectPage";
 import StudentPortalPage from "./pages/portal/StudentPortalPage";
 import ParentPortalPage from "./pages/portal/ParentPortalPage";
@@ -56,6 +63,14 @@ export default function App() {
             <Route path="staff" element={<SchoolStaffPage />} />
             <Route path="audit" element={<SchoolAuditPage />} />
             <Route path="settings" element={<SchoolSettingsPage />} />
+            <Route path="support" element={<SchoolSupportPage />} />
+          </Route>
+          <Route path="/admin-login" element={<AdminLoginPage />} />
+          <Route path="/admin" element={<AdminLayout />}>
+            <Route index element={<AdminOverviewPage />} />
+            <Route path="schools" element={<AdminSchoolsPage />} />
+            <Route path="schools/:id" element={<AdminSchoolDetailPage />} />
+            <Route path="tickets" element={<AdminTicketsPage />} />
           </Route>
           <Route path="/submit/:projectId" element={<SubmitProjectPage />} />
 

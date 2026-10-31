@@ -31,6 +31,7 @@ import EmptyState from "../components/common/EmptyState";
 import Spinner from "../components/common/Spinner";
 import ClassSelector from "../components/common/ClassSelector";
 import NumberedHeadsModal from "../components/common/NumberedHeadsModal";
+import FeatureGate from "../components/common/FeatureGate";
 import SessionSummaryModal from "../components/common/SessionSummaryModal";
 import NamesWheelModal from "../components/common/NamesWheelModal";
 import SoundToggle from "../components/common/SoundToggle";
@@ -511,13 +512,15 @@ export default function SessionsPage({ archived = false }: { archived?: boolean 
                                   <Disc3 size={16} />
                                   {t("sessions.wheelButton")}
                                 </button>
-                                <button
-                                  onClick={() => setGroupPickOpen(true)}
-                                  className="btn-secondary py-1.5 px-3 text-sm"
-                                >
-                                  <Users size={16} />
-                                  {t("numberedHeads.button")}
-                                </button>
+                                <FeatureGate feature="numberedHeads" as="span">
+                                  <button
+                                    onClick={() => setGroupPickOpen(true)}
+                                    className="btn-secondary py-1.5 px-3 text-sm"
+                                  >
+                                    <Users size={16} />
+                                    {t("numberedHeads.button")}
+                                  </button>
+                                </FeatureGate>
                                 <button
                                   onClick={() => setSummarySession(s)}
                                   className="btn-secondary py-1.5 px-3 text-sm"

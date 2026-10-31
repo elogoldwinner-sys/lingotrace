@@ -33,6 +33,39 @@ service cloud.firestore {
     }
 
 
+    // ---- Platform administrator + plan features ----
+
+    // The platform admin (a single, fixed, verified Google account). Keep this address in sync with src/lib/admin.ts.
+    // The admin can read schools, their teachers / staff lists and support tickets, and write plans + ticket replies.
+    // The admin can NOT read classes, students or points.
+    function isAdmin() {
+      return isSignedIn() && request.auth.token.email != null &&
+        request.auth.token.email_verified == true &&
+        request.auth.token.email.lower() == 'elo.gold.winner@gmail.com';
+    }
+
+    // Is this feature switched on for the school? Entitlements live in schoolEntitlements/{schoolId}, which only the
+    // admin can write. No document, or no key = OFF (basic plan).
+    function featureOn(schoolId, feature) {
+      return schoolId != '' &&
+        exists(/databases/$(database)/documents/schoolEntitlements/$(schoolId)) &&
+        get(/databases/$(database)/documents/schoolEntitlements/$(schoolId)).data.get('features', {}).get(feature, false) == true;
+    }
+
+    // May a staff document with this role exist for the school? The principal is always fine; department heads and
+    // counselors need "leadership"; supervisors and coordinators need "supervisors".
+    function staffRoleAllowed(d) {
+      return d.role == 'principal' ||
+        (d.role in ['departmentHead', 'counselor'] && featureOn(d.schoolId, 'leadership')) ||
+        (d.role in ['supervisor', 'coordinator'] && featureOn(d.schoolId, 'supervisors'));
+    }
+
+    // Like featureOn, for a feature that belongs to a class's school (classes outside any school are not limited).
+    function classFeatureOn(classId, feature) {
+      let sid = get(/databases/$(database)/documents/classes/$(classId)).data.get('schoolId', '');
+      return sid == '' || featureOn(sid, feature);
+    }
+
     // ---- School portal helpers (principal / department head / counselor …) ----
 
     // The school's doc id never changes (it is the FIRST principal's uid), but "who is the principal" is the
@@ -68,7 +101,7 @@ service cloud.firestore {
         c.get('grade', -1) in a.get('grades', []) ||
         c.get('classKey', '') in a.get('classKeys', []);
       let subjectOk = c.get('subject', '') == a.get('subject', '');
-      return c.get('schoolId', '') != '' && c.get('schoolId', '') == a.schoolId && (
+      return c.get('schoolId', '') != '' && c.get('schoolId', '') == a.schoolId && staffRoleAllowed(a) && (
         a.role == 'principal' ||
         (a.role == 'departmentHead' && subjectOk) ||
         (a.role == 'counselor' && inScope) ||
@@ -269,7 +302,8 @@ service cloud.firestore {
       let c = get(/databases/$(database)/documents/classes/$(classId)).data;
       return isSignedIn() && c.get('ownerId', '') == request.auth.uid &&
         (c.get('schoolId', '') == '' ||
-          get(/databases/$(database)/documents/schools/$(c.schoolId)).data.get('allowSubjectCompare', true) != false);
+          (get(/databases/$(database)/documents/schools/$(c.schoolId)).data.get('allowSubjectCompare', true) != false &&
+            featureOn(c.schoolId, 'compareSubjects')));
     }
 
     // Points transactions are owned by the teacher who awarded them. The
@@ -363,9 +397,12 @@ service cloud.firestore {
     // Only the teacher who runs the class can create, edit or delete.
     match /linkedAssignments/{assignmentId} {
       allow read: if isSignedIn();
+      // Creating / editing needs the "examsGames" feature when the class belongs to a school (deleting never does).
       allow create: if ownsClass(request.resource.data.classId) &&
-        request.resource.data.teacherId == request.auth.uid;
-      allow update, delete: if ownsClass(resource.data.classId);
+        request.resource.data.teacherId == request.auth.uid &&
+        classFeatureOn(request.resource.data.classId, 'examsGames');
+      allow update: if ownsClass(resource.data.classId) && classFeatureOn(resource.data.classId, 'examsGames');
+      allow delete: if ownsClass(resource.data.classId);
     }
 
     // Scores reported back by GATway / Play. Doc id = `${assignmentId}_${studentId}`.
@@ -441,19 +478,23 @@ service cloud.firestore {
 
     // Who may use the school portal, and with what scope (doc id = lower-cased Gmail).
     match /staffAccess/{email} {
-      allow get: if isSignedIn() && request.auth.token.email != null &&
-        (request.auth.token.email.lower() == email || isSchoolPrincipal(resource.data.schoolId));
-      allow list: if isSignedIn() &&
-        (isSchoolPrincipal(resource.data.schoolId) || resource.data.addedByUid == request.auth.uid);
+      allow get: if isAdmin() || (isSignedIn() && request.auth.token.email != null &&
+        (request.auth.token.email.lower() == email || isSchoolPrincipal(resource.data.schoolId)));
+      allow list: if isAdmin() || (isSignedIn() &&
+        (isSchoolPrincipal(resource.data.schoolId) || resource.data.addedByUid == request.auth.uid));
+      // New department heads / counselors need the "leadership" feature, supervisors / coordinators need "supervisors".
       allow create: if isSignedIn() && request.resource.data.email == email && (
         (isSchoolPrincipal(request.resource.data.schoolId) &&
-          request.resource.data.addedByUid == request.auth.uid) ||
-        (hasStaff() && headMayGrant(request.resource.data)));
+          request.resource.data.addedByUid == request.auth.uid &&
+          staffRoleAllowed(request.resource.data)) ||
+        (hasStaff() && headMayGrant(request.resource.data) &&
+          featureOn(request.resource.data.schoolId, 'supervisors')));
       // The principal may change anything (including a role, when transferring the principal role);
       // a department head may only adjust the supervisors / coordinators they added, never a role.
       allow update: if isSignedIn() && request.resource.data.email == email &&
         request.resource.data.schoolId == resource.data.schoolId && (
-        isSchoolPrincipal(resource.data.schoolId) ||
+        (isSchoolPrincipal(resource.data.schoolId) &&
+          (request.resource.data.role == resource.data.role || staffRoleAllowed(request.resource.data))) ||
         (hasStaff() && request.resource.data.role == resource.data.role &&
           resource.data.addedByUid == request.auth.uid && headMayGrant(request.resource.data)));
       allow delete: if isSignedIn() && (
@@ -464,10 +505,10 @@ service cloud.firestore {
     // A teacher's request to join a school (doc id = the teacher's uid). It can only be CREATED as "pending";
     // only the principal can change the status to approved / rejected.
     match /schoolTeachers/{uid} {
-      allow get: if isSignedIn() && (request.auth.uid == uid ||
+      allow get: if isAdmin() || isSignedIn() && (request.auth.uid == uid ||
         isSchoolPrincipal(resource.data.schoolId) ||
         (hasStaff() && staffSchool() == resource.data.schoolId));
-      allow list: if isSignedIn() && (isSchoolPrincipal(resource.data.schoolId) ||
+      allow list: if isAdmin() || isSignedIn() && (isSchoolPrincipal(resource.data.schoolId) ||
         (hasStaff() && staffSchool() == resource.data.schoolId));
       allow create: if isSignedIn() && request.auth.uid == uid &&
         request.resource.data.uid == uid && request.resource.data.status == 'pending' &&
@@ -480,6 +521,55 @@ service cloud.firestore {
           (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['subject', 'status', 'classMap', 'schoolId']) &&
             request.resource.data.status == 'pending'))));
       allow delete: if isSignedIn() && (request.auth.uid == uid || isSchoolPrincipal(resource.data.schoolId));
+    }
+
+    // ---- Platform admin: plans, notes, log, support tickets ----
+
+    // What the admin switched on for a school. Read by the school's own people (to fade locked features); written ONLY
+    // by the admin — a principal can edit the school document but never this one.
+    match /schoolEntitlements/{schoolId} {
+      allow read: if isAdmin() || isSchoolPrincipal(schoolId) ||
+        (hasStaff() && staffSchool() == schoolId) || approvedTeacherOf(schoolId);
+      allow write: if isAdmin();
+    }
+
+    // Private admin notes about a school and the admin's change log. Admin only.
+    match /adminNotes/{schoolId} {
+      allow read, write: if isAdmin();
+    }
+    match /adminLog/{entryId} {
+      allow read, create: if isAdmin();
+      allow update, delete: if false;
+    }
+
+    // Support tickets issued by a school principal. The admin reads and answers all of them; a principal reads only
+    // their own school's. The principal may change only status (re-open / close) and the "new" flags.
+    match /tickets/{ticketId} {
+      allow read: if isAdmin() || isSchoolPrincipal(resource.data.schoolId);
+      allow create: if isSchoolPrincipal(request.resource.data.schoolId) &&
+        request.resource.data.createdByUid == request.auth.uid &&
+        request.resource.data.status == 'open' &&
+        request.resource.data.subject is string &&
+        request.resource.data.subject.size() > 0 && request.resource.data.subject.size() <= 150 &&
+        request.resource.data.category in ['complaint', 'feature_request', 'technical', 'billing', 'other'];
+      allow update: if isAdmin() || (isSchoolPrincipal(resource.data.schoolId) &&
+        request.resource.data.diff(resource.data).affectedKeys()
+          .hasOnly(['status', 'unreadByAdmin', 'unreadByPrincipal', 'lastMessageAt', 'messageCount']) &&
+        (request.resource.data.status == resource.data.status || request.resource.data.status in ['open', 'closed']));
+      allow delete: if isAdmin();
+
+      // The thread. Append-only. getAfter() lets the first message be written in the same batch as its ticket.
+      match /messages/{messageId} {
+        allow read: if isAdmin() ||
+          isSchoolPrincipal(get(/databases/$(database)/documents/tickets/$(ticketId)).data.schoolId);
+        allow create: if request.resource.data.text is string &&
+          request.resource.data.text.size() > 0 && request.resource.data.text.size() <= 4000 &&
+          request.resource.data.authorUid == request.auth.uid && (
+            (isAdmin() && request.resource.data.authorRole == 'admin') ||
+            (request.resource.data.authorRole == 'principal' &&
+              isSchoolPrincipal(getAfter(/databases/$(database)/documents/tickets/$(ticketId)).data.schoolId)));
+        allow update, delete: if false;
+      }
     }
   }
 }

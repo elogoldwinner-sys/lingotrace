@@ -917,7 +917,8 @@
       "teachers": "Teachers",
       "staff": "Staff",
       "audit": "Audit trail",
-      "settings": "Settings"
+      "settings": "Settings",
+      "support": "Support"
     },
     "mode": {
       "classes": "Classes in a subject",
@@ -949,5 +950,140 @@
     "transferError": "Couldn't transfer the role. Check the Gmail — it may already be used for another school.",
     "editGradeSection": "Change grade / section",
     "setGradeSection": "Set grade and section"
+  },
+  "feat": {
+    "locked": "Locked",
+    "requestAccess": "Request access",
+    "lockedPrincipal": "Not included in your school's plan. Tap to ask the administrator to enable it.",
+    "lockedTeacher": "Not enabled for your school. Ask your principal to request it.",
+    "noticePrincipal": "This feature isn't included in your school's plan. Use “Request access” to ask the administrator.",
+    "noticeTeacher": "This feature isn't enabled for your school. Ask your principal to request it.",
+    "staffLockedPrincipal": "Adding department heads and counselors isn't included in your school's plan. Use “Request access” to ask the administrator.",
+    "staffLockedHead": "Adding supervisors and coordinators isn't enabled for your school. Ask your principal to request it.",
+    "pausedTitle": "This account is paused",
+    "pausedBody": "Your school's plan doesn't include this kind of account right now. Please contact your principal.",
+    "leadership": {
+      "label": "Department heads & counselors",
+      "description": "The principal can add department heads and school counselors to the school portal."
+    },
+    "supervisors": {
+      "label": "Supervisors & coordinators",
+      "description": "Department heads can add supervisors and coordinators for their subject."
+    },
+    "compareClasses": {
+      "label": "Comparing classes",
+      "description": "Compare classes against each other (school portal Compare tab and teachers' Class statistics)."
+    },
+    "compareSubjects": {
+      "label": "Comparing classes across subjects",
+      "description": "Compare the subjects of one class against each other (school portal and teachers' Class statistics)."
+    },
+    "examsGames": {
+      "label": "Exams & Games",
+      "description": "Teachers can link GATway exams and LingoBite Play games to their classes."
+    },
+    "numberedHeads": {
+      "label": "Numbered Heads Together",
+      "description": "Random group-number picker inside a live session."
+    },
+    "editReasons": {
+      "label": "Edit mark reasons",
+      "description": "Teachers can hide built-in reasons and add their own for giving / deducting marks."
+    }
+  },
+  "adm": {
+    "loginTitle": "Admin portal",
+    "loginSub": "Manage schools, plans and support tickets.",
+    "notAdmin": "This Google account is not authorised for the admin portal.",
+    "openAdmin": "Open the admin portal",
+    "title": "Platform admin",
+    "tab": {
+      "overview": "Overview",
+      "schools": "Schools",
+      "tickets": "Tickets"
+    },
+    "overviewTitle": "Overview",
+    "statSchools": "Schools",
+    "statPaid": "Paid schools",
+    "statActive": "Open tickets",
+    "statUnread": "Waiting for your reply",
+    "noRecordTitle": "Schools without a plan record",
+    "noRecordHelp": "These schools have only the basic features. Open Schools to switch features on, or apply the Paid preset to several schools at once.",
+    "openSchools": "Open Schools",
+    "adoption": "Features switched on",
+    "recentTickets": "Latest tickets",
+    "seeAll": "See all",
+    "noTickets": "No tickets yet.",
+    "new": "New",
+    "schoolsTitle": "Schools",
+    "searchSchools": "Search school or principal",
+    "noSchools": "No schools found.",
+    "presetPaid": "Paid preset (everything on)",
+    "presetFree": "Free preset (basic only)",
+    "schoolsWord": "school(s)",
+    "selected": "selected",
+    "selectAll": "Select all",
+    "featuresOn": "features on",
+    "openTicketsShort": "open ticket(s)",
+    "planPaid": "Paid",
+    "planFree": "Free",
+    "planLabel": "Plan label",
+    "planHelp": "A label for you — the switches below are what actually decide access.",
+    "backToSchools": "All schools",
+    "schoolMissing": "School not found.",
+    "since": "since",
+    "featuresTitle": "Features for this school",
+    "enabled": "enabled",
+    "disabled": "disabled",
+    "disableNote": "Switching a feature off fades it for the school straight away. Staff added earlier keep their record but can't sign in to the school portal while their role is off.",
+    "noteTitle": "Private note",
+    "notePh": "Contract, contact, renewal date…",
+    "ticketsTitle": "Tickets",
+    "peopleTitle": "People",
+    "teachersWord": "teachers",
+    "staffWord": "staff",
+    "noPeople": "Nobody has joined this school yet.",
+    "logTitle": "Change log",
+    "noLog": "No changes yet.",
+    "ticketsPageTitle": "Support tickets",
+    "searchTickets": "Search subject or school",
+    "filterAll": "All",
+    "filterUnread": "Needs reply",
+    "backToList": "All tickets",
+    "pickTicket": "Choose a ticket to read and reply."
+  },
+  "tk": {
+    "cat": {
+      "complaint": "Complaint",
+      "feature_request": "Feature request",
+      "technical": "Technical problem",
+      "billing": "Plan / billing",
+      "other": "Other"
+    },
+    "status": {
+      "open": "Open",
+      "in_progress": "In progress",
+      "resolved": "Resolved",
+      "closed": "Closed"
+    },
+    "statusLabel": "Status",
+    "closeTicket": "Close ticket",
+    "supportTeam": "Support team",
+    "closedHint": "This ticket is closed. Sending a message re-opens it.",
+    "replyPlaceholder": "Write a reply…",
+    "send": "Send",
+    "sendError": "Couldn't send that. Please try again.",
+    "createError": "Couldn't send your ticket. Please try again.",
+    "title": "Support",
+    "sub": "Send a complaint, a question or a request to the platform administrator and follow the answer here.",
+    "new": "New ticket",
+    "category": "Type",
+    "subject": "Subject",
+    "message": "Message",
+    "submit": "Send ticket",
+    "none": "You haven't sent any tickets yet.",
+    "pick": "Choose a ticket to read the conversation.",
+    "requestSubject": "Please enable",
+    "requestBody": "Hello, we would like to use this feature at our school. Please enable it for us and let us know the next steps."
   }
 }

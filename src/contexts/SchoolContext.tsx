@@ -1,5 +1,7 @@
 import { createContext, useCallback, useContext, useEffect, useRef, useState, type ReactNode } from "react";
 import { useAuth } from "./AuthContext";
+import { getEntitlements } from "../lib/services/entitlementsService";
+import type { FeatureKey } from "../lib/features";
 import {
   getMembership,
   getSchool,
@@ -7,7 +9,7 @@ import {
   getStaffAccess,
   syncClassesToSchool,
 } from "../lib/services/schoolService";
-import type { School, SchoolAssets, SchoolTeacher, StaffAccess } from "../types";
+import type { School, SchoolAssets, SchoolEntitlements, SchoolTeacher, StaffAccess } from "../types";
 
 interface SchoolContextValue {
   /** The school-portal access this Gmail has (principal / head / counselor …), if any. */
@@ -18,6 +20,8 @@ interface SchoolContextValue {
   school: School | null;
   /** Signature / stamp images (staff only). */
   assets: SchoolAssets;
+  /** What the platform admin has switched on for the school (basic plan when nothing is set). */
+  entitlements: SchoolEntitlements | null;
   loading: boolean;
   refresh: () => Promise<void>;
 }
@@ -30,6 +34,7 @@ export function SchoolProvider({ children }: { children: ReactNode }) {
   const [membership, setMembership] = useState<SchoolTeacher | null>(null);
   const [school, setSchool] = useState<School | null>(null);
   const [assets, setAssets] = useState<SchoolAssets>({});
+  const [entitlements, setEntitlements] = useState<SchoolEntitlements | null>(null);
   const [loading, setLoading] = useState(true);
   const token = useRef(0);
 
@@ -40,6 +45,7 @@ export function SchoolProvider({ children }: { children: ReactNode }) {
       setMembership(null);
       setSchool(null);
       setAssets({});
+      setEntitlements(null);
       setLoading(false);
       return;
     }
@@ -48,15 +54,17 @@ export function SchoolProvider({ children }: { children: ReactNode }) {
       getMembership(user.uid).catch(() => null),
     ]);
     const schoolId = staffDoc?.schoolId || memberDoc?.schoolId;
-    const [schoolDoc, assetDoc] = await Promise.all([
+    const [schoolDoc, assetDoc, entDoc] = await Promise.all([
       schoolId ? getSchool(schoolId).catch(() => null) : Promise.resolve(null),
       staffDoc ? getSchoolAssets(staffDoc.schoolId) : Promise.resolve({}),
+      schoolId ? getEntitlements(schoolId) : Promise.resolve(null),
     ]);
     if (mine !== token.current) return;
     setStaff(staffDoc);
     setMembership(memberDoc);
     setSchool(schoolDoc);
     setAssets(assetDoc);
+    setEntitlements(entDoc);
     setLoading(false);
   }, [user]);
 
@@ -87,7 +95,7 @@ export function SchoolProvider({ children }: { children: ReactNode }) {
   }, [profile, membership, school]);
 
   return (
-    <SchoolContext.Provider value={{ staff, membership, school, assets, loading, refresh: load }}>
+    <SchoolContext.Provider value={{ staff, membership, school, assets, entitlements, loading, refresh: load }}>
       {children}
     </SchoolContext.Provider>
   );
@@ -97,6 +105,29 @@ export function useSchool() {
   const ctx = useContext(SchoolContext);
   if (!ctx) throw new Error("useSchool must be used within a SchoolProvider");
   return ctx;
+}
+
+/**
+ * Is a platform-admin-controlled feature available to this person?
+ *  - Someone who belongs to a school (school-portal staff, or a teacher the principal approved) gets exactly what the
+ *    admin switched on for that school.
+ *  - A teacher who is not part of a school is not governed by a school plan and keeps everything.
+ *  - While the school is still loading we don't lock anything (the security rules are the real gate for writes).
+ * This hides / fades UI; data that must not be written without the feature is also checked in firestore.rules.
+ */
+export function useFeature(key: FeatureKey): boolean {
+  const { school, staff, membership, entitlements, loading } = useSchool();
+  if (loading) return true;
+  const governed = !!school && (!!staff || (membership?.status === "approved" && membership.schoolId === school.id));
+  if (!governed) return true;
+  return entitlements?.features[key] === true;
+}
+
+/** Is the current person governed by a school plan at all, and are they its principal? (Decides the lock tooltip.) */
+export function useFeatureAudience(): { governed: boolean; isPrincipal: boolean } {
+  const { school, staff, membership } = useSchool();
+  const governed = !!school && (!!staff || membership?.status === "approved");
+  return { governed, isPrincipal: staff?.role === "principal" };
 }
 
 /** Teachers: may the school's teachers use "compare across subjects"? (Default yes; always yes outside a school.) */

@@ -7,7 +7,8 @@ import Spinner from "../common/Spinner";
 import { db } from "../../lib/firebase";
 import { useAuth } from "../../contexts/AuthContext";
 import { useEffectiveSchoolLogo } from "../../contexts/SchoolContext";
-import { useSubjectCompareAllowed } from "../../contexts/SchoolContext";
+import { useFeature, useSubjectCompareAllowed } from "../../contexts/SchoolContext";
+import FeatureGate from "../common/FeatureGate";
 import {
   bucketize,
   describePeriod,
@@ -483,6 +484,9 @@ export default function ClassStatsModal({
   const { logo: schoolLogo } = useEffectiveSchoolLogo();
   // The school principal can switch "compare across subjects" off for the school's teachers.
   const subjectCompareAllowed = useSubjectCompareAllowed();
+  // The platform admin switches "compare classes" and "compare across subjects" on per school.
+  const compareClassesOn = useFeature("compareClasses");
+  const compareSubjectsOn = useFeature("compareSubjects");
   const [tab, setTab] = useState<StatsTab>(initialTab);
   const [classId, setClassId] = useState(defaultClassId);
   const [compareIds, setCompareIds] = useState<Set<string>>(new Set());
@@ -500,7 +504,8 @@ export default function ClassStatsModal({
 
   useEffect(() => {
     if (!open) return;
-    setTab(initialTab === "subjects" && !subjectCompareAllowed ? "students" : initialTab);
+    const blocked = (initialTab === "subjects" && !(subjectCompareAllowed && compareSubjectsOn)) || (initialTab === "classes" && !compareClassesOn);
+    setTab(blocked ? "students" : initialTab);
     setClassId(defaultClassId || classes[0]?.id || "");
     setCompareIds(new Set(classes.map((c) => c.id)));
     setStudentKey("");
@@ -634,8 +639,14 @@ export default function ClassStatsModal({
         <div className="space-y-4">
           <div className="flex flex-wrap gap-2">
             {tabBtn("students", t("reports.tabStudents"))}
-            {tabBtn("classes", t("reports.tabClasses"))}
-            {hasSubjects && tabBtn("subjects", t("reports.tabSubjects"))}
+            <FeatureGate feature="compareClasses" as="span">
+              {tabBtn("classes", t("reports.tabClasses"))}
+            </FeatureGate>
+            {hasSubjects && (
+              <FeatureGate feature="compareSubjects" as="span">
+                {tabBtn("subjects", t("reports.tabSubjects"))}
+              </FeatureGate>
+            )}
           </div>
 
           <ReportControls

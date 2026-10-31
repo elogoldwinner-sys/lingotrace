@@ -5,7 +5,9 @@ import { Pencil, Plus, Trash2 } from "lucide-react";
 import Modal from "../../components/common/Modal";
 import Spinner from "../../components/common/Spinner";
 import ScopePicker, { scopeSummary, type Scope } from "../../components/school/ScopePicker";
-import { useSchool } from "../../contexts/SchoolContext";
+import { useFeature, useSchool } from "../../contexts/SchoolContext";
+import FeatureGate from "../../components/common/FeatureGate";
+import type { FeatureKey } from "../../lib/features";
 import { useAuth } from "../../contexts/AuthContext";
 import { useSchoolData } from "../../components/school/SchoolDataContext";
 import { listStaff, normEmail, removeStaffAccess, saveStaffAccess, updateStaffScope } from "../../lib/services/schoolService";
@@ -28,6 +30,11 @@ export default function SchoolStaffPage() {
   const { staff, school } = useSchool();
   const { classes } = useSchoolData();
   const isPrincipal = staff?.role === "principal";
+  // Department heads & counselors, and supervisors & coordinators, are switched on per school by the platform admin.
+  const leadershipOn = useFeature("leadership");
+  const supervisorsOn = useFeature("supervisors");
+  const addFeature: FeatureKey = isPrincipal ? "leadership" : "supervisors";
+  const roleEditable = (r: StaffRole) => (r === "departmentHead" || r === "counselor" ? leadershipOn : supervisorsOn);
   const [list, setList] = useState<StaffAccess[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -166,11 +173,20 @@ export default function SchoolStaffPage() {
               : t("sp.staffSubHead", "Add supervisors or coordinators for your subject and choose the grades or classes they can see.")}
           </p>
         </div>
-        <button className="btn-primary" onClick={openNew}>
-          <Plus size={16} />
-          {t("sp.addStaff", "Add staff")}
-        </button>
+        <FeatureGate feature={addFeature} as="span">
+          <button className="btn-primary" onClick={openNew}>
+            <Plus size={16} />
+            {t("sp.addStaff", "Add staff")}
+          </button>
+        </FeatureGate>
       </div>
+      {!(isPrincipal ? leadershipOn : supervisorsOn) && (
+        <p className="rounded-lg border border-gold/40 bg-gold-50 px-3 py-2 text-sm font-semibold text-navy">
+          {isPrincipal
+            ? t("feat.staffLockedPrincipal", "Adding department heads and counselors isn't included in your school's plan. Use “Request access” to ask the administrator.")
+            : t("feat.staffLockedHead", "Adding supervisors and coordinators isn't enabled for your school. Ask your principal to request it.")}
+        </p>
+      )}
       {error && !open && <p className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">{error}</p>}
 
       {loading ? (
@@ -192,7 +208,12 @@ export default function SchoolStaffPage() {
                 </p>
               </div>
               <div className="flex gap-3">
-                <button className="text-cream-600 hover:text-navy" onClick={() => openEdit(a)} title={t("common.edit", "Edit")}>
+                <button
+                  className="text-cream-600 hover:text-navy disabled:cursor-not-allowed disabled:opacity-40"
+                  disabled={!roleEditable(a.role)}
+                  onClick={() => openEdit(a)}
+                  title={t("common.edit", "Edit")}
+                >
                   <Pencil size={16} />
                 </button>
                 <button className="text-cream-600 hover:text-red-600" onClick={() => remove(a)} title={t("sp.remove", "Remove")}>
