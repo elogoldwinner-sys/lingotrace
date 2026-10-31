@@ -47,11 +47,16 @@ function normalise(schoolId: string, data: Record<string, unknown> | undefined):
   };
 }
 
+/** Throws if the document can't be read (e.g. rules not deployed). Used for background refreshes. */
+export async function getEntitlementsStrict(schoolId: string): Promise<SchoolEntitlements> {
+  const snap = await getDoc(doc(db, "schoolEntitlements", schoolId));
+  return normalise(schoolId, snap.exists() ? snap.data() : undefined);
+}
+
 /** Never throws: if the doc can't be read the school simply gets the basic plan (fail closed). */
 export async function getEntitlements(schoolId: string): Promise<SchoolEntitlements> {
   try {
-    const snap = await getDoc(doc(db, "schoolEntitlements", schoolId));
-    return normalise(schoolId, snap.exists() ? snap.data() : undefined);
+    return await getEntitlementsStrict(schoolId);
   } catch (err) {
     console.error("Couldn't read the school's entitlements", err);
     return defaultEntitlements(schoolId);

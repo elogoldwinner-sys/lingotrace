@@ -1,6 +1,6 @@
 import { createContext, useCallback, useContext, useEffect, useRef, useState, type ReactNode } from "react";
 import { useAuth } from "./AuthContext";
-import { getEntitlements } from "../lib/services/entitlementsService";
+import { getEntitlements, getEntitlementsStrict } from "../lib/services/entitlementsService";
 import type { FeatureKey, LimitKey } from "../lib/features";
 import {
   getMembership,
@@ -73,6 +73,32 @@ export function SchoolProvider({ children }: { children: ReactNode }) {
     setLoading(true);
     load();
   }, [authLoading, load]);
+
+  // Pick up plan changes the admin makes while someone is signed in: re-read the plan when the tab regains focus
+  // and every minute. A failed re-read keeps the last known plan (it never locks everything on a hiccup).
+  const planSchoolId = school?.id;
+  useEffect(() => {
+    if (!planSchoolId) return;
+    let alive = true;
+    const poll = async () => {
+      try {
+        const fresh = await getEntitlementsStrict(planSchoolId);
+        if (alive) setEntitlements((prev) => (prev && JSON.stringify({ ...prev, updatedAt: 0 }) === JSON.stringify({ ...fresh, updatedAt: 0 }) ? prev : fresh));
+      } catch (err) {
+        console.error("Couldn't refresh the school's plan", err);
+      }
+    };
+    const onVisible = () => document.visibilityState === "visible" && poll();
+    window.addEventListener("focus", poll);
+    document.addEventListener("visibilitychange", onVisible);
+    const timer = window.setInterval(poll, 60_000);
+    return () => {
+      alive = false;
+      window.removeEventListener("focus", poll);
+      document.removeEventListener("visibilitychange", onVisible);
+      window.clearInterval(timer);
+    };
+  }, [planSchoolId]);
 
   // A teacher waiting for approval picks the decision up as soon as they come back to the tab.
   useEffect(() => {
