@@ -35,10 +35,14 @@ service cloud.firestore {
 
     // ---- School portal helpers (principal / department head / counselor …) ----
 
-    // The school's id is its principal's uid, so "am I the principal of this school" is a path check.
+    // The school's doc id never changes (it is the FIRST principal's uid), but "who is the principal" is the
+    // Gmail stored on the school (schools/{id}.principalEmail) — so the role can be transferred to another Gmail.
     function isSchoolPrincipal(schoolId) {
-      return isSignedIn() && schoolId == request.auth.uid &&
-        exists(/databases/$(database)/documents/schools/$(schoolId));
+      return isSignedIn() && request.auth.token.email != null &&
+        request.auth.token.email_verified == true &&
+        exists(/databases/$(database)/documents/schools/$(schoolId)) &&
+        get(/databases/$(database)/documents/schools/$(schoolId)).data.get('principalEmail', '') ==
+          request.auth.token.email.lower();
     }
 
     // Staff access docs are keyed by the person's lower-cased verified Gmail.
@@ -387,9 +391,14 @@ service cloud.firestore {
     match /schools/{schoolId} {
       allow read: if isSignedIn();
       allow create: if isSignedIn() && schoolId == request.auth.uid &&
-        request.resource.data.principalUid == request.auth.uid;
-      allow update: if isSignedIn() && schoolId == request.auth.uid &&
-        request.resource.data.principalUid == request.auth.uid;
+        request.resource.data.principalUid == request.auth.uid &&
+        request.auth.token.email != null &&
+        request.resource.data.principalEmail == request.auth.token.email.lower();
+      // Only the current principal can edit the school — including handing the role to another Gmail.
+      allow update: if isSchoolPrincipal(schoolId) &&
+        request.resource.data.principalEmail is string &&
+        request.resource.data.principalEmail != '' &&
+        request.resource.data.principalEmail == request.resource.data.principalEmail.lower();
       allow delete: if false;
 
       // Who opened / printed which report, approvals… Append-only; only the principal can read it.
@@ -426,11 +435,13 @@ service cloud.firestore {
         (isSchoolPrincipal(request.resource.data.schoolId) &&
           request.resource.data.addedByUid == request.auth.uid) ||
         (hasStaff() && headMayGrant(request.resource.data)));
+      // The principal may change anything (including a role, when transferring the principal role);
+      // a department head may only adjust the supervisors / coordinators they added, never a role.
       allow update: if isSignedIn() && request.resource.data.email == email &&
-        request.resource.data.schoolId == resource.data.schoolId &&
-        request.resource.data.role == resource.data.role && (
+        request.resource.data.schoolId == resource.data.schoolId && (
         isSchoolPrincipal(resource.data.schoolId) ||
-        (hasStaff() && resource.data.addedByUid == request.auth.uid && headMayGrant(request.resource.data)));
+        (hasStaff() && request.resource.data.role == resource.data.role &&
+          resource.data.addedByUid == request.auth.uid && headMayGrant(request.resource.data)));
       allow delete: if isSignedIn() && (
         isSchoolPrincipal(resource.data.schoolId) ||
         (hasStaff() && resource.data.addedByUid == request.auth.uid && resource.data.role in ['supervisor', 'coordinator']));

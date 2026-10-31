@@ -1,9 +1,11 @@
+import { useEffect, useRef } from "react";
 import { NavLink, Navigate, Outlet, useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { Globe, LogOut, Repeat, Building2 } from "lucide-react";
 import { useAuth } from "../../contexts/AuthContext";
 import { useSchool } from "../../contexts/SchoolContext";
 import Spinner from "../common/Spinner";
+import { updateSchool } from "../../lib/services/schoolService";
 import { SchoolDataProvider } from "./SchoolDataContext";
 import type { StaffRole } from "../../types";
 
@@ -22,8 +24,20 @@ const TABS: { to: string; key: string; label: string; roles: StaffRole[] }[] = [
 export default function SchoolPortalLayout() {
   const { t, i18n } = useTranslation();
   const { user, profile, portalParent, portalStudent, signOut, loading: authLoading } = useAuth();
-  const { staff, school, loading } = useSchool();
+  const { staff, school, loading, refresh } = useSchool();
   const navigate = useNavigate();
+  const synced = useRef(false);
+
+  // After a principal-role transfer the school only knows the new principal's Gmail; on their first sign-in,
+  // record their real name and account id.
+  useEffect(() => {
+    if (synced.current || !user || !school || staff?.role !== "principal") return;
+    if (school.principalUid === user.uid && (!user.displayName || school.principalName === user.displayName)) return;
+    synced.current = true;
+    updateSchool(school.id, { principalUid: user.uid, principalName: user.displayName || school.principalName })
+      .then(refresh)
+      .catch(() => {});
+  }, [user, school, staff, refresh]);
 
   if (authLoading || loading) {
     return (

@@ -21,3 +21,10 @@
 2. A teacher requests to join → principal approves → classes appear in the principal's overview.
 3. Department head sees only their subject; counselor only assigned classes; try opening a report of another subject (should fail to load).
 4. Toggle "compare across subjects" off → teacher's Class statistics loses the tab.
+
+## Transferring the principal role (Settings → bottom section)
+- The school's document id never changes; "the principal" is now the Gmail stored in `schools/{id}.principalEmail` (the security rules check this). `firestore.rules` must be redeployed.
+- One atomic batch: new Gmail gets principal access → school's principal Gmail changes → the old principal's access is removed → the transfer is written to the audit trail.
+- The new principal must sign in with exactly that Gmail at `/school-login` (the school portal opens directly). Their name and account id are recorded on first sign-in.
+- The previous principal's Google account cannot create a new school afterwards (the school id is tied to it); use another account if needed.
+- To test: transfer to a second Gmail, sign in with it, confirm Settings, Teachers and Staff work, and that the old account is sent back to the sign-in page.

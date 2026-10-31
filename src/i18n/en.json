@@ -938,6 +938,14 @@
       "class": "A class",
       "students": "Student(s)"
     },
-    "homeSchoolDesc": "For principals, department heads and counselors"
+    "homeSchoolDesc": "For principals, department heads and counselors",
+    "transferTitle": "Transfer the principal role",
+    "transferHelp": "Give this school to another Gmail. The new principal signs in with that Gmail at the School portal and gets full control. Classes, teachers, staff and logs stay as they are. Your own access is removed immediately.",
+    "newPrincipalGmail": "New principal's Gmail",
+    "transferUnderstand": "I understand I will lose principal access and only the new principal can undo this.",
+    "transferButton": "Transfer principal role",
+    "transferSame": "That is your own email. Enter the new principal's Gmail.",
+    "transferConfirm": "Transfer the principal role to {{email}}? You will lose principal access to {{school}} immediately.",
+    "transferError": "Couldn't transfer the role. Check the Gmail — it may already be used for another school."
   }
 }

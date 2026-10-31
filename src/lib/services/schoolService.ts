@@ -286,3 +286,49 @@ export async function loadClassPoints(classId: string): Promise<PointsTransactio
   const snap = await getDocs(query(collection(db, "pointsTransactions"), where("classId", "==", classId)));
   return snap.docs.map((d) => ({ ...(d.data() as PointsTransaction), id: d.id }));
 }
+
+/**
+ * Hands the principal role to another Gmail, atomically (one batch): the new Gmail gets principal access,
+ * the school's stored principal Gmail changes (this is what the security rules check), the previous principal's
+ * access is removed, and the transfer is written to the audit trail. Must be called by the CURRENT principal.
+ * Nothing else moves: classes, teachers, staff, logs and settings all stay with the school.
+ */
+export async function transferPrincipalRole(input: {
+  school: School;
+  fromUid: string;
+  fromEmail: string;
+  fromName: string;
+  toEmail: string;
+  toName?: string;
+}) {
+  const toEmail = normEmail(input.toEmail);
+  const fromEmail = normEmail(input.fromEmail);
+  if (!toEmail || toEmail === fromEmail) throw new Error("same-email");
+  const batch = writeBatch(db);
+  batch.set(doc(db, "staffAccess", toEmail), {
+    email: toEmail,
+    schoolId: input.school.id,
+    role: "principal",
+    displayName: input.toName?.trim() || null,
+    addedByUid: input.fromUid,
+    addedByRole: "principal",
+    createdAt: serverTimestamp(),
+  });
+  batch.update(doc(db, "schools", input.school.id), {
+    principalEmail: toEmail,
+    principalName: input.toName?.trim() || toEmail,
+    // The new principal's uid is unknown until they sign in for the first time (see SchoolPortalLayout).
+    principalUid: "",
+  });
+  batch.delete(doc(db, "staffAccess", fromEmail));
+  batch.set(doc(collection(db, "schools", input.school.id, "audit")), {
+    actorUid: input.fromUid,
+    actorName: input.fromName,
+    actorEmail: fromEmail,
+    actorRole: "principal",
+    action: "settings_changed",
+    target: `Principal role transferred to ${toEmail}`,
+    createdAt: serverTimestamp(),
+  });
+  await batch.commit();
+}

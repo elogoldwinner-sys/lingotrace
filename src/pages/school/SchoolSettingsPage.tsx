@@ -4,7 +4,9 @@ import { Navigate } from "react-router-dom";
 import { Plus, X } from "lucide-react";
 import { useSchool } from "../../contexts/SchoolContext";
 import { useSchoolData } from "../../components/school/SchoolDataContext";
-import { setSchoolAssets, updateSchool } from "../../lib/services/schoolService";
+import { normEmail, setSchoolAssets, transferPrincipalRole, updateSchool } from "../../lib/services/schoolService";
+import { useAuth } from "../../contexts/AuthContext";
+import { useNavigate } from "react-router-dom";
 import ImageUploadField from "../../components/school/ImageUploadField";
 
 /** Principal only: school identity (name, logo, signature, stamp), approved subjects, and the "compare across subjects" switch. */
@@ -12,6 +14,12 @@ export default function SchoolSettingsPage() {
   const { t } = useTranslation();
   const { staff, school, assets, refresh } = useSchool();
   const { audit } = useSchoolData();
+  const { user } = useAuth();
+  const navigate = useNavigate();
+  const [toEmail, setToEmail] = useState("");
+  const [toName, setToName] = useState("");
+  const [understood, setUnderstood] = useState(false);
+  const [transferring, setTransferring] = useState(false);
   const [name, setName] = useState(school?.name || "");
   const [draft, setDraft] = useState("");
   const [saved, setSaved] = useState("");
@@ -42,6 +50,38 @@ export default function SchoolSettingsPage() {
   };
 
   const compareOn = sch.allowSubjectCompare !== false;
+
+  async function transfer() {
+    if (!user?.email) return;
+    const mail = normEmail(toEmail);
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(mail)) {
+      setError(t("classes.invalidEmail"));
+      return;
+    }
+    if (mail === normEmail(user.email)) {
+      setError(t("sp.transferSame", "That is your own email. Enter the new principal's Gmail."));
+      return;
+    }
+    if (!window.confirm(t("sp.transferConfirm", { defaultValue: "Transfer the principal role to {{email}}? You will lose principal access to {{school}} immediately.", email: mail, school: sch.name }))) return;
+    setTransferring(true);
+    setError("");
+    try {
+      await transferPrincipalRole({
+        school: sch,
+        fromUid: user.uid,
+        fromEmail: user.email,
+        fromName: user.displayName || user.email,
+        toEmail: mail,
+        toName,
+      });
+      await refresh(); // this account no longer has access → the portal sends it back to the sign-in page
+      navigate("/school-login", { replace: true });
+    } catch (err) {
+      console.error("Principal transfer failed", err);
+      setError(t("sp.transferError", "Couldn't transfer the role. Check the Gmail — it may already be used for another school."));
+      setTransferring(false);
+    }
+  }
 
   return (
     <div className="space-y-6">
@@ -135,6 +175,32 @@ export default function SchoolSettingsPage() {
         >
           <span className={`absolute top-0.5 h-6 w-6 rounded-full bg-white shadow transition-all ${compareOn ? "start-[22px]" : "start-0.5"}`} />
         </button>
+      </section>
+
+      <section className="card space-y-3 border-red-200 p-4">
+        <h2 className="font-semibold text-red-700">{t("sp.transferTitle", "Transfer the principal role")}</h2>
+        <p className="text-xs text-cream-600">
+          {t("sp.transferHelp", "Give this school to another Gmail. The new principal signs in with that Gmail at the School portal and gets full control. Classes, teachers, staff and logs stay as they are. Your own access is removed immediately.")}
+        </p>
+        <div className="grid gap-3 sm:grid-cols-2">
+          <div>
+            <label className="label-eyebrow mb-1.5 block">{t("sp.newPrincipalGmail", "New principal's Gmail")}</label>
+            <input type="email" dir="ltr" className="input-field" value={toEmail} onChange={(e) => setToEmail(e.target.value)} placeholder="name@gmail.com" />
+          </div>
+          <div>
+            <label className="label-eyebrow mb-1.5 block">{t("sp.nameOptional", "Name (optional)")}</label>
+            <input className="input-field" value={toName} onChange={(e) => setToName(e.target.value)} />
+          </div>
+        </div>
+        <label className="flex items-start gap-2 text-sm font-semibold text-navy">
+          <input type="checkbox" className="mt-1" checked={understood} onChange={(e) => setUnderstood(e.target.checked)} />
+          {t("sp.transferUnderstand", "I understand I will lose principal access and only the new principal can undo this.")}
+        </label>
+        <div className="flex justify-end">
+          <button type="button" disabled={!understood || !toEmail.trim() || transferring} onClick={transfer} className="rounded-lg bg-red-600 px-4 py-2 text-sm font-semibold text-white hover:bg-red-700 disabled:opacity-50">
+            {t("sp.transferButton", "Transfer principal role")}
+          </button>
+        </div>
       </section>
     </div>
   );
