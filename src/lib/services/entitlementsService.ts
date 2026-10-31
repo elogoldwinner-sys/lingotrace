@@ -5,6 +5,7 @@ import {
   getDoc,
   getDocs,
   limit,
+  onSnapshot,
   orderBy,
   query,
   serverTimestamp,
@@ -51,6 +52,15 @@ function normalise(schoolId: string, data: Record<string, unknown> | undefined):
 export async function getEntitlementsStrict(schoolId: string): Promise<SchoolEntitlements> {
   const snap = await getDoc(doc(db, "schoolEntitlements", schoolId));
   return normalise(schoolId, snap.exists() ? snap.data() : undefined);
+}
+
+/** Live subscription to one school's plan. A missing document is the basic plan, not an error. */
+export function subscribeEntitlements(schoolId: string, onData: (e: SchoolEntitlements) => void, onError: (err: unknown) => void) {
+  return onSnapshot(
+    doc(db, "schoolEntitlements", schoolId),
+    (snap) => onData(normalise(schoolId, snap.exists() ? snap.data() : undefined)),
+    onError
+  );
 }
 
 /** Never throws: if the doc can't be read the school simply gets the basic plan (fail closed). */

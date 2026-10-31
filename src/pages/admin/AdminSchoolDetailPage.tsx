@@ -7,7 +7,7 @@ import Switch from "../../components/common/Switch";
 import { StatusPill, fmtDateTime } from "../../components/support/ticketUi";
 import { useAuth } from "../../contexts/AuthContext";
 import { allFeaturesOff, allFeaturesOn, FEATURES, FREE_LIMITS, LIMIT_KEYS, LIMIT_META, UNLIMITED_LIMITS, type FeatureKey, type LimitKey, type LimitMap } from "../../lib/features";
-import { getAdminNote, getEntitlements, listAdminLog, saveAdminNote, saveEntitlements } from "../../lib/services/entitlementsService";
+import { getAdminNote, getEntitlements, getEntitlementsStrict, listAdminLog, saveAdminNote, saveEntitlements } from "../../lib/services/entitlementsService";
 import { getSchool, listMemberships, listStaff } from "../../lib/services/schoolService";
 import { subscribeAllTickets } from "../../lib/services/ticketsService";
 import { toMillis } from "../../lib/timestamps";
@@ -72,6 +72,9 @@ export default function AdminSchoolDetailPage() {
     setEnt({ ...(ent as SchoolEntitlements), plan, features, limits }); // optimistic; rolled back below if the write fails
     try {
       await saveEntitlements(school, { plan, features, limits }, user.email, detail);
+      // Read it back from the server: proves the document the school's teachers read is the one we just wrote.
+      const back = await getEntitlementsStrict(school.id);
+      if (FEATURES.some((f) => (back.features[f.key] === true) !== (features[f.key] === true))) throw new Error("read-back mismatch");
       setLog(await listAdminLog(id).catch(() => log));
     } catch (err) {
       console.error("Admin: saving the plan failed", err);

@@ -2,15 +2,18 @@ import type { ReactNode } from "react";
 import { Link } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { Lock } from "lucide-react";
-import { useFeature, useFeatureAudience } from "../../contexts/SchoolContext";
+import { useFeature, useFeatureAudience, useSchool } from "../../contexts/SchoolContext";
 import { FEATURE_BY_KEY, type FeatureKey } from "../../lib/features";
 
 /** Small lock pill. For a principal it links to the support page with the ticket pre-filled; for anyone else it's a hint. */
 export function LockBadge({ feature, className = "", compact = false }: { feature: FeatureKey; className?: string; compact?: boolean }) {
   const { t } = useTranslation();
   const { isPrincipal } = useFeatureAudience();
+  const { entitlementsError } = useSchool();
   const name = t(`feat.${feature}.label`, FEATURE_BY_KEY[feature].label);
-  const hint = isPrincipal
+  const hint = entitlementsError
+    ? `${t("feat.planError", "Couldn't load your school's plan")} (${entitlementsError}). ${t("feat.planErrorHelp", "Reload the page; if it persists, contact the administrator.")}`
+    : isPrincipal
     ? t("feat.lockedPrincipal", "Not included in your school's plan. Tap to ask the administrator to enable it.")
     : t("feat.lockedTeacher", "Not enabled for your school. Ask your principal to request it.");
   const body = (
@@ -57,6 +60,7 @@ export default function FeatureGate({
 }) {
   const { t } = useTranslation();
   const { isPrincipal } = useFeatureAudience();
+  const { entitlementsError } = useSchool();
   const enabled = useFeature(feature);
   if (enabled) return <>{children}</>;
   const Tag = as;
@@ -65,7 +69,9 @@ export default function FeatureGate({
       {notice && (
         <p className="mb-4 flex items-center gap-2 rounded-lg border border-gold/40 bg-gold-50 px-3 py-2 text-sm font-semibold text-navy">
           <Lock size={15} className="shrink-0 text-gold" />
-          {isPrincipal
+          {entitlementsError
+            ? `${t("feat.planError", "Couldn't load your school's plan")} (${entitlementsError}). ${t("feat.planErrorHelp", "Reload the page; if it persists, contact the administrator.")}`
+            : isPrincipal
             ? t("feat.noticePrincipal", "This feature isn't included in your school's plan. Use “Request access” to ask the administrator.")
             : t("feat.noticeTeacher", "This feature isn't enabled for your school. Ask your principal to request it.")}
         </p>

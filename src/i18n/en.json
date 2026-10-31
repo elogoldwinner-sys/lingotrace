@@ -995,7 +995,9 @@
     "certificates": {
       "label": "Certificates",
       "description": "Teachers can create and download student certificates."
-    }
+    },
+    "planError": "Couldn't load your school's plan",
+    "planErrorHelp": "Reload the page; if it persists, contact the administrator."
   },
   "adm": {
     "loginTitle": "Admin portal",

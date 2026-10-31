@@ -1,6 +1,6 @@
 import { createContext, useCallback, useContext, useEffect, useRef, useState, type ReactNode } from "react";
 import { useAuth } from "./AuthContext";
-import { getEntitlements, getEntitlementsStrict } from "../lib/services/entitlementsService";
+import { getEntitlements, subscribeEntitlements } from "../lib/services/entitlementsService";
 import type { FeatureKey, LimitKey } from "../lib/features";
 import {
   getMembership,
@@ -22,6 +22,8 @@ interface SchoolContextValue {
   assets: SchoolAssets;
   /** What the platform admin has switched on for the school (basic plan when nothing is set). */
   entitlements: SchoolEntitlements | null;
+  /** Set when the plan could not be read (e.g. "permission-denied"): the school is then treated as basic. */
+  entitlementsError: string | null;
   loading: boolean;
   refresh: () => Promise<void>;
 }
@@ -35,6 +37,7 @@ export function SchoolProvider({ children }: { children: ReactNode }) {
   const [school, setSchool] = useState<School | null>(null);
   const [assets, setAssets] = useState<SchoolAssets>({});
   const [entitlements, setEntitlements] = useState<SchoolEntitlements | null>(null);
+  const [entitlementsError, setEntitlementsError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const token = useRef(0);
 
@@ -74,30 +77,22 @@ export function SchoolProvider({ children }: { children: ReactNode }) {
     load();
   }, [authLoading, load]);
 
-  // Pick up plan changes the admin makes while someone is signed in: re-read the plan when the tab regains focus
-  // and every minute. A failed re-read keeps the last known plan (it never locks everything on a hiccup).
+  // Live plan: the moment the admin changes a switch, everyone signed in at that school sees it (no reload needed).
+  // If the plan can't be read we say why (shown on the lock badges) and fall back to the basic plan.
   const planSchoolId = school?.id;
   useEffect(() => {
     if (!planSchoolId) return;
-    let alive = true;
-    const poll = async () => {
-      try {
-        const fresh = await getEntitlementsStrict(planSchoolId);
-        if (alive) setEntitlements((prev) => (prev && JSON.stringify({ ...prev, updatedAt: 0 }) === JSON.stringify({ ...fresh, updatedAt: 0 }) ? prev : fresh));
-      } catch (err) {
-        console.error("Couldn't refresh the school's plan", err);
+    return subscribeEntitlements(
+      planSchoolId,
+      (fresh) => {
+        setEntitlements(fresh);
+        setEntitlementsError(null);
+      },
+      (err) => {
+        console.error(`Couldn't read the plan of school ${planSchoolId}`, err);
+        setEntitlementsError((err as { code?: string }).code || "unknown");
       }
-    };
-    const onVisible = () => document.visibilityState === "visible" && poll();
-    window.addEventListener("focus", poll);
-    document.addEventListener("visibilitychange", onVisible);
-    const timer = window.setInterval(poll, 60_000);
-    return () => {
-      alive = false;
-      window.removeEventListener("focus", poll);
-      document.removeEventListener("visibilitychange", onVisible);
-      window.clearInterval(timer);
-    };
+    );
   }, [planSchoolId]);
 
   // A teacher waiting for approval picks the decision up as soon as they come back to the tab.
@@ -121,7 +116,7 @@ export function SchoolProvider({ children }: { children: ReactNode }) {
   }, [profile, membership, school]);
 
   return (
-    <SchoolContext.Provider value={{ staff, membership, school, assets, entitlements, loading, refresh: load }}>
+    <SchoolContext.Provider value={{ staff, membership, school, assets, entitlements, entitlementsError, loading, refresh: load }}>
       {children}
     </SchoolContext.Provider>
   );
