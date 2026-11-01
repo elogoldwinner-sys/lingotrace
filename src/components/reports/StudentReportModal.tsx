@@ -122,6 +122,10 @@ function StudentSheet({ student, className, period, kind, txns, firstAt, logo, t
   );
 }
 
+const CACHE_MS = 5 * 60 * 1000;
+/** A student's marks, kept a few minutes: re-opening the report or changing the filters costs no reads. */
+const studentCache = new Map<string, { at: number; txns: ReturnType<typeof toTxn>[] }>();
+
 /**
  * A student's points report: what was gained and/or lost, for the entire
  * period since the beginning or between two dates, with graphs. Can be
@@ -156,6 +160,13 @@ export default function StudentReportModal({
     let cancelled = false;
     setLoading(true);
     setError(false);
+    const cacheKey = `${user.uid}|${student.id}`;
+    const hit = studentCache.get(cacheKey);
+    if (hit && Date.now() - hit.at < CACHE_MS) {
+      setAll(hit.txns);
+      setLoading(false);
+      return;
+    }
     setAll([]);
     // Filtering on `awardedBy` as well keeps the query inside the Firestore rule (teachers read the points they awarded).
     getDocs(
@@ -167,7 +178,9 @@ export default function StudentReportModal({
     )
       .then((snap) => {
         if (cancelled) return;
-        setAll(snap.docs.map((d) => toTxn({ ...(d.data() as PointsTransaction), id: d.id })));
+        const txns = snap.docs.map((d) => toTxn({ ...(d.data() as PointsTransaction), id: d.id }));
+        studentCache.set(cacheKey, { at: Date.now(), txns });
+        setAll(txns);
       })
       .catch((err) => {
         console.error("Student report failed", err);
