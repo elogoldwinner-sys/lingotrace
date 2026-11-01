@@ -1,3 +1,4 @@
+import type { CSSProperties } from "react";
 import type { ClassRecord } from "../../types";
 import { classTone } from "../../lib/uiColors";
 
@@ -20,12 +21,12 @@ export default function ClassSelector({ classes, selectedClassId, onSelect }: Cl
           <button
             key={c.id}
             type="button"
+            aria-pressed={active}
             onClick={() => onSelect(c.id)}
-            className={`flex items-center gap-2 rounded-lg border-2 px-4 py-2 text-sm font-semibold transition-colors ${
-              active ? tone.active : `bg-white ${tone.idle}`
-            }`}
+            style={{ "--c": tone.color } as CSSProperties}
+            className="cls-fx"
           >
-            <span className={`h-2.5 w-2.5 rounded-full ${active ? "bg-white" : tone.dot}`} />
+            <i className={`cls-mark cls-mark-${tone.shape}`} />
             {c.name}
           </button>
         );

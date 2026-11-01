@@ -185,22 +185,34 @@ export default function MarkSheetModal({
     }
   }
 
-  const chip = "inline-flex items-center gap-1.5 rounded-full border border-green-600 bg-white px-3 py-1.5 text-sm font-semibold text-green-700 transition hover:bg-green-600 hover:text-white";
   const typeChip = (label: string, onAdd: () => void, onRemove?: () => void) => (
-    <span key={label} className="inline-flex items-center">
-      <button type="button" onClick={onAdd} className={`${chip} ${onRemove ? "rounded-e-none border-e-0" : ""}`}>
-        <Plus size={14} />
-        {label}
-      </button>
+    <span
+      key={label}
+      role="button"
+      tabIndex={0}
+      onClick={onAdd}
+      onKeyDown={(e) => {
+        if (e.target === e.currentTarget && (e.key === "Enter" || e.key === " ")) {
+          e.preventDefault();
+          onAdd();
+        }
+      }}
+      className="chip-fx"
+    >
+      <Plus size={14} />
+      {label}
       {onRemove && (
         <button
           type="button"
-          onClick={onRemove}
+          onClick={(e) => {
+            e.stopPropagation();
+            onRemove();
+          }}
           aria-label={t("msheet.removeType", "Remove this type")}
           title={t("msheet.removeType", "Remove this type")}
-          className="rounded-e-full border border-green-600 bg-white px-2 py-2 text-cream-600 hover:bg-red-50 hover:text-red-600"
+          className="chip-fx-x"
         >
-          <X size={13} />
+          <X size={11} strokeWidth={3} />
         </button>
       )}
     </span>

@@ -13,26 +13,32 @@ export const ACTION_TONES = {
   amber: "!border-amber-300 !bg-amber-50 !text-amber-800 hover:!bg-amber-100 !shadow-[0_4px_0_#fcd34d]",
 } as const;
 
-/** Solid (filled) buttons — each a clearly different colour, for the main action row. Use with `btn-secondary`. */
-export const SOLID_TONES = {
-  teal: "!border-teal-800 !bg-teal-600 !text-white hover:!bg-teal-700 !shadow-[0_4px_0_#115e59]",
-  blue: "!border-blue-800 !bg-blue-600 !text-white hover:!bg-blue-700 !shadow-[0_4px_0_#1e40af]",
-  orange: "!border-orange-700 !bg-orange-500 !text-white hover:!bg-orange-600 !shadow-[0_4px_0_#c2410c]",
-  lime: "!border-lime-800 !bg-lime-700 !text-white hover:!bg-lime-800 !shadow-[0_4px_0_#3f6212]",
+/**
+ * Toolbar buttons: each gets its own colour (set through the --c variable that `.btn-fx` reads in index.css).
+ * No two buttons share a colour or shape. Unisex palette, no pink / baby blue.
+ */
+export const BTN_TONES = {
+  purple: "[--c:#36207C]",
+  teal: "[--c:#0F8B8D]",
+  ruby: "[--c:#C0264F]",
+  blue: "[--c:#2563EB]",
+  orange: "[--c:#EA580C]",
+  slate: "[--c:#475569]",
 } as const;
 
-/** One look per class: tinted outline when idle, solid fill when selected. */
+/** Kept so older imports still work; maps onto the new tones. */
+export const SOLID_TONES = BTN_TONES;
+
+/** One look per class: its own colour AND its own marker shape (so a 9th class or a colour-blind viewer can still tell them apart). */
 const CLASS_TONES = [
-  { idle: "border-blue-300 text-blue-700 hover:bg-blue-50", active: "border-blue-600 bg-blue-600 text-white", dot: "bg-blue-500" },
-  { idle: "border-teal-300 text-teal-700 hover:bg-teal-50", active: "border-teal-600 bg-teal-600 text-white", dot: "bg-teal-500" },
-  { idle: "border-orange-300 text-orange-700 hover:bg-orange-50", active: "border-orange-600 bg-orange-600 text-white", dot: "bg-orange-500" },
-  { idle: "border-violet-300 text-violet-700 hover:bg-violet-50", active: "border-violet-600 bg-violet-600 text-white", dot: "bg-violet-500" },
-  { idle: "border-emerald-300 text-emerald-700 hover:bg-emerald-50", active: "border-emerald-600 bg-emerald-600 text-white", dot: "bg-emerald-500" },
-  { idle: "border-amber-300 text-amber-700 hover:bg-amber-50", active: "border-amber-600 bg-amber-600 text-white", dot: "bg-amber-500" },
-  { idle: "border-cyan-300 text-cyan-700 hover:bg-cyan-50", active: "border-cyan-600 bg-cyan-600 text-white", dot: "bg-cyan-500" },
-  { idle: "border-indigo-300 text-indigo-700 hover:bg-indigo-50", active: "border-indigo-600 bg-indigo-600 text-white", dot: "bg-indigo-500" },
-  { idle: "border-lime-400 text-lime-800 hover:bg-lime-50", active: "border-lime-600 bg-lime-600 text-white", dot: "bg-lime-500" },
-  { idle: "border-slate-300 text-slate-700 hover:bg-slate-50", active: "border-slate-600 bg-slate-600 text-white", dot: "bg-slate-500" },
+  { color: "#2563EB", shape: "circle" },
+  { color: "#0891B2", shape: "square" },
+  { color: "#EA580C", shape: "triangle" },
+  { color: "#7C3AED", shape: "diamond" },
+  { color: "#16A34A", shape: "hexagon" },
+  { color: "#CA8A04", shape: "plus" },
+  { color: "#DC2626", shape: "down" },
+  { color: "#475569", shape: "star" },
 ];
 
 /** Colour for a class: its rank among the given class ids (sorted), so it's the same on every page. */

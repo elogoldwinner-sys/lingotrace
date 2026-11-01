@@ -82,7 +82,7 @@ import { useLimit } from "../contexts/SchoolContext";
 import CertificateModal from "../components/common/CertificateModal";
 import RichText from "../components/common/RichText";
 import { reasonsForAmount, POSITIVE_POINTS_REASONS } from "../lib/pointsReasons";
-import { SOLID_TONES } from "../lib/uiColors";
+import { BTN_TONES } from "../lib/uiColors";
 import ReasonPicker, { useSaveCustomReason } from "../components/common/ReasonPicker";
 import { studentDisplayName, primaryName } from "../lib/studentName";
 
@@ -623,28 +623,28 @@ export default function StudentsPage() {
       <div className="flex flex-col gap-3">
         <h1 className="whitespace-nowrap text-2xl font-semibold text-navy">{t("students.title")}</h1>
         <div className="grid w-full grid-cols-2 gap-2 sm:flex sm:flex-wrap [&>button]:w-full [&>button]:justify-center sm:[&>button]:w-auto">
-          <button onClick={() => setAddModalOpen(true)} className="btn-primary text-sm py-2 px-3 disabled:cursor-not-allowed" disabled={!selectedClassId || (maxStudents !== null && students.length >= maxStudents)}>
-            <Plus size={16} />
+          <button onClick={() => setAddModalOpen(true)} className={`btn-fx ${BTN_TONES.purple}`} disabled={!selectedClassId || (maxStudents !== null && students.length >= maxStudents)}>
+            <span className="fx-tile"><Plus size={16} /></span>
             {t("students.addStudent")}
           </button>
           <button
             onClick={() => setBulkModalOpen(true)}
-            className={`btn-secondary text-sm py-2 px-3 disabled:cursor-not-allowed ${SOLID_TONES.teal}`}
+            className={`btn-fx ${BTN_TONES.teal}`}
             disabled={!selectedClassId || (maxStudents !== null && students.length >= maxStudents)}
           >
-            <Upload size={16} />
+            <span className="fx-tile"><Upload size={16} /></span>
             {t("students.bulkImport")}
           </button>
           <button
             onClick={() => setMarkSheetOpen(true)}
-            className={`btn-secondary text-sm py-2 px-3 disabled:cursor-not-allowed ${SOLID_TONES.lime}`}
+            className={`btn-fx ${BTN_TONES.ruby}`}
             disabled={!selectedClassId || students.length === 0}
           >
-            <ClipboardList size={16} />
+            <span className="fx-tile"><ClipboardList size={16} /></span>
             {t("msheet.button", "Mark sheet")}
           </button>
-          <button onClick={() => setReportModalOpen(true)} className={`btn-secondary text-sm py-2 px-3 ${SOLID_TONES.blue}`}>
-            <FileSpreadsheet size={16} />
+          <button onClick={() => setReportModalOpen(true)} className={`btn-fx ${BTN_TONES.blue}`}>
+            <span className="fx-tile"><FileSpreadsheet size={16} /></span>
             {t("pointsReport.button")}
           </button>
           <button
@@ -652,10 +652,10 @@ export default function StudentsPage() {
               setClassStatsTab("students");
               setClassStatsOpen(true);
             }}
-            className={`btn-secondary text-sm py-2 px-3 ${SOLID_TONES.orange}`}
+            className={`btn-fx ${BTN_TONES.orange}`}
             disabled={!selectedClassId}
           >
-            <BarChart3 size={16} />
+            <span className="fx-tile"><BarChart3 size={16} /></span>
             {t("reports.classStats")}
           </button>
           <FeatureGate feature="compareClasses" as="span">
@@ -664,10 +664,10 @@ export default function StudentsPage() {
                 setClassStatsTab("classes");
                 setClassStatsOpen(true);
               }}
-              className={`btn-secondary text-sm py-2 px-3 ${SOLID_TONES.lime}`}
+              className={`btn-fx ${BTN_TONES.slate}`}
               disabled={!selectedClassId}
             >
-              <Scale size={16} />
+              <span className="fx-tile"><Scale size={16} /></span>
               {t("reports.compareButton")}
             </button>
           </FeatureGate>

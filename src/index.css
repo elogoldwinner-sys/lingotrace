@@ -495,3 +495,77 @@
   .lt-sp, .lt-ck, .lt-glint { display: none; }
   .lt-n-shimmer, .lt-n-rainbow { -webkit-text-fill-color: currentColor; background: none; }
 }
+
+/* ---------- Hover / click effect (icon tile lights up on hover, gold ring on click) ---------- */
+@layer components {
+  .btn-fx {
+    --dk: color-mix(in srgb, var(--c) 62%, #000);
+    --fx-gold: #ffb020;
+    @apply relative inline-flex items-center justify-center gap-2 rounded-xl border-2 py-1.5 pe-3.5 ps-2 text-sm font-extrabold text-white;
+    background: var(--c);
+    border-color: var(--dk);
+    box-shadow: 0 4px 0 var(--dk);
+    transition: transform .18s cubic-bezier(.34,1.56,.64,1), box-shadow .2s;
+  }
+  .btn-fx:focus-visible { outline: 3px solid var(--fx-gold); outline-offset: 2px; }
+  .btn-fx .fx-tile {
+    @apply grid h-7 w-7 place-items-center rounded-[9px] border-2 border-transparent;
+    background: rgba(255,255,255,.18);
+    transition: background .2s, color .2s, border-color .2s, box-shadow .2s, transform .2s;
+  }
+  .btn-fx:not(:disabled):hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 0 var(--dk), 0 0 0 3px color-mix(in srgb, var(--c) 28%, transparent), 0 10px 24px color-mix(in srgb, var(--c) 55%, transparent);
+  }
+  .btn-fx:not(:disabled):hover .fx-tile {
+    background: #fff; color: var(--c);
+    border-color: color-mix(in srgb, var(--c) 70%, #fff);
+    box-shadow: 0 0 12px color-mix(in srgb, var(--c) 70%, transparent);
+    transform: scale(1.06);
+  }
+  .btn-fx:not(:disabled):active { transform: translateY(3px); box-shadow: 0 1px 0 var(--dk); }
+  .btn-fx:disabled { opacity: .5; }
+  .btn-fx::after, .cls-fx::after, .chip-fx::after {
+    content: ""; position: absolute; inset: -4px; border-radius: inherit; border: 3px solid #ffb020; opacity: 0; pointer-events: none;
+  }
+  .fx-pop::after { animation: fx-ring .5s ease-out; }
+  .btn-fx.fx-pop .fx-tile { background: #fff; color: #ffb020; border-color: #ffb020; box-shadow: 0 0 16px #ffb020; animation: fx-flash .45s ease-out; }
+
+  .cls-fx {
+    --dk: color-mix(in srgb, var(--c) 70%, #000);
+    @apply relative inline-flex items-center gap-2 rounded-[14px] border-2 bg-white px-4 py-2 text-sm font-extrabold;
+    color: var(--dk);
+    border-color: color-mix(in srgb, var(--c) 45%, #fff);
+    transition: transform .18s cubic-bezier(.34,1.56,.64,1), box-shadow .2s, background .2s, color .2s, border-color .2s;
+  }
+  .cls-fx:hover { transform: translateY(-2px); border-color: var(--c); box-shadow: 0 0 0 3px color-mix(in srgb, var(--c) 22%, transparent), 0 8px 20px color-mix(in srgb, var(--c) 40%, transparent); }
+  .cls-fx:active { transform: scale(.95); }
+  .cls-fx[aria-pressed="true"] { background: var(--c); border-color: var(--c); color: #fff; }
+  .cls-mark { display: block; width: 10px; height: 10px; background: var(--c); }
+  .cls-fx[aria-pressed="true"] .cls-mark { background: #fff; }
+  .cls-mark-circle { border-radius: 50%; }
+  .cls-mark-square { border-radius: 2px; }
+  .cls-mark-triangle { clip-path: polygon(50% 0, 100% 100%, 0 100%); }
+  .cls-mark-diamond { clip-path: polygon(50% 0, 100% 50%, 50% 100%, 0 50%); }
+  .cls-mark-hexagon { clip-path: polygon(25% 5%, 75% 5%, 100% 50%, 75% 95%, 25% 95%, 0 50%); }
+  .cls-mark-plus { clip-path: polygon(35% 0, 65% 0, 65% 35%, 100% 35%, 100% 65%, 65% 65%, 65% 100%, 35% 100%, 35% 65%, 0 65%, 0 35%, 35% 35%); }
+  .cls-mark-down { clip-path: polygon(0 0, 100% 0, 50% 100%); }
+  .cls-mark-star { clip-path: polygon(50% 0, 61% 35%, 98% 35%, 68% 57%, 79% 91%, 50% 70%, 21% 91%, 32% 57%, 2% 35%, 39% 35%); }
+
+  .chip-fx {
+    --c: #36207c;
+    @apply relative inline-flex cursor-pointer items-center gap-1.5 rounded-full border-2 bg-white py-1.5 pe-2 ps-3 text-sm font-extrabold;
+    color: var(--c); border-color: var(--c);
+    transition: transform .18s cubic-bezier(.34,1.56,.64,1), box-shadow .2s, background .2s, color .2s;
+  }
+  .chip-fx:hover { background: var(--c); color: #fff; transform: translateY(-2px); box-shadow: 0 0 0 3px color-mix(in srgb, var(--c) 25%, transparent), 0 8px 20px color-mix(in srgb, var(--c) 45%, transparent); }
+  .chip-fx:active { transform: scale(.95); }
+  .chip-fx:focus-visible { outline: 3px solid #ffb020; outline-offset: 2px; }
+  .chip-fx-x { display: grid; width: 18px; height: 18px; place-items: center; border-radius: 50%; color: #f97316; transition: background .15s, color .15s, transform .15s; }
+  .chip-fx-x:hover { background: #f97316; color: #fff; transform: rotate(90deg); }
+}
+@keyframes fx-ring { from { opacity: .95; transform: scale(.94); } to { opacity: 0; transform: scale(1.28); } }
+@keyframes fx-flash { 0% { transform: scale(.8) rotate(-12deg); } 60% { transform: scale(1.18) rotate(6deg); } 100% { transform: scale(1); } }
+@media (prefers-reduced-motion: reduce) {
+  .btn-fx, .btn-fx *, .cls-fx, .chip-fx, .chip-fx *, .fx-pop::after { animation: none !important; transition: none !important; }
+}
