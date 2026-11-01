@@ -1,8 +1,8 @@
 import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Download } from "lucide-react";
-import { collection, getDocs, query, where } from "firebase/firestore";
-import { format } from "date-fns";
+import { collection, getDocs, query, Timestamp, where } from "firebase/firestore";
+import { format, startOfWeek } from "date-fns";
 import Modal from "./Modal";
 import { db } from "../../lib/firebase";
 import { useAuth } from "../../contexts/AuthContext";
@@ -24,6 +24,11 @@ const LEGACY_REASONS: PointsReason[] = [
   "manual",
   "other",
 ];
+
+const CACHE_MS = 5 * 60 * 1000;
+/** Fetched points / students are kept for a few minutes: changing the reason or positive/negative filter and exporting again costs no reads. */
+const txnCache = new Map<string, { at: number; rows: PointsTransaction[] }>();
+const studentCache = new Map<string, { at: number; list: StudentRecord[] }>();
 
 function today() {
   return format(new Date(), "yyyy-MM-dd");
@@ -60,7 +65,7 @@ export default function PointsReportModal({
   const { t } = useTranslation();
   const { user } = useAuth();
 
-  const [startDate, setStartDate] = useState(() => format(new Date(Date.now() - 7 * 86400000), "yyyy-MM-dd"));
+  const [startDate, setStartDate] = useState(() => format(startOfWeek(new Date(), { weekStartsOn: 0 }), "yyyy-MM-dd"));
   const [endDate, setEndDate] = useState(today);
   const [classId, setClassId] = useState<string>("all");
   const [kind, setKind] = useState<KindFilter>("both");
@@ -119,9 +124,27 @@ export default function PointsReportModal({
       const startMs = new Date(`${startDate}T00:00:00`).getTime();
       const endMs = new Date(`${endDate}T23:59:59.999`).getTime();
 
-      const snap = await getDocs(query(collection(db, "pointsTransactions"), where("awardedBy", "==", user.uid)));
-      const rows = snap.docs
-        .map((d) => ({ ...(d.data() as PointsTransaction), id: d.id }))
+      // Ask Firestore only for the chosen class and dates (needs the composite indexes in firestore.indexes.json;
+      // until they exist it falls back to reading everything and filtering here).
+      const cacheKey = `${user.uid}|${classId}|${startMs}|${endMs}`;
+      let fetched = txnCache.get(cacheKey);
+      if (!fetched || Date.now() - fetched.at > CACHE_MS) {
+        const base = [where("awardedBy", "==", user.uid), ...(classId !== "all" ? [where("classId", "==", classId)] : [])];
+        const col = collection(db, "pointsTransactions");
+        let snap;
+        try {
+          snap = await getDocs(
+            query(col, ...base, where("createdAt", ">=", Timestamp.fromMillis(startMs)), where("createdAt", "<=", Timestamp.fromMillis(endMs)))
+          );
+        } catch (err) {
+          if ((err as { code?: string }).code !== "failed-precondition") throw err; // anything but "index missing"
+          console.warn("Points report: index not deployed yet, reading all points instead", err);
+          snap = await getDocs(query(col, where("awardedBy", "==", user.uid)));
+        }
+        fetched = { at: Date.now(), rows: snap.docs.map((d) => ({ ...(d.data() as PointsTransaction), id: d.id })) };
+        txnCache.set(cacheKey, fetched);
+      }
+      const rows = fetched.rows
         .filter((txn) => {
           if (classId !== "all" && txn.classId !== classId) return false;
           const created = toMillis(txn.createdAt);
@@ -142,8 +165,13 @@ export default function PointsReportModal({
       const studentsById = new Map<string, StudentRecord>();
       await Promise.all(
         classIds.map(async (cid) => {
-          const s = await getDocs(query(collection(db, "students"), where("classId", "==", cid)));
-          s.docs.forEach((d) => studentsById.set(d.id, { ...(d.data() as StudentRecord), id: d.id }));
+          let cached = studentCache.get(cid);
+          if (!cached || Date.now() - cached.at > CACHE_MS) {
+            const s = await getDocs(query(collection(db, "students"), where("classId", "==", cid)));
+            cached = { at: Date.now(), list: s.docs.map((d) => ({ ...(d.data() as StudentRecord), id: d.id })) };
+            studentCache.set(cid, cached);
+          }
+          cached.list.forEach((st) => studentsById.set(st.id, st));
         })
       );
       const classNameById = new Map(classes.map((c) => [c.id, c.name]));

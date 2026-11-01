@@ -1,7 +1,7 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { collection, getDocs, query, where } from "firebase/firestore";
-import { format, subDays } from "date-fns";
+import { collection, getDocs, query, Timestamp, where, type QueryConstraint } from "firebase/firestore";
+import { endOfWeek, format, startOfWeek } from "date-fns";
 import Modal from "../common/Modal";
 import Spinner from "../common/Spinner";
 import { db } from "../../lib/firebase";
@@ -14,6 +14,7 @@ import {
   describePeriod,
   filterTxns,
   isPeriodValid,
+  periodBounds,
   toTxn,
   totalsOf,
   type KindFilter,
@@ -447,6 +448,45 @@ function SubjectsSheet({
   );
 }
 
+/* ───────────────────────── Loading (on demand, period-limited, cached) ───────────────────────── */
+
+const REPORT_CACHE_MS = 5 * 60 * 1000;
+/** Loaded reports are kept for a few minutes so re-opening the window or switching tabs costs no reads. */
+const reportCache = new Map<string, { at: number; data: LoadedData }>();
+
+const periodKey = (p: Period) => (p.mode === "all" ? "all" : `${p.startDate}_${p.endDate}`);
+
+/** The first day of this week (Sunday) to today — the default period, so a quick look reads only a few days of points. */
+function currentWeek(): Period {
+  const now = new Date();
+  return {
+    mode: "custom",
+    startDate: format(startOfWeek(now, { weekStartsOn: 0 }), "yyyy-MM-dd"),
+    endDate: format(endOfWeek(now, { weekStartsOn: 0 }), "yyyy-MM-dd"),
+  };
+}
+
+/**
+ * Reads points transactions, restricted to the period when one is chosen. The period query needs composite indexes
+ * (awardedBy + createdAt, classId + createdAt — see firestore.indexes.json); until they exist it falls back to reading
+ * everything, and the caller filters by period anyway.
+ */
+async function readTxns(base: QueryConstraint[], p: Period) {
+  const col = collection(db, "pointsTransactions");
+  if (p.mode === "custom") {
+    const { startMs, endMs } = periodBounds(p);
+    try {
+      return await getDocs(
+        query(col, ...base, where("createdAt", ">=", Timestamp.fromMillis(startMs)), where("createdAt", "<=", Timestamp.fromMillis(endMs)))
+      );
+    } catch (err) {
+      if ((err as { code?: string }).code !== "failed-precondition") throw err; // anything but "index missing"
+      console.warn("Class statistics: index not deployed yet, reading all points instead", err);
+    }
+  }
+  return getDocs(query(col, ...base));
+}
+
 /* ───────────────────────── The window ───────────────────────── */
 
 interface LoadedData {
@@ -493,13 +533,12 @@ export default function ClassStatsModal({
   const [groupId, setGroupId] = useState("");
   const [studentKey, setStudentKey] = useState("");
   const [data, setData] = useState<LoadedData | null>(null);
+  /** Which period `data` was loaded for. The report is only shown while the chosen period matches it. */
+  const [loadedKey, setLoadedKey] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(false);
-  const [period, setPeriod] = useState<Period>({
-    mode: "all",
-    startDate: format(subDays(new Date(), 30), "yyyy-MM-dd"),
-    endDate: format(new Date(), "yyyy-MM-dd"),
-  });
+  const loadSeq = useRef(0);
+  const [period, setPeriod] = useState<Period>(currentWeek);
   const [kind, setKind] = useState<KindFilter>("both");
 
   useEffect(() => {
@@ -512,66 +551,89 @@ export default function ClassStatsModal({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, initialTab, defaultClassId]);
 
+  const classesKey = classes.map((c) => c.id).join(",");
+  const cacheKeyFor = (p: Period) => `${user?.uid}|${classesKey}|${periodKey(p)}`;
+
+  // Opening the window (or changing the period) reads NOTHING. If this exact report was loaded a moment ago it is
+  // shown straight from the cache; otherwise the teacher presses "Load report".
   useEffect(() => {
     if (!open || !user) return;
-    let cancelled = false;
+    const hit = reportCache.get(cacheKeyFor(period));
+    if (hit && Date.now() - hit.at < REPORT_CACHE_MS) {
+      setData(hit.data);
+      setLoadedKey(periodKey(period));
+      setError(false);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, user, classesKey, period]);
+
+  async function loadReport(force = false) {
+    if (!user || !isPeriodValid(period)) return;
+    const p = period;
+    const cacheKey = cacheKeyFor(p);
+    const hit = reportCache.get(cacheKey);
+    if (!force && hit && Date.now() - hit.at < REPORT_CACHE_MS) {
+      setData(hit.data);
+      setLoadedKey(periodKey(p));
+      setError(false);
+      return;
+    }
+    const seq = ++loadSeq.current;
     setLoading(true);
     setError(false);
-    (async () => {
-      try {
-        const studentsOf = (cid: string) => getDocs(query(collection(db, "students"), where("classId", "==", cid)));
-        const [pointsSnap, givenSnap, ...studentSnaps] = await Promise.all([
-          getDocs(query(collection(db, "pointsTransactions"), where("awardedBy", "==", user.uid))),
-          getDocs(query(collection(db, "classes"), where("ownerId", "==", user.uid))),
-          ...classes.map((c) => studentsOf(c.id)),
-        ]);
-        const toStudents = (snap: typeof pointsSnap) =>
-          snap.docs.map((d) => ({ ...(d.data() as StudentRecord), id: d.id }));
-        const studentsByClass = new Map<string, StudentRecord[]>();
-        classes.forEach((c, i) => studentsByClass.set(c.id, toStudents(studentSnaps[i])));
-        const txnMap = new Map<string, Txn>();
-        pointsSnap.docs.forEach((d) => txnMap.set(d.id, toTxn({ ...(d.data() as PointsTransaction), id: d.id })));
+    try {
+      const studentsOf = (cid: string) => getDocs(query(collection(db, "students"), where("classId", "==", cid)));
+      const [pointsSnap, givenSnap, ...studentSnaps] = await Promise.all([
+        readTxns([where("awardedBy", "==", user.uid)], p),
+        getDocs(query(collection(db, "classes"), where("ownerId", "==", user.uid))),
+        ...classes.map((c) => studentsOf(c.id)),
+      ]);
+      const toStudents = (snap: typeof pointsSnap) => snap.docs.map((d) => ({ ...(d.data() as StudentRecord), id: d.id }));
+      const studentsByClass = new Map<string, StudentRecord[]>();
+      classes.forEach((c, i) => studentsByClass.set(c.id, toStudents(studentSnaps[i])));
+      const txnMap = new Map<string, Txn>();
+      pointsSnap.docs.forEach((d) => txnMap.set(d.id, toTxn({ ...(d.data() as PointsTransaction), id: d.id })));
 
-        // Subject classes this teacher handed to co-teachers (the classroom-teacher feature).
-        const given = givenSnap.docs
-          .map((d) => ({ ...(d.data() as ClassRecord), id: d.id }))
-          .filter((g) => g.teacherId !== user.uid);
-        const joined = given.filter((g) => g.teacherId);
-        let rulesMissing = false;
-        await Promise.all(
-          joined.map(async (g) => {
-            studentsByClass.set(g.id, toStudents(await studentsOf(g.id)));
-            try {
-              const snap = await getDocs(query(collection(db, "pointsTransactions"), where("classId", "==", g.id)));
-              snap.docs.forEach((d) => txnMap.set(d.id, toTxn({ ...(d.data() as PointsTransaction), id: d.id })));
-            } catch {
-              rulesMissing = true;
-            }
-          })
-        );
-        const groups: SubjectGroup[] = classes
-          .filter((c) => !c.parentClassId && given.some((g) => g.parentClassId === c.id))
-          .map((main) => ({
-            main,
-            members: [
-              { cls: main, label: main.subject || t("reports.mainSubject") },
-              ...joined.filter((g) => g.parentClassId === main.id).map((g) => ({ cls: g, label: g.subject || g.name })),
-            ],
-            notJoined: given.filter((g) => g.parentClassId === main.id && !g.teacherId).length,
-          }));
-        if (!cancelled) setData({ txns: Array.from(txnMap.values()), studentsByClass, groups, rulesMissing });
-      } catch (err) {
-        console.error("Class statistics failed", err);
-        if (!cancelled) setError(true);
-      } finally {
-        if (!cancelled) setLoading(false);
+      // Subject classes this teacher handed to co-teachers (the classroom-teacher feature).
+      const given = givenSnap.docs.map((d) => ({ ...(d.data() as ClassRecord), id: d.id })).filter((g) => g.teacherId !== user.uid);
+      const joined = given.filter((g) => g.teacherId);
+      let rulesMissing = false;
+      await Promise.all(
+        joined.map(async (g) => {
+          studentsByClass.set(g.id, toStudents(await studentsOf(g.id)));
+          try {
+            const snap = await readTxns([where("classId", "==", g.id)], p);
+            snap.docs.forEach((d) => txnMap.set(d.id, toTxn({ ...(d.data() as PointsTransaction), id: d.id })));
+          } catch {
+            rulesMissing = true;
+          }
+        })
+      );
+      const groups: SubjectGroup[] = classes
+        .filter((c) => !c.parentClassId && given.some((g) => g.parentClassId === c.id))
+        .map((main) => ({
+          main,
+          members: [
+            { cls: main, label: main.subject || t("reports.mainSubject") },
+            ...joined.filter((g) => g.parentClassId === main.id).map((g) => ({ cls: g, label: g.subject || g.name })),
+          ],
+          notJoined: given.filter((g) => g.parentClassId === main.id && !g.teacherId).length,
+        }));
+      const loaded: LoadedData = { txns: Array.from(txnMap.values()), studentsByClass, groups, rulesMissing };
+      reportCache.set(cacheKey, { at: Date.now(), data: loaded });
+      if (seq === loadSeq.current) {
+        setData(loaded);
+        setLoadedKey(periodKey(p));
       }
-    })();
-    return () => {
-      cancelled = true;
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open, user, classes]);
+    } catch (err) {
+      console.error("Class statistics failed", err);
+      if (seq === loadSeq.current) setError(true);
+    } finally {
+      if (seq === loadSeq.current) setLoading(false);
+    }
+  }
+
+  const ready = !!data && loadedKey === periodKey(period);
 
   const hasSubjects = subjectCompareAllowed && !!data && data.groups.length > 0;
   const group = data?.groups.find((g) => g.main.id === groupId) || data?.groups.find((g) => g.main.id === defaultClassId) || data?.groups[0];
@@ -588,10 +650,10 @@ export default function ClassStatsModal({
   if (!open) return null;
 
   const common = { period, kind, logo: schoolLogo, teacherName: profile?.displayName || "" };
-  const txns = valid && data ? data.txns : [];
+  const txns = valid && ready && data ? data.txns : [];
   let sheet: React.ReactNode = null;
   let printTitle = "";
-  if (data) {
+  if (data && ready) {
     if (tab === "students" && cls) {
       printTitle = `${cls.name} - ${t("reports.classReportTitle")}`;
       sheet = <StudentsSheet {...common} cls={cls} students={data.studentsByClass.get(cls.id) || []} txns={txns} />;
@@ -655,7 +717,7 @@ export default function ClassStatsModal({
             kind={kind}
             onKind={setKind}
             onPrint={() => printReport(printTitle)}
-            printDisabled={loading || !valid || !sheet}
+            printDisabled={loading || !valid || !ready || !sheet}
           >
             {tab === "students" && (
               <div>
@@ -734,6 +796,17 @@ export default function ClassStatsModal({
             )}
           </ReportControls>
 
+          <div className="flex flex-wrap items-center gap-3">
+            <button type="button" onClick={() => loadReport(ready)} disabled={loading || !valid} className="btn-primary py-2 text-sm disabled:opacity-60">
+              {loading ? t("common.loading") : ready ? t("reports.refresh", "Refresh") : t("reports.loadReport", "Load report")}
+            </button>
+            {!ready && !loading && (
+              <p className="text-sm text-cream-600">
+                {t("reports.loadHint", "Choose the period, then press “Load report”. Nothing is read until you do, and a shorter period is faster.")}
+              </p>
+            )}
+          </div>
+
           {loading ? (
             <div className="flex justify-center py-10">
               <Spinner />
@@ -745,7 +818,7 @@ export default function ClassStatsModal({
           )}
         </div>
       </Modal>
-      {!loading && !error && sheet && <PrintPortal>{sheet}</PrintPortal>}
+      {!loading && !error && ready && sheet && <PrintPortal>{sheet}</PrintPortal>}
     </>
   );
 }
