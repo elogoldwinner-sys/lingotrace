@@ -21,6 +21,7 @@ import {
   LineChart,
   Scale,
   Images,
+  ClipboardList,
 } from "lucide-react";
 import { deleteField } from "firebase/firestore";
 import { useAuth } from "../contexts/AuthContext";
@@ -69,6 +70,7 @@ import Spinner from "../components/common/Spinner";
 import ClassSelector from "../components/common/ClassSelector";
 import WeeklyChampions from "../components/common/WeeklyChampions";
 import PointsReportModal from "../components/common/PointsReportModal";
+import MarkSheetModal from "../components/common/MarkSheetModal";
 import StudentAvatar, { rankOf } from "../components/avatars/StudentAvatar";
 import AvatarPickerModal from "../components/avatars/AvatarPickerModal";
 import ClassTypeCard from "../components/avatars/ClassTypeCard";
@@ -130,6 +132,7 @@ export default function StudentsPage() {
   const [detailStudent, setDetailStudent] = useState<StudentRecord | null>(null);
   const [detailPoints, setDetailPoints] = useState<PointsTransaction[]>([]);
   const [reportModalOpen, setReportModalOpen] = useState(false);
+  const [markSheetOpen, setMarkSheetOpen] = useState(false);
   // Printable student report (points gained/lost + graphs) and class statistics
   const healedLogoRef = useRef(new Set<string>());
   const [avatarPickerOpen, setAvatarPickerOpen] = useState(false);
@@ -632,6 +635,14 @@ export default function StudentsPage() {
             <Upload size={16} />
             {t("students.bulkImport")}
           </button>
+          <button
+            onClick={() => setMarkSheetOpen(true)}
+            className={`btn-secondary text-sm py-2 px-3 disabled:cursor-not-allowed ${SOLID_TONES.lime}`}
+            disabled={!selectedClassId || students.length === 0}
+          >
+            <ClipboardList size={16} />
+            {t("msheet.button", "Mark sheet")}
+          </button>
           <button onClick={() => setReportModalOpen(true)} className={`btn-secondary text-sm py-2 px-3 ${SOLID_TONES.blue}`}>
             <FileSpreadsheet size={16} />
             {t("pointsReport.button")}
@@ -885,6 +896,14 @@ export default function StudentsPage() {
         classes={classes}
         defaultClassId={selectedClassId}
         initialTab={classStatsTab}
+      />
+
+      <MarkSheetModal
+        open={markSheetOpen}
+        onClose={() => setMarkSheetOpen(false)}
+        classId={selectedClassId}
+        className={currentClass?.name || ""}
+        students={students}
       />
 
       <PointsReportModal

@@ -1118,5 +1118,26 @@
     "studentsUsage": "Students in this class",
     "studentsReached": "Your school's plan allows {{n}} students per class. Ask your principal to request more.",
     "bulkOver": "This file would take the class over your plan's limit of {{n}} students."
+  },
+  "msheet": {
+    "button": "Mark sheet",
+    "title": "Mark sheet",
+    "intro": "Pick the reasons you want as columns (a quiz, an exam, a dictation…). Fill a column with one mark for everyone, then change only the students who differ. Empty slots are skipped.",
+    "gain": "Give marks for",
+    "lose": "Deduct marks for",
+    "addColumn": "Add column",
+    "noStudents": "This class has no students yet.",
+    "pickFirst": "Choose at least one reason above to start.",
+    "student": "Student",
+    "markPh": "Mark",
+    "fillAll": "Fill all",
+    "clear": "Clear",
+    "total": "Total",
+    "nothing": "Nothing to save yet.",
+    "summary": "{{count}} marks for {{students}} students are ready to save.",
+    "save": "Save {{count}} marks",
+    "saved": "Saved {{count}} marks for {{students}} students.",
+    "partial": "Saved {{count}} marks. {{failed}} students could not be saved — their slots are kept, press Save again.",
+    "error": "Couldn't save the marks. Please try again."
   }
 }
