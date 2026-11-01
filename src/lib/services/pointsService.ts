@@ -118,6 +118,8 @@ export interface SheetMark {
   amount: number;
   reason: PointsReason;
   note?: string;
+  /** Marks from the mark sheet are assessments (quiz, exam…): reports list them apart from the detailed points. */
+  assessment?: { kind: string; label?: string; name: string };
 }
 
 export interface SheetEntry {
@@ -176,6 +178,13 @@ export async function awardSheet(
         reason: m.reason,
         note: m.note || "",
         awardedBy,
+        ...(m.assessment
+          ? {
+              assessmentKind: m.assessment.kind,
+              ...(m.assessment.label ? { assessmentLabel: m.assessment.label } : {}),
+              assessmentName: m.assessment.name,
+            }
+          : {}),
         createdAt: serverTimestamp(),
       });
     }

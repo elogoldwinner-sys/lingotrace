@@ -58,6 +58,8 @@ interface AuthContextValue {
   updateTeacherReasonPrefs: (prefs: ReasonPrefs) => Promise<void>;
   /** Turns "marking attendance adds / deducts marks" on or off. */
   updateTeacherAttendancePoints: (enabled: boolean) => Promise<void>;
+  /** Saves which assessment types (quiz, exam…) the mark sheet offers. */
+  updateTeacherAssessmentKinds: (prefs: { hidden: string[]; custom: string[] }) => Promise<void>;
   /** Saves the teacher's weekly timetable ("<weekday>-<period>" → class id). */
   updateTeacherTimetable: (timetable: Record<string, string>) => Promise<void>;
   /** Saves period times for a teacher who is not in a school. */
@@ -375,6 +377,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setProfile((prev) => (prev ? { ...prev, reasonPrefs: prefs } : prev));
   }
 
+  async function updateTeacherAssessmentKinds(assessmentKinds: { hidden: string[]; custom: string[] }) {
+    const currentUser = auth.currentUser;
+    if (!currentUser) return;
+    await updateDoc(doc(db, "teachers", currentUser.uid), { assessmentKinds });
+    setProfile((prev) => (prev ? { ...prev, assessmentKinds } : prev));
+  }
+
   async function updateTeacherTimetable(timetable: Record<string, string>) {
     const currentUser = auth.currentUser;
     if (!currentUser) return;
@@ -418,6 +427,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         updateTeacherGender,
         updateTeacherReasonPrefs,
         updateTeacherAttendancePoints,
+        updateTeacherAssessmentKinds,
         updateTeacherTimetable,
         updateTeacherOwnSchedule,
         refreshPortalRole,

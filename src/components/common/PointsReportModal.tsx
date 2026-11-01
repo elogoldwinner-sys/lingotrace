@@ -8,6 +8,7 @@ import { db } from "../../lib/firebase";
 import { useAuth } from "../../contexts/AuthContext";
 import { buildCsv, downloadTextFile } from "../../lib/csv";
 import { toMillis } from "../../lib/timestamps";
+import { kindLabel } from "../../lib/assessments";
 import { NEGATIVE_POINTS_REASONS, POSITIVE_POINTS_REASONS } from "../../lib/pointsReasons";
 import type { ClassRecord, PointsReason, PointsTransaction, StudentRecord } from "../../types";
 
@@ -153,7 +154,8 @@ export default function PointsReportModal({
           if (kind === "negative" && !(txn.amount < 0)) return false;
           return selected.has(txn.reason);
         })
-        .sort((a, b) => toMillis(a.createdAt) - toMillis(b.createdAt));
+        // Quizzes, exams, spelling exams and projects (from the mark sheet) come first, then the detailed points.
+        .sort((a, b) => (b.assessmentKind ? 1 : 0) - (a.assessmentKind ? 1 : 0) || toMillis(a.createdAt) - toMillis(b.createdAt));
 
       if (rows.length === 0) {
         setMessage(t("pointsReport.empty"));
@@ -196,8 +198,8 @@ export default function PointsReportModal({
           student?.group || "",
           String(txn.amount),
           txn.amount > 0 ? t("pointsReport.typePositive") : txn.amount < 0 ? t("pointsReport.typeNegative") : "",
-          reasonLabel(txn.reason),
-          txn.note || "",
+          txn.assessmentKind ? kindLabel(t, txn.assessmentKind, txn.assessmentLabel) : reasonLabel(txn.reason),
+          txn.assessmentKind ? txn.assessmentName || "" : txn.note || "",
         ];
       });
 

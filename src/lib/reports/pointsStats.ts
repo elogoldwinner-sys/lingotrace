@@ -23,6 +23,8 @@ export interface Txn {
   reason: PointsTransaction["reason"];
   note: string;
   at: number;
+  /** Present for mark-sheet marks (quiz, exam…): reports show these in their own section. */
+  assess?: { kind: string; label: string; name: string };
 }
 
 export function toTxn(raw: PointsTransaction): Txn {
@@ -34,6 +36,7 @@ export function toTxn(raw: PointsTransaction): Txn {
     reason: raw.reason,
     note: raw.note || "",
     at: toMillis(raw.createdAt),
+    assess: raw.assessmentKind ? { kind: raw.assessmentKind, label: raw.assessmentLabel || "", name: raw.assessmentName || "" } : undefined,
   };
 }
 

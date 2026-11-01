@@ -21,6 +21,7 @@ import {
 } from "../../lib/reports/pointsStats";
 import { GAINED, GainedLostBars, HorizontalBars, Legend, LOST, RunningTotalLine } from "../charts/PointsCharts";
 import { PrintedOn, PrintPortal, printReport, ReportControls, ReportHeader, StatCards } from "./reportParts";
+import { StudentAssessments } from "./AssessmentTables";
 import type { PointsTransaction, StudentRecord } from "../../types";
 
 interface SheetProps {
@@ -91,8 +92,10 @@ function StudentSheet({ student, className, period, kind, txns, firstAt, logo, t
             <Legend items={series} />
           </div>
 
-          <h2>{t("reports.history")}</h2>
-          <table className="lt-table">
+          <StudentAssessments txns={txns} />
+
+          {txns.some((x) => !x.assess) && <h2>{t("reports.history")}</h2>}
+          {txns.some((x) => !x.assess) && <table className="lt-table">
             <thead>
               <tr>
                 <th>{t("reports.colDate")}</th>
@@ -102,7 +105,7 @@ function StudentSheet({ student, className, period, kind, txns, firstAt, logo, t
               </tr>
             </thead>
             <tbody>
-              {[...txns].reverse().map((x) => (
+              {[...txns].filter((x) => !x.assess).reverse().map((x) => (
                 <tr key={x.id}>
                   <td style={{ whiteSpace: "nowrap" }}>{x.at ? format(new Date(x.at), "yyyy-MM-dd HH:mm") : ""}</td>
                   <td>{t(`points.reasons.${x.reason}`)}</td>
@@ -114,7 +117,7 @@ function StudentSheet({ student, className, period, kind, txns, firstAt, logo, t
                 </tr>
               ))}
             </tbody>
-          </table>
+          </table>}
         </>
       )}
       <PrintedOn />

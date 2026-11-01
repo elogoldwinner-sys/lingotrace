@@ -1142,7 +1142,15 @@
     "save": "Save {{count}} marks",
     "saved": "Saved {{count}} marks for {{students}} students.",
     "partial": "Saved {{count}} marks. {{failed}} students could not be saved — their slots are kept, press Save again.",
-    "error": "Couldn't save the marks. Please try again."
+    "error": "Couldn't save the marks. Please try again.",
+    "intro2": "Add a column for each quiz, exam, spelling exam or project and name it. Fill a column with one mark for everyone, then change only the students who differ. Empty slots are skipped. These marks appear in their own section of the reports, before the detailed points.",
+    "addColumnFor": "Add a column for",
+    "namePh": "Name (e.g. Quiz 3 – Fractions)",
+    "removeType": "Remove this type",
+    "restoreTypes": "Restore the default types",
+    "ownTypePh": "Type name (e.g. Oral test)",
+    "addType": "Add type",
+    "pickFirst2": "Add a column above to start (for example a quiz)."
   },
   "sched": {
     "title": "Current period",
@@ -1219,5 +1227,23 @@
     "preview": "Preview (A4)",
     "none": "No letterhead uploaded yet.",
     "offByAdmin": "The letterhead isn't included in your school's plan, so printed reports use the standard layout."
+  },
+  "assess": {
+    "title": "Assessments",
+    "colDate": "Date",
+    "colType": "Type",
+    "colName": "Name",
+    "colMark": "Mark",
+    "colGraded": "Students",
+    "colAvg": "Average",
+    "colHigh": "Highest",
+    "colLow": "Lowest",
+    "other": "Assessment",
+    "kinds": {
+      "quiz": "Quiz",
+      "exam": "Exam",
+      "spelling": "Spelling exam",
+      "project": "Project"
+    }
   }
 }

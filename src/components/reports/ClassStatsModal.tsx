@@ -24,6 +24,7 @@ import {
 } from "../../lib/reports/pointsStats";
 import { GAINED, GainedLostBars, HorizontalBars, Legend, LOST, RunningTotalLine } from "../charts/PointsCharts";
 import { PrintedOn, PrintPortal, printReport, ReportControls, ReportHeader, StatCards } from "./reportParts";
+import { ClassAssessments } from "./AssessmentTables";
 import type { ClassRecord, PointsTransaction, StudentRecord } from "../../types";
 
 export type StatsTab = "students" | "classes" | "subjects";
@@ -105,6 +106,8 @@ function StudentsSheet({
         ]}
       />
       <StatCards totals={mine.totals} extra={{ label: t("reports.students"), value: students.length }} />
+
+      <ClassAssessments txns={mine.own} />
 
       {mine.own.length === 0 ? (
         <p style={{ marginTop: 16, color: "#6b7280" }}>{t("reports.noData")}</p>

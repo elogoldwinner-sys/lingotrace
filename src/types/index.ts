@@ -25,6 +25,8 @@ export interface UserProfile {
   attendancePoints?: boolean;
   /** Which reasons the teacher sees when giving / deducting marks (all classes, with optional per-class overrides). */
   reasonPrefs?: ReasonPrefs;
+  /** Which assessment types (quiz, exam…) the mark sheet offers this teacher. */
+  assessmentKinds?: { hidden: string[]; custom: string[] };
   /** The teacher's weekly timetable: "<weekday>-<period index>" → class id (see lib/schedule.ts). */
   timetable?: Record<string, string>;
   /** Period times for a teacher who is not in a school (school teachers use the principal's schedule). */
@@ -292,6 +294,12 @@ export interface PointsTransaction {
   awardedBy: string;
   /** Set when the mark was given from inside a session (used by the Session Summary). */
   sessionId?: string;
+  /** Set for marks from the mark sheet (quiz, exam, spelling exam, project…): reports list these apart from the detailed points. */
+  assessmentKind?: string;
+  /** The teacher's own type name, when `assessmentKind` is "custom". */
+  assessmentLabel?: string;
+  /** What the teacher called this assessment, e.g. "Quiz 3 – Fractions". */
+  assessmentName?: string;
   createdAt: number;
 }
 
