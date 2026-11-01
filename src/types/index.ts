@@ -497,9 +497,24 @@ export interface School {
   subjects: string[];
   /** When false, teachers of this school cannot use "compare across subjects" in Class statistics. Default true. */
   allowSubjectCompare?: boolean;
+  /** A letterhead the principal uploaded (PDF). Printed reports are placed on its first page. Needs the "letterhead" feature. */
+  letterhead?: SchoolLetterhead;
   /** Period times, school days and timezone, set by the principal; teachers build their timetables on it. */
   schedule?: { timezone: string; days: number[]; periods: { start: string; end: string }[] };
   createdAt: number;
+}
+
+export interface SchoolLetterhead {
+  /** The uploaded PDF (kept so the principal can open it). */
+  pdfUrl: string;
+  /** The PDF's first page as an image — what printed reports are placed on. */
+  imageUrl: string;
+  /** Blank space left for the letterhead's own header / footer / sides, in millimetres. */
+  topMm: number;
+  bottomMm: number;
+  sideMm: number;
+  /** The principal can switch it off without deleting it. */
+  enabled: boolean;
 }
 
 /** Signature / stamp images, kept apart from the (publicly listable) school doc. */

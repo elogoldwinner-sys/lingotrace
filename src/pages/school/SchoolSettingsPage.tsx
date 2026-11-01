@@ -9,6 +9,7 @@ import { useAuth } from "../../contexts/AuthContext";
 import { useNavigate } from "react-router-dom";
 import ImageUploadField from "../../components/school/ImageUploadField";
 import ScheduleEditor from "../../components/common/ScheduleEditor";
+import LetterheadCard from "../../components/school/LetterheadCard";
 import { DEFAULT_TIMEZONE, safeTimezone } from "../../lib/schedule";
 
 /** Principal only: school identity (name, logo, signature, stamp), approved subjects, and the "compare across subjects" switch. */
@@ -162,6 +163,15 @@ export default function SchoolSettingsPage() {
           </button>
         </div>
       </section>
+
+      <LetterheadCard
+        value={sch.letterhead || null}
+        onSave={async (next) => {
+          await updateSchool(sch.id, { letterhead: (next ?? null) as unknown as undefined });
+          await refresh();
+          audit("settings_changed", t("lh.title", "School letterhead"));
+        }}
+      />
 
       <section className="card space-y-3 p-4">
         <div>

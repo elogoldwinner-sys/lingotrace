@@ -3,10 +3,38 @@ import { useTranslation } from "react-i18next";
 import { Printer } from "lucide-react";
 import { format } from "date-fns";
 import type { KindFilter, Period, Totals } from "../../lib/reports/pointsStats";
+import { useLetterhead } from "../../lib/useLetterhead";
 
 /** Renders its children into <body> so they can be printed on their own (see .lt-print-root in index.css). */
 export function PrintPortal({ children }: { children: React.ReactNode }) {
-  return createPortal(<div className="lt-print-root">{children}</div>, document.body);
+  const letterhead = useLetterhead();
+  if (!letterhead) return createPortal(<div className="lt-print-root">{children}</div>, document.body);
+  // With a letterhead: the page image is fixed (repeats on every printed page) and the report sits inside the blank
+  // area. A table's header / footer rows repeat on each page, so they hold the top and bottom spacing.
+  return createPortal(
+    <div className="lt-print-root lt-has-letterhead" style={{ paddingInline: `${letterhead.sideMm}mm` }}>
+      <style>{"@media print { @page { size: A4; margin: 0; } }"}</style>
+      <img className="lt-letterhead" src={letterhead.imageUrl} alt="" />
+      <table className="lt-lh-table">
+        <thead>
+          <tr>
+            <td style={{ height: `${letterhead.topMm}mm`, padding: 0 }} />
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td style={{ padding: 0 }}>{children}</td>
+          </tr>
+        </tbody>
+        <tfoot>
+          <tr>
+            <td style={{ height: `${letterhead.bottomMm}mm`, padding: 0 }} />
+          </tr>
+        </tfoot>
+      </table>
+    </div>,
+    document.body
+  );
 }
 
 /** Opens the browser's print dialog (which also offers "Save as PDF"), naming the file after the report. */

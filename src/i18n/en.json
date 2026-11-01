@@ -1000,7 +1000,11 @@
       "description": "Teachers can create and download student certificates."
     },
     "planError": "Couldn't load your school's plan",
-    "planErrorHelp": "Reload the page; if it persists, contact the administrator."
+    "planErrorHelp": "Reload the page; if it persists, contact the administrator.",
+    "letterhead": {
+      "label": "School letterhead",
+      "description": "The principal uploads a PDF letterhead and every printed report is placed on it."
+    }
   },
   "adm": {
     "loginTitle": "Admin portal",
@@ -1191,5 +1195,29 @@
     "notLinked": "This account isn't linked to a school, so you set your own period times. To use your school's times, join your school from the prompt on the dashboard.",
     "pendingLink": "Your request to join the school is still waiting for the principal's approval. Until then you can set your own period times.",
     "rejectedLink": "Your request to join the school was declined, so you set your own period times."
+  },
+  "lh": {
+    "title": "School letterhead",
+    "intro": "Upload your school's letterhead as a PDF. Every printed report — from you and from your teachers — is then placed on it automatically.",
+    "upload": "Upload letterhead (PDF)",
+    "replace": "Replace the PDF",
+    "remove": "Remove",
+    "uploading": "Uploading…",
+    "onlyPdf": "Please choose a PDF file.",
+    "tooBig": "The file is larger than {{mb}} MB.",
+    "error": "Couldn't upload the letterhead. If it keeps failing, the upload settings may not allow PDF files.",
+    "firstPageOnly": "Only the first page of the PDF is used, and it is stretched to A4.",
+    "enabled": "Use the letterhead on printed reports",
+    "margins": "Blank space for the letterhead (mm)",
+    "top": "Top",
+    "bottom": "Bottom",
+    "side": "Sides",
+    "marginsHint": "The report starts below the top space and stops above the bottom space on every page, so it never covers your header or footer. The shaded areas in the preview show it.",
+    "save": "Save margins",
+    "saved": "Letterhead saved.",
+    "openPdf": "Open the PDF",
+    "preview": "Preview (A4)",
+    "none": "No letterhead uploaded yet.",
+    "offByAdmin": "The letterhead isn't included in your school's plan, so printed reports use the standard layout."
   }
 }

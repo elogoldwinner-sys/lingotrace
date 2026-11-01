@@ -14,6 +14,7 @@ export const FEATURE_KEYS = [
   "numberedHeads",
   "editReasons",
   "certificates",
+  "letterhead",
 ] as const;
 
 export type FeatureKey = (typeof FEATURE_KEYS)[number];
@@ -76,6 +77,12 @@ export const FEATURES: FeatureMeta[] = [
     label: "Certificates",
     description: "Teachers can create and download student certificates.",
     audience: "teachers",
+  },
+  {
+    key: "letterhead",
+    label: "School letterhead",
+    description: "The principal uploads a PDF letterhead and every printed report is placed on it.",
+    audience: "principal",
   },
 ];
 
