@@ -13,9 +13,11 @@ export interface ScheduleInfo {
 /** The period times that apply to the signed-in teacher: their school's once approved, otherwise their own. */
 export function useSchedule(): ScheduleInfo {
   const { profile } = useAuth();
-  const { school, membership, loading } = useSchool();
-  const inSchool = !!school && !!membership && membership.status === "approved" && membership.schoolId === school.id;
-  const raw = inSchool ? school!.schedule : profile?.ownSchedule;
+  const { membership, memberSchool, loading } = useSchool();
+  const approved = !!membership && membership.status === "approved";
+  // Approved in a school: wait for that school's live record, then use the principal's schedule.
+  const inSchool = approved;
+  const raw = inSchool ? memberSchool?.schedule : profile?.ownSchedule;
   const schedule: Schedule | null = raw && raw.periods?.length ? { timezone: safeTimezone(raw.timezone), days: raw.days || [], periods: raw.periods } : null;
-  return { schedule, source: inSchool ? "school" : "own", loading };
+  return { schedule, source: inSchool ? "school" : "own", loading: loading || (inSchool && !memberSchool) };
 }

@@ -1,6 +1,8 @@
 import { createContext, useCallback, useContext, useEffect, useRef, useState, type ReactNode } from "react";
 import { useAuth } from "./AuthContext";
 import { useLocation } from "react-router-dom";
+import { doc, onSnapshot } from "firebase/firestore";
+import { db } from "../lib/firebase";
 import { subscribeEntitlements } from "../lib/services/entitlementsService";
 import type { FeatureKey, LimitKey } from "../lib/features";
 import {
@@ -19,6 +21,8 @@ interface SchoolContextValue {
   membership: SchoolTeacher | null;
   /** The school the person belongs to — through staff access or teacher membership. */
   school: School | null;
+  /** The school this teacher is an APPROVED member of, kept live (so the principal's schedule changes show up without a reload). */
+  memberSchool: School | null;
   /** Signature / stamp images (staff only). */
   assets: SchoolAssets;
   /** Plans (what the platform admin switched on) of the schools this person is connected to, by school id. */
@@ -37,6 +41,7 @@ export function SchoolProvider({ children }: { children: ReactNode }) {
   const [membership, setMembership] = useState<SchoolTeacher | null>(null);
   const [school, setSchool] = useState<School | null>(null);
   const [assets, setAssets] = useState<SchoolAssets>({});
+  const [memberSchool, setMemberSchool] = useState<School | null>(null);
   const [plans, setPlans] = useState<Record<string, SchoolEntitlements>>({});
   const [planErrors, setPlanErrors] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(true);
@@ -102,6 +107,20 @@ export function SchoolProvider({ children }: { children: ReactNode }) {
     return () => unsubs.forEach((u) => u());
   }, [staffSchoolId, memberSchoolId]);
 
+  // The teacher's own school, live. It can differ from `school` (a Gmail that is staff of one school and a teacher in
+  // another gets the staff school there), and the principal can change things after the teacher signed in.
+  useEffect(() => {
+    if (!memberSchoolId) {
+      setMemberSchool(null);
+      return;
+    }
+    return onSnapshot(
+      doc(db, "schools", memberSchoolId),
+      (snap) => setMemberSchool(snap.exists() ? ({ ...(snap.data() as School), id: snap.id }) : null),
+      (err) => console.error("Couldn't read the teacher's school", err)
+    );
+  }, [memberSchoolId]);
+
   // A teacher waiting for approval picks the decision up as soon as they come back to the tab.
   useEffect(() => {
     if (membership?.status !== "pending") return;
@@ -123,7 +142,7 @@ export function SchoolProvider({ children }: { children: ReactNode }) {
   }, [profile, membership, school]);
 
   return (
-    <SchoolContext.Provider value={{ staff, membership, school, assets, plans, planErrors, loading, refresh: load }}>
+    <SchoolContext.Provider value={{ staff, membership, school, memberSchool, assets, plans, planErrors, loading, refresh: load }}>
       {children}
     </SchoolContext.Provider>
   );
