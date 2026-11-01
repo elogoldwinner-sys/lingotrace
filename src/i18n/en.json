@@ -1187,6 +1187,9 @@
     "overlap": "Periods can't overlap — each must start after the previous one ends.",
     "saveError": "Couldn't save the schedule. Please try again.",
     "saved": "Schedule saved.",
-    "save": "Save schedule"
+    "save": "Save schedule",
+    "notLinked": "This account isn't linked to a school, so you set your own period times. To use your school's times, join your school from the prompt on the dashboard.",
+    "pendingLink": "Your request to join the school is still waiting for the principal's approval. Until then you can set your own period times.",
+    "rejectedLink": "Your request to join the school was declined, so you set your own period times."
   }
 }

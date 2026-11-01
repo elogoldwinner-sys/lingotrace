@@ -3,6 +3,7 @@ import { useTranslation } from "react-i18next";
 import Modal from "./Modal";
 import ScheduleEditor from "./ScheduleEditor";
 import { useAuth } from "../../contexts/AuthContext";
+import { useSchool } from "../../contexts/SchoolContext";
 import { useSchedule } from "../../lib/useSchedule";
 import { deviceTimezone, slotKey } from "../../lib/schedule";
 import type { ClassRecord } from "../../types";
@@ -25,6 +26,7 @@ export default function TimetableModal({
   const { t, i18n } = useTranslation();
   const { profile, updateTeacherTimetable, updateTeacherOwnSchedule } = useAuth();
   const { schedule, source } = useSchedule();
+  const { membership } = useSchool();
   const [tab, setTab] = useState<"table" | "times">("table");
   const [draft, setDraft] = useState<Record<string, string>>({});
   const [busy, setBusy] = useState(false);
@@ -73,6 +75,15 @@ export default function TimetableModal({
   return (
     <Modal open={open} onClose={onClose} title={t("sched.myTimetable", "My timetable")} widthClassName="max-w-4xl">
       <div className="space-y-4">
+        {source === "own" && (
+          <p className="rounded-lg border border-cream-400 bg-cream-100 px-3 py-2 text-xs text-cream-700">
+            {!membership
+              ? t("sched.notLinked", "This account isn't linked to a school, so you set your own period times. To use your school's times, join your school from the prompt on the dashboard.")
+              : membership.status === "pending"
+                ? t("sched.pendingLink", "Your request to join the school is still waiting for the principal's approval. Until then you can set your own period times.")
+                : t("sched.rejectedLink", "Your request to join the school was declined, so you set your own period times.")}
+          </p>
+        )}
         {source === "own" && (
           <div className="flex flex-wrap gap-2">
             {tabBtn("table", t("sched.tabTable", "Timetable"))}
