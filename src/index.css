@@ -404,8 +404,9 @@
   .lt-table tr { break-inside: avoid; }
 
   /* School letterhead: the page image repeats behind every page; the report keeps clear of its header / footer. */
-  .lt-has-letterhead .lt-letterhead { position: fixed; inset: 0; width: 100%; height: 100%; object-fit: fill; z-index: -1; }
-  .lt-has-letterhead .lt-lh-table { width: 100%; border-collapse: collapse; }
+  /* Not z-index:-1: the page's white body background would paint over it. The image sits at 0, the report above it. */
+  .lt-has-letterhead .lt-letterhead { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; object-fit: fill; z-index: 0; }
+  .lt-has-letterhead .lt-lh-table { width: 100%; border-collapse: collapse; position: relative; z-index: 1; }
   .lt-has-letterhead .lt-lh-table > thead { display: table-header-group; }
   .lt-has-letterhead .lt-lh-table > tfoot { display: table-footer-group; }
   .lt-has-letterhead .lt-report-logo { display: none; }
