@@ -1,13 +1,4 @@
-import {
-  collection,
-  doc,
-  getDoc,
-  getDocs,
-  onSnapshot,
-  query,
-  setDoc,
-  where,
-} from "firebase/firestore";
+import { collection, doc, getDoc, getDocs, onSnapshot, query, setDoc, where, Timestamp } from "firebase/firestore";
 import { auth, db } from "../firebase";
 import { toMillis } from "../timestamps";
 import type { ClassRanking, RankingEntry, RankingPosition, PointsTransaction } from "../../types";
@@ -174,10 +165,33 @@ export async function computeAndSaveRankingForPeriod(
       )
     : query(collection(db, "pointsTransactions"), where("classId", "==", classId));
 
+  // Only the marks inside the period are needed. Reading the class's WHOLE history on every recompute was the biggest
+  // source of reads (it grows all year), so ask Firestore for the period only. That query needs the composite index
+  // classId + awardedBy + createdAt (firestore.indexes.json); until it is deployed we fall back to the full read.
+  const periodQuery = teacherUid
+    ? query(
+        collection(db, "pointsTransactions"),
+        where("classId", "==", classId),
+        where("awardedBy", "==", teacherUid),
+        where("createdAt", ">=", Timestamp.fromMillis(period.start)),
+        where("createdAt", "<=", Timestamp.fromMillis(period.end))
+      )
+    : null;
+  const readTransactions = async () => {
+    if (periodQuery) {
+      try {
+        return await getDocs(periodQuery);
+      } catch (err) {
+        if ((err as { code?: string }).code !== "failed-precondition") throw err; // anything but "index missing"
+        console.warn("Champions board: index not deployed yet, reading the full points history instead", err);
+      }
+    }
+    return getDocs(transactionsQuery);
+  };
   const [classSnap, studentsSnap, transactionsSnap] = await Promise.all([
     getDoc(doc(db, "classes", classId)),
     getDocs(query(collection(db, "students"), where("classId", "==", classId))),
-    getDocs(transactionsQuery),
+    readTransactions(),
   ]);
   const className = (classSnap.data()?.name as string) || "";
 

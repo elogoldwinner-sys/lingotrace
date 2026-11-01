@@ -1,4 +1,4 @@
-import { arrayUnion, deleteField, doc, getDoc, getDocs, onSnapshot, query, setDoc, updateDoc, where, collection, writeBatch } from "firebase/firestore";
+import { arrayUnion, deleteField, doc, getCountFromServer, getDoc, getDocs, onSnapshot, query, setDoc, updateDoc, where, collection, writeBatch } from "firebase/firestore";
 import { db } from "../firebase";
 import { createFirestoreService } from "../firestoreService";
 import { removeChildFromParent } from "./parentsService";
@@ -198,11 +198,11 @@ export function subscribeToStudent(
 }
 
 /**
- * Live per-class student counts for a set of classes. Used by the Dashboard
- * and Classes list views instead of the `ClassRecord.studentIds` array,
- * which is never actually written to when a student is created (via the
- * join flow) or deleted — reading the real `students` collection directly
- * avoids that drift entirely.
+ * Per-class student counts for a set of classes (Dashboard and Classes list). Uses Firestore COUNT queries — one read
+ * per class (per 1,000 students) — instead of listening to every student document, which cost one read per student on
+ * every load AND again every time any student changed (each mark updates the student's total). Counts are fetched once
+ * when the classes are known; they refresh the next time the page opens. Same call shape as before (returns an
+ * unsubscribe function), so no caller changes.
  */
 export function subscribeToStudentCounts(
   classIds: string[],
@@ -213,33 +213,22 @@ export function subscribeToStudentCounts(
     onData({});
     return () => {};
   }
-  // Firestore "in" queries cap at 30 values; chunk defensively in case a
-  // teacher ever has more classes than that.
-  const chunks: string[][] = [];
-  for (let i = 0; i < classIds.length; i += 30) {
-    chunks.push(classIds.slice(i, i + 30));
-  }
-
-  const chunkCounts: Record<string, number>[] = chunks.map(() => ({}));
-  const unsubscribers = chunks.map((chunk, chunkIndex) =>
-    onSnapshot(
-      query(collection(db, "students"), where("classId", "in", chunk)),
-      (snapshot) => {
-        const counts: Record<string, number> = {};
-        snapshot.docs.forEach((d) => {
-          const classId = (d.data() as StudentRecord).classId;
-          counts[classId] = (counts[classId] || 0) + 1;
-        });
-        chunkCounts[chunkIndex] = counts;
-        const merged: Record<string, number> = {};
-        chunkCounts.forEach((c) => Object.assign(merged, c));
-        onData(merged);
-      },
-      (error) => onError?.(error)
-    )
-  );
-
-  return () => unsubscribers.forEach((unsub) => unsub());
+  let cancelled = false;
+  Promise.all(
+    classIds.map(async (id) => {
+      const snap = await getCountFromServer(query(collection(db, "students"), where("classId", "==", id)));
+      return [id, snap.data().count] as const;
+    })
+  )
+    .then((rows) => {
+      if (!cancelled) onData(Object.fromEntries(rows));
+    })
+    .catch((err) => {
+      if (!cancelled) onError?.(err as Error);
+    });
+  return () => {
+    cancelled = true;
+  };
 }
 
 /**
