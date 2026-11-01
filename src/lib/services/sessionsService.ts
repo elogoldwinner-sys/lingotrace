@@ -1,4 +1,6 @@
 import { addDays, format, parseISO } from "date-fns";
+import { collection, doc, getDocs, query, updateDoc, where } from "firebase/firestore";
+import { db } from "../firebase";
 import { createFirestoreService } from "../firestoreService";
 import type { SessionRecord } from "../../types";
 
@@ -87,4 +89,22 @@ export async function updateSession(id: string, data: Partial<SessionRecord>) {
 
 export async function deleteSession(id: string) {
   return service.remove(id);
+}
+
+/**
+ * The session for one period of one day, so a teacher can go straight from the "current period" indicator to its
+ * attendance sheet. Reuses the session already made for that period; otherwise takes a bulk-generated session of that
+ * day that no period has claimed yet; otherwise creates one. Returns the session id.
+ */
+export async function ensurePeriodSession(classId: string, date: string, period: number): Promise<string> {
+  const snap = await getDocs(query(collection(db, "sessions"), where("classId", "==", classId), where("date", "==", date)));
+  const list = snap.docs.map((d) => ({ ...(d.data() as Omit<SessionRecord, "id">), id: d.id }));
+  const mine = list.find((s) => s.period === period);
+  if (mine) return mine.id;
+  const free = list.filter((s) => s.period == null).sort((a, b) => a.title.localeCompare(b.title))[0];
+  if (free) {
+    await updateDoc(doc(db, "sessions", free.id), { period });
+    return free.id;
+  }
+  return service.create({ classId, date, title: `${date} (${period})`, period } as Omit<SessionRecord, "id" | "createdAt">);
 }

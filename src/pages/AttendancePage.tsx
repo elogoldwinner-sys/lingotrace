@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Send, Check, ChevronDown, BarChart3, Printer } from "lucide-react";
+import { Link, useSearchParams } from "react-router-dom";
+import { Send, Check, ChevronDown, BarChart3, Printer, Play } from "lucide-react";
 import { startOfWeek, addDays, format as formatDate, parseISO } from "date-fns";
 import { useAuth } from "../contexts/AuthContext";
 import { subscribeToClasses } from "../lib/services/classesService";
@@ -83,6 +84,11 @@ export default function AttendancePage({ archived = false }: { archived?: boolea
   const [loading, setLoading] = useState(true);
 
   const [expandedSessionId, setExpandedSessionId] = useState<string | null>(null);
+  // Deep link from the dashboard's "current period" card: ?classId=…&sessionId=… opens that session's sheet.
+  const [searchParams] = useSearchParams();
+  const focusClass = searchParams.get("classId");
+  const focusSession = searchParams.get("sessionId");
+  const focusedRef = useRef<string | null>(null);
 
   // Students ticked in the open session's roster, for marking several at
   // once. Cleared whenever the open session or class changes.
@@ -106,7 +112,10 @@ export default function AttendancePage({ archived = false }: { archived?: boolea
     if (!user) return;
     const unsubscribe = subscribeToClasses(user.uid, (data) => {
       setClasses(data);
-      if (!selectedClassId && data.length > 0) setSelectedClassId(data[0].id);
+      if (!selectedClassId && data.length > 0) {
+        // Arriving from the "current period" indicator: open that class straight away.
+        setSelectedClassId(focusClass && data.some((c) => c.id === focusClass) ? focusClass : data[0].id);
+      }
     });
     return unsubscribe;
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -191,6 +200,18 @@ export default function AttendancePage({ archived = false }: { archived?: boolea
     setExpandedWeeks(new Set([visibleWeeks[0].key]));
     defaultedClassRef.current = selectedClassId;
   }, [visibleWeeks, selectedClassId]);
+
+  // Open the linked session once its class's sessions have loaded: expand its week and the session, and scroll to it.
+  useEffect(() => {
+    if (!focusSession || focusedRef.current === focusSession) return;
+    const target = sessions.find((s) => s.id === focusSession);
+    if (!target || target.classId !== selectedClassId) return;
+    focusedRef.current = focusSession;
+    const weekKey = formatDate(startOfWeek(parseISO(target.date), { weekStartsOn: 0 }), "yyyy-MM-dd");
+    setExpandedWeeks((prev) => new Set(prev).add(weekKey));
+    setExpandedSessionId(target.id);
+    window.setTimeout(() => document.getElementById(`att-session-${target.id}`)?.scrollIntoView({ behavior: "smooth", block: "start" }), 150);
+  }, [sessions, focusSession, selectedClassId]);
 
   function toggleWeek(key: string) {
     setExpandedWeeks((prev) => {
@@ -371,7 +392,7 @@ export default function AttendancePage({ archived = false }: { archived?: boolea
                       {isWeekOpen && (
                         <div className="divide-y divide-cream-400 border-t border-cream-400">
                           {week.sessions.map((s) => (
-                            <div key={s.id}>
+                            <div key={s.id} id={`att-session-${s.id}`}>
                               <button
                                 onClick={() => setExpandedSessionId(expandedSessionId === s.id ? null : s.id)}
                                 className={`w-full text-left flex items-start justify-between px-5 py-4 transition-colors ${
@@ -386,6 +407,12 @@ export default function AttendancePage({ archived = false }: { archived?: boolea
 
                               {expandedSessionId === s.id && (
                                 <div className="px-5 pb-5 space-y-2 bg-cream-100/60 pt-2">
+                                  <div className="flex justify-end">
+                                    <Link to={`/sessions?classId=${encodeURIComponent(s.classId)}&sessionId=${encodeURIComponent(s.id)}`} className="btn-gold py-1.5 px-3 text-sm">
+                                      <Play size={15} />
+                                      {t("sched.goToSession", "Go to this session")}
+                                    </Link>
+                                  </div>
                                   <div className="flex flex-wrap items-center gap-x-4 gap-y-2 rounded-lg border border-cream-300 bg-white px-3 py-2.5">
                                     <label className="flex items-center gap-3 cursor-pointer">
                                       <input

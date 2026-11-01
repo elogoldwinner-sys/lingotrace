@@ -58,6 +58,10 @@ interface AuthContextValue {
   updateTeacherReasonPrefs: (prefs: ReasonPrefs) => Promise<void>;
   /** Turns "marking attendance adds / deducts marks" on or off. */
   updateTeacherAttendancePoints: (enabled: boolean) => Promise<void>;
+  /** Saves the teacher's weekly timetable ("<weekday>-<period>" → class id). */
+  updateTeacherTimetable: (timetable: Record<string, string>) => Promise<void>;
+  /** Saves period times for a teacher who is not in a school. */
+  updateTeacherOwnSchedule: (schedule: NonNullable<UserProfile["ownSchedule"]>) => Promise<void>;
   refreshPortalRole: () => Promise<void>;
   signOut: () => Promise<void>;
 }
@@ -371,6 +375,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setProfile((prev) => (prev ? { ...prev, reasonPrefs: prefs } : prev));
   }
 
+  async function updateTeacherTimetable(timetable: Record<string, string>) {
+    const currentUser = auth.currentUser;
+    if (!currentUser) return;
+    await updateDoc(doc(db, "teachers", currentUser.uid), { timetable });
+    setProfile((prev) => (prev ? { ...prev, timetable } : prev));
+  }
+
+  async function updateTeacherOwnSchedule(ownSchedule: NonNullable<UserProfile["ownSchedule"]>) {
+    const currentUser = auth.currentUser;
+    if (!currentUser) return;
+    await updateDoc(doc(db, "teachers", currentUser.uid), { ownSchedule });
+    setProfile((prev) => (prev ? { ...prev, ownSchedule } : prev));
+  }
+
   async function updateTeacherAttendancePoints(enabled: boolean) {
     const currentUser = auth.currentUser;
     if (!currentUser) return;
@@ -400,6 +418,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         updateTeacherGender,
         updateTeacherReasonPrefs,
         updateTeacherAttendancePoints,
+        updateTeacherTimetable,
+        updateTeacherOwnSchedule,
         refreshPortalRole,
         signOut,
       }}

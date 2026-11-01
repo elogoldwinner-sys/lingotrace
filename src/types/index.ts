@@ -25,6 +25,10 @@ export interface UserProfile {
   attendancePoints?: boolean;
   /** Which reasons the teacher sees when giving / deducting marks (all classes, with optional per-class overrides). */
   reasonPrefs?: ReasonPrefs;
+  /** The teacher's weekly timetable: "<weekday>-<period index>" → class id (see lib/schedule.ts). */
+  timetable?: Record<string, string>;
+  /** Period times for a teacher who is not in a school (school teachers use the principal's schedule). */
+  ownSchedule?: { timezone: string; days: number[]; periods: { start: string; end: string }[] };
   /** Older single list of saved custom reasons — only read as a fallback when `reasonPrefs` is absent. */
   customReasons?: CustomReasons;
   createdAt: number;
@@ -185,6 +189,8 @@ export interface SessionRecord {
   date: string; // YYYY-MM-DD
   topic?: string;
   objectives?: string;
+  /** Set when the session was opened from the timetable: which period of the day it is (1-based). */
+  period?: number;
   createdAt: number;
 }
 
@@ -491,6 +497,8 @@ export interface School {
   subjects: string[];
   /** When false, teachers of this school cannot use "compare across subjects" in Class statistics. Default true. */
   allowSubjectCompare?: boolean;
+  /** Period times, school days and timezone, set by the principal; teachers build their timetables on it. */
+  schedule?: { timezone: string; days: number[]; periods: { start: string; end: string }[] };
   createdAt: number;
 }
 

@@ -8,6 +8,8 @@ import { normEmail, setSchoolAssets, transferPrincipalRole, updateSchool } from 
 import { useAuth } from "../../contexts/AuthContext";
 import { useNavigate } from "react-router-dom";
 import ImageUploadField from "../../components/school/ImageUploadField";
+import ScheduleEditor from "../../components/common/ScheduleEditor";
+import { DEFAULT_TIMEZONE, safeTimezone } from "../../lib/schedule";
 
 /** Principal only: school identity (name, logo, signature, stamp), approved subjects, and the "compare across subjects" switch. */
 export default function SchoolSettingsPage() {
@@ -159,6 +161,24 @@ export default function SchoolSettingsPage() {
             {t("sp.add", "Add")}
           </button>
         </div>
+      </section>
+
+      <section className="card space-y-3 p-4">
+        <div>
+          <h2 className="font-semibold text-navy">{t("sched.schoolTitle", "Periods and school days")}</h2>
+          <p className="text-sm text-cream-600">
+            {t("sched.schoolHint", "Set the school days, timezone and the time of every period. Your teachers then fill in their timetables, and each sees the current period on their dashboard.")}
+          </p>
+        </div>
+        <ScheduleEditor
+          value={sch.schedule && sch.schedule.periods?.length ? { ...sch.schedule, timezone: safeTimezone(sch.schedule.timezone) } : null}
+          defaultTimezone={DEFAULT_TIMEZONE}
+          onSave={async (schedule) => {
+            await updateSchool(sch.id, { schedule });
+            await refresh();
+            audit("settings_changed", t("sched.schoolTitle", "Periods and school days"));
+          }}
+        />
       </section>
 
       <section className="card flex flex-wrap items-center justify-between gap-3 p-4">

@@ -21,6 +21,7 @@ import { useAuth } from "../../contexts/AuthContext";
 import { subscribeToSessions } from "../../lib/services/sessionsService";
 import type { ClassRecord, SessionRecord, TeacherGender } from "../../types";
 import { Sparks, Star } from "../home/KidHomeArt";
+import PeriodNowCard from "../common/PeriodNowCard";
 import bannerFemale from "../../assets/kid-dashboard/banner-female.webp";
 import bannerMale from "../../assets/kid-dashboard/banner-male.webp";
 import cornerDecor from "../../assets/kid-dashboard/corner-decor.webp";
@@ -269,7 +270,7 @@ function QuickActions() {
 
 /* ─────────────────────────────── calendar ─────────────────────────────── */
 
-function UpcomingCalendar({ sessionDates, today }: { sessionDates: Set<string>; today: Date }) {
+function UpcomingCalendar({ sessionDates, today, classes }: { sessionDates: Set<string>; today: Date; classes: ClassRecord[] }) {
   const { t, i18n } = useTranslation();
   const [month, setMonth] = useState(() => startOfMonth(today));
   const [selected, setSelected] = useState<string | null>(null);
@@ -291,6 +292,8 @@ function UpcomingCalendar({ sessionDates, today }: { sessionDates: Set<string>; 
         <SectionTitle icon={<CalendarDays size={24} />}>{t("dashboard.upcoming")}</SectionTitle>
         <TextLink to="/sessions">{t("dashboard.viewCalendar")}</TextLink>
       </div>
+
+      <PeriodNowCard classes={classes} />
 
       <div className="mb-2 flex items-center justify-between px-6">
         <button
@@ -463,7 +466,7 @@ export default function KidDashboard({
 
       <div className="min-w-0 space-y-5">
         <QuickActions />
-        <UpcomingCalendar sessionDates={sessionDates} today={today} />
+        <UpcomingCalendar sessionDates={sessionDates} today={today} classes={classes} />
       </div>
     </div>
   );

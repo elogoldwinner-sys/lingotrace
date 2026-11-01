@@ -21,6 +21,7 @@ import RichTextEditor from "../components/common/RichTextEditor";
 import { plainTextToHtml, richHtmlToPlainText, sanitizeRichHtml } from "../lib/richText";
 import { useTheme } from "../contexts/ThemeContext";
 import KidDashboard from "../components/dashboard/KidDashboard";
+import PeriodNowCard from "../components/common/PeriodNowCard";
 
 function StatCard({
   icon,
@@ -634,6 +635,8 @@ export default function DashboardPage() {
   return (
     <div className="space-y-6">
       <h1 className="text-2xl font-semibold text-navy">{t("dashboard.title")}</h1>
+
+      <PeriodNowCard classes={classes} />
 
       {announcementsBlock}
 

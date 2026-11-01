@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { useSearchParams } from "react-router-dom";
 import { startOfWeek, addDays, format as formatDate, parseISO } from "date-fns";
 import { Plus, Minus, Trash2, Disc3, ChevronDown, X, Layers, NotebookPen, Users, ClipboardList } from "lucide-react";
 import { useAuth } from "../contexts/AuthContext";
@@ -111,6 +112,11 @@ export default function SessionsPage({ archived = false }: { archived?: boolean 
 
   // Active session (the one currently expanded to apply session procedures)
   const [activeSessionId, setActiveSessionId] = useState<string | null>(null);
+  // Deep link: ?classId=…&sessionId=… opens that session ready to run.
+  const [searchParams] = useSearchParams();
+  const focusClass = searchParams.get("classId");
+  const focusSession = searchParams.get("sessionId");
+  const focusedRef = useRef<string | null>(null);
   const [sessionAttendance, setSessionAttendance] = useState<AttendanceRecord[]>([]);
 
   // Which week groups are expanded. Keyed by that week's Sunday (yyyy-MM-dd).
@@ -124,7 +130,10 @@ export default function SessionsPage({ archived = false }: { archived?: boolean 
     if (!user) return;
     const unsubscribe = subscribeToClasses(user.uid, (data) => {
       setClasses(data);
-      if (!selectedClassId && data.length > 0) setSelectedClassId(data[0].id);
+      if (!selectedClassId && data.length > 0) {
+        // Arriving from the attendance page / "current period" card: open that class.
+        setSelectedClassId(focusClass && data.some((c) => c.id === focusClass) ? focusClass : data[0].id);
+      }
     });
     return unsubscribe;
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -224,6 +233,18 @@ export default function SessionsPage({ archived = false }: { archived?: boolean 
     setExpandedWeeks(new Set([visibleWeeks[0].key]));
     defaultedClassRef.current = selectedClassId;
   }, [visibleWeeks, selectedClassId]);
+
+  // Open the linked session once its class's sessions have loaded: expand its week, activate it and scroll to it.
+  useEffect(() => {
+    if (!focusSession || focusedRef.current === focusSession) return;
+    const target = sessions.find((s) => s.id === focusSession);
+    if (!target || target.classId !== selectedClassId) return;
+    focusedRef.current = focusSession;
+    const weekKey = formatDate(startOfWeek(parseISO(target.date), { weekStartsOn: 0 }), "yyyy-MM-dd");
+    setExpandedWeeks((prev) => new Set(prev).add(weekKey));
+    setActiveSessionId(target.id);
+    window.setTimeout(() => document.getElementById(`session-${target.id}`)?.scrollIntoView({ behavior: "smooth", block: "start" }), 150);
+  }, [sessions, focusSession, selectedClassId]);
 
   function toggleWeek(key: string) {
     setExpandedWeeks((prev) => {
@@ -468,7 +489,7 @@ export default function SessionsPage({ archived = false }: { archived?: boolean 
                 {isWeekOpen && (
                   <div className="divide-y divide-cream-400 border-t border-cream-400">
                     {week.sessions.map((s) => (
-                      <div key={s.id}>
+                      <div key={s.id} id={`session-${s.id}`}>
                         <button
                           onClick={() => setActiveSessionId(activeSessionId === s.id ? null : s.id)}
                           className={`w-full text-left flex items-start justify-between px-5 py-4 transition-colors ${
