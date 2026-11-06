@@ -45,6 +45,7 @@ export default function ReasonPicker({
   onChange,
   remember,
   onRememberChange,
+  extraCustom,
 }: {
   amount: number;
   classId: string;
@@ -53,6 +54,8 @@ export default function ReasonPicker({
   onChange: (reason: PointsReason, note: string) => void;
   remember: boolean;
   onRememberChange: (value: boolean) => void;
+  /** A custom reason that isn't on the saved list (e.g. the teacher's default reason) but should still show as a chip. */
+  extraCustom?: string;
 }) {
   const { t } = useTranslation();
   const { profile } = useAuth();
@@ -121,6 +124,18 @@ export default function ReasonPicker({
             {text}
           </button>
         ))}
+        {extraCustom && !saved.includes(extraCustom) && (
+          <button
+            type="button"
+            onClick={() => {
+              setTyping(false);
+              onChange("custom", extraCustom);
+            }}
+            className={chip(reason === "custom" && note === extraCustom && !typing)}
+          >
+            {extraCustom}
+          </button>
+        )}
         <FeatureGate feature="editReasons" as="span">
           <button
             type="button"

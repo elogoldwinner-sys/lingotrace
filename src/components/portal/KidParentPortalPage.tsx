@@ -1,4 +1,5 @@
-import { Globe, LogOut, Repeat } from "lucide-react";
+import type { ReactNode } from "react";
+import { Globe, LogOut, MessageCircle, Repeat } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import Logo from "../common/Logo";
 import ThemeToggle from "../common/ThemeToggle";
@@ -35,6 +36,9 @@ export default function KidParentPortalPage({
   onSignOut,
   canSwitchToTeacher,
   onSwitchToTeacher,
+  hasParentWhatsapp,
+  onEditWhatsapp,
+  whatsappModal,
 }: {
   studentIds: string[];
   currentStudentId: string;
@@ -49,6 +53,12 @@ export default function KidParentPortalPage({
   /** True when this same Google account also has a teacher profile. */
   canSwitchToTeacher?: boolean;
   onSwitchToTeacher?: () => void;
+  /** Whether the parent has already saved their own WhatsApp number (changes the header button's label). */
+  hasParentWhatsapp?: boolean;
+  /** Opens the "your WhatsApp number" window. */
+  onEditWhatsapp?: () => void;
+  /** The WhatsApp number window itself (rendered by ParentPortalPage). */
+  whatsappModal?: ReactNode;
 }) {
   const { t } = useTranslation();
 
@@ -91,6 +101,17 @@ export default function KidParentPortalPage({
             >
               <Repeat size={14} />
               <span className="hidden sm:inline">{t("nav.switchToTeacher")}</span>
+            </button>
+          )}
+          {onEditWhatsapp && (
+            <button
+              type="button"
+              onClick={onEditWhatsapp}
+              title={t("portal.waButtonTitle")}
+              className="flex items-center gap-1.5 rounded-full border-2 border-green-200 px-3 py-1.5 text-xs font-extrabold text-green-700 transition hover:bg-green-50 sm:px-3.5"
+            >
+              <MessageCircle size={14} />
+              <span className="hidden sm:inline">{hasParentWhatsapp ? t("portal.waButtonEdit") : t("portal.waButtonAdd")}</span>
             </button>
           )}
           <button
@@ -147,6 +168,7 @@ export default function KidParentPortalPage({
           <img src={whatsappIcon} alt="" className="h-full w-full rounded-full" />
         </a>
       )}
+      {whatsappModal}
     </div>
   );
 }

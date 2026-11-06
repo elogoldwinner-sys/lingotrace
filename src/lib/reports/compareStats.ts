@@ -13,6 +13,8 @@ export interface SeriesResult {
   totals: Totals;
   /** Running net total at the end of every bucket (aligned with `labels`). */
   cumulative: number[];
+  /** Net points of each bucket on its own (not added to the earlier buckets), aligned with `labels`. */
+  net: number[];
 }
 
 /**
@@ -26,7 +28,7 @@ export function compareSeries(input: SeriesInput[], period: Period, kind: KindFi
 } {
   const filtered = input.map((s) => ({ ...s, txns: filterTxns(s.txns, period, kind) }));
   const all = filtered.flatMap((s) => s.txns);
-  const series: SeriesResult[] = filtered.map((s) => ({ id: s.id, label: s.label, totals: totalsOf(s.txns), cumulative: [] }));
+  const series: SeriesResult[] = filtered.map((s) => ({ id: s.id, label: s.label, totals: totalsOf(s.txns), cumulative: [], net: [] }));
   if (all.length === 0) return { size: "day", labels: [], series };
 
   const { startMs, endMs } = periodBounds(period);
@@ -53,6 +55,7 @@ export function compareSeries(input: SeriesInput[], period: Period, kind: KindFi
       if (i != null) net[i] += t.amount;
     }
     let run = 0;
+    series[si].net = net;
     series[si].cumulative = net.map((n) => (run += n));
   });
   return { size, labels, series };

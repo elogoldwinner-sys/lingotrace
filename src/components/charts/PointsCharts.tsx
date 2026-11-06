@@ -93,13 +93,17 @@ export function GainedLostBars({ buckets, height = 230 }: { buckets: Bucket[]; h
   );
 }
 
-/** The running total of net points over time. */
+/**
+ * Net points (gained minus lost) for each day / week / month ON ITS OWN — every period starts from zero
+ * instead of adding the earlier periods, so the line rises and falls with how the student actually did.
+ * Dots are green above zero and red below it.
+ */
 export function RunningTotalLine({ buckets, height = 200 }: { buckets: Bucket[]; height?: number }) {
   const padL = 36;
   const padR = 14;
   const padT = 14;
   const padB = 26;
-  const values = buckets.map((b) => b.cumulative);
+  const values = buckets.map((b) => b.net);
   let min = Math.min(...values, 0);
   let max = Math.max(...values, 0);
   if (min === max) max = min + 1;
@@ -111,7 +115,7 @@ export function RunningTotalLine({ buckets, height = 200 }: { buckets: Bucket[];
   const x = (i: number) => padL + (buckets.length === 1 ? plotW / 2 : (plotW * i) / (buckets.length - 1));
   const y = (v: number) => padT + ((max - v) / (max - min)) * plotH;
   const labels = labelIndices(buckets.length);
-  const path = buckets.map((b, i) => `${i === 0 ? "M" : "L"}${x(i).toFixed(1)},${y(b.cumulative).toFixed(1)}`).join(" ");
+  const path = buckets.map((b, i) => `${i === 0 ? "M" : "L"}${x(i).toFixed(1)},${y(b.net).toFixed(1)}`).join(" ");
   const ticks = [max, (max + min) / 2, min].map((v) => Math.round(v));
 
   return (
@@ -129,7 +133,7 @@ export function RunningTotalLine({ buckets, height = 200 }: { buckets: Bucket[];
       <path d={path} fill="none" stroke={LINE} strokeWidth="2.2" strokeLinejoin="round" strokeLinecap="round" />
       {buckets.map((b, i) => (
         <g key={b.key}>
-          {buckets.length <= 40 && <circle cx={x(i)} cy={y(b.cumulative)} r="2.6" fill={LINE} />}
+          {buckets.length <= 40 && <circle cx={x(i)} cy={y(b.net)} r="3" fill={b.net < 0 ? LOST : b.net > 0 ? GAINED : LINE} />}
           {labels.has(i) && (
             <text x={x(i)} y={height - 8} fontSize="10" fill={MUTED} textAnchor="middle">
               {b.label}

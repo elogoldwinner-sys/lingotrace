@@ -22,6 +22,7 @@ import {
   Scale,
   Images,
   ClipboardList,
+  MessageCircle,
 } from "lucide-react";
 import { deleteField } from "firebase/firestore";
 import { useAuth } from "../contexts/AuthContext";
@@ -41,7 +42,8 @@ import { awardPoints, subscribeToStudentPointsHistory } from "../lib/services/po
 import { subscribeToStudentAttendance } from "../lib/services/attendanceService";
 import { subscribeToStudentNotes, deleteNote } from "../lib/services/notesService";
 import { subscribeToSessions } from "../lib/services/sessionsService";
-import { sendPeriodReportToParent } from "../lib/services/reportService";
+import { sendPeriodReportToParent, getPeriodReportData } from "../lib/services/reportService";
+import { whatsappLink } from "../lib/whatsapp";
 import { getBadgeDefinition } from "../lib/services/badgesService";
 import { resetStudentData, resetClassData } from "../lib/services/resetService";
 import { removeChildFromParent } from "../lib/services/parentsService";
@@ -165,6 +167,7 @@ export default function StudentsPage() {
   const [reportStart, setReportStart] = useState(daysAgoISO(30));
   const [reportEnd, setReportEnd] = useState(todayISO());
   const [sendingReport, setSendingReport] = useState(false);
+  const [sendingWaReport, setSendingWaReport] = useState(false);
   const [reportSent, setReportSent] = useState(false);
   const [reportError, setReportError] = useState("");
 
@@ -607,6 +610,44 @@ export default function StudentsPage() {
       setReportError(err instanceof Error ? err.message : t("attendance.sendError"));
     } finally {
       setSendingReport(false);
+    }
+  }
+
+  // Opens WhatsApp with the parent's chat and a ready-to-send summary of the chosen date range.
+  async function handleWhatsappReport() {
+    if (!detailStudent?.parentWhatsapp) return;
+    const className = classes.find((c) => c.id === selectedClassId)?.name || "";
+    const number = detailStudent.parentWhatsapp;
+    // Opened straight away (inside the click) so the browser doesn't block it while the figures load.
+    const win = window.open("about:blank", "_blank");
+    setSendingWaReport(true);
+    setReportError("");
+    try {
+      const data = await getPeriodReportData({
+        studentId: detailStudent.id,
+        className,
+        startDate: reportStart,
+        endDate: reportEnd,
+      });
+      const lines = [
+        t("students.waReportHeader", { student: data.studentName, className, start: reportStart, end: reportEnd }),
+        t("students.waReportPoints", { points: data.points }),
+        t("students.waReportAttendance", {
+          present: data.attendance.present,
+          late: data.attendance.late,
+          absent: data.attendance.absent,
+          excused: data.attendance.excused,
+        }),
+        ...data.notes.slice(0, 8).map((n) => `${n.positive ? "✅" : "⚠️"} ${n.text}`),
+      ];
+      const url = `${whatsappLink(number)}?text=${encodeURIComponent(lines.join("\n"))}`;
+      if (win) win.location.href = url;
+      else window.open(url, "_blank");
+    } catch (err) {
+      win?.close();
+      setReportError(err instanceof Error ? err.message : t("attendance.sendError"));
+    } finally {
+      setSendingWaReport(false);
     }
   }
 
@@ -1093,6 +1134,28 @@ export default function StudentsPage() {
               </div>
             </div>
 
+            <div>
+              <h3 className="text-sm font-semibold text-navy mb-2">{t("students.parentWhatsapp")}</h3>
+              {detailStudent.parentWhatsapp ? (
+                <div className="flex items-center justify-between gap-3 flex-wrap rounded-lg border border-cream-300 px-3 py-2.5">
+                  <span dir="ltr" className="text-sm font-medium text-navy">
+                    {detailStudent.parentWhatsapp}
+                  </span>
+                  <a
+                    href={whatsappLink(detailStudent.parentWhatsapp)}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="btn-secondary py-1.5 px-3 text-sm"
+                  >
+                    <MessageCircle size={16} />
+                    {t("students.waOpenChat")}
+                  </a>
+                </div>
+              ) : (
+                <p className="text-xs text-cream-600">{t("students.parentWhatsappNone")}</p>
+              )}
+            </div>
+
             {(detailStudent.parentName || detailStudent.parentEmail) && (
               <div>
                 <h3 className="text-sm font-semibold text-navy mb-2">{t("students.parentPortalAccess")}</h3>
@@ -1237,6 +1300,16 @@ export default function StudentsPage() {
                       ? t("attendance.sent")
                       : t("attendance.sendReport")}
                 </button>
+                {detailStudent.parentWhatsapp && (
+                  <button
+                    onClick={handleWhatsappReport}
+                    disabled={sendingWaReport}
+                    className="btn-secondary py-2 px-4 text-sm disabled:opacity-50"
+                  >
+                    <MessageCircle size={16} />
+                    {sendingWaReport ? t("common.loading") : t("students.waSendReport")}
+                  </button>
+                )}
               </div>
               {!detailStudent.parentEmail && (
                 <p className="text-xs text-cream-600 mt-2">{t("attendance.noParentEmail")}</p>

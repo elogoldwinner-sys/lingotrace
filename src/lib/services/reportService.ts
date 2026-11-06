@@ -4,6 +4,7 @@ import { getAttendanceForStudentInRange } from "./attendanceService";
 import { getNotesForStudentInRange } from "./notesService";
 import { getBadgeDefinition } from "./badgesService";
 import { sendParentReport } from "../emailjs";
+import { richHtmlToPlainText } from "../richText";
 import type { AttendanceStatus } from "../../types";
 
 export interface SendPeriodReportInput {
@@ -93,4 +94,40 @@ export async function sendPeriodReportToParent(input: SendPeriodReportInput) {
     badges: badgesSummary,
     message: `Progress report for ${input.startDate} to ${input.endDate}.`,
   });
+}
+
+export interface PeriodReportData {
+  studentName: string;
+  points: number;
+  attendance: Record<AttendanceStatus, number>;
+  /** Plain-text notes for the period, each tagged positive / negative. */
+  notes: { positive: boolean; text: string }[];
+}
+
+/**
+ * The same figures as the emailed progress report (points, attendance, notes for a date range),
+ * returned as data so the teacher can send them to the parent's WhatsApp from the student's profile.
+ */
+export async function getPeriodReportData(input: SendPeriodReportInput): Promise<PeriodReportData> {
+  const student = await labeled("student", getStudentOnce(input.studentId));
+  if (!student) throw new Error("Student not found.");
+  const startMs = new Date(`${input.startDate}T00:00:00`).getTime();
+  const endMs = new Date(`${input.endDate}T23:59:59`).getTime();
+  const [points, attendance, notes] = await Promise.all([
+    labeled("points", getPointsForStudentInRange(input.studentId, startMs, endMs)),
+    labeled("attendance", getAttendanceForStudentInRange(input.studentId, input.startDate, input.endDate)),
+    labeled("notes", getNotesForStudentInRange(input.studentId, startMs, endMs)),
+  ]);
+  const counts: Record<AttendanceStatus, number> = { present: 0, absent: 0, late: 0, excused: 0 };
+  attendance.forEach((r) => {
+    counts[r.status] += 1;
+  });
+  return {
+    studentName: student.name,
+    points: points.reduce((sum, txn) => sum + txn.amount, 0),
+    attendance: counts,
+    notes: notes
+      .map((n) => ({ positive: n.sentiment === "positive", text: richHtmlToPlainText(n.content).trim() }))
+      .filter((n) => n.text),
+  };
 }

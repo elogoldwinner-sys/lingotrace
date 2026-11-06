@@ -1,13 +1,14 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
-import { LogOut, Globe, Repeat, UserRound, Check } from "lucide-react";
+import { LogOut, Globe, Repeat, UserRound, Check, MessageCircle } from "lucide-react";
 import StudentAvatar, { rankInAny } from "../../components/avatars/StudentAvatar";
 import { useAuth } from "../../contexts/AuthContext";
 import { useTheme } from "../../contexts/ThemeContext";
 import KidParentPortalPage from "../../components/portal/KidParentPortalPage";
 import ChildSwitcher from "../../components/portal/ChildSwitcher";
-import { subscribeToStudent, getStudentOnce } from "../../lib/services/studentsService";
+import { subscribeToStudent, getStudentOnce, setParentWhatsappForStudents } from "../../lib/services/studentsService";
+import ParentWhatsappModal from "../../components/portal/ParentWhatsappModal";
 import { subscribeToStudentPointsHistory } from "../../lib/services/pointsService";
 import { subscribeToStudentAttendance } from "../../lib/services/attendanceService";
 import { setNoteReadByParent, subscribeToVisibleParentNotes } from "../../lib/services/notesService";
@@ -412,6 +413,25 @@ function markRemovalNoticeSeen(parentUid: string, studentId: string) {
   }
 }
 
+/** Remembers (per parent account, in this browser) that the parent skipped the WhatsApp pop-up, so it isn't shown again. */
+const WHATSAPP_PROMPT_KEY = "lingotrace.parentWhatsappPromptDismissed";
+
+function isWhatsappPromptDismissed(parentUid: string): boolean {
+  try {
+    return window.localStorage.getItem(`${WHATSAPP_PROMPT_KEY}.${parentUid}`) === "1";
+  } catch {
+    return false;
+  }
+}
+
+function dismissWhatsappPrompt(parentUid: string) {
+  try {
+    window.localStorage.setItem(`${WHATSAPP_PROMPT_KEY}.${parentUid}`, "1");
+  } catch {
+    // Storage unavailable — the pop-up may show again next visit; nothing else to do.
+  }
+}
+
 /**
  * Tiny standalone piece just for a tab's label (child's name), kept live so
  * a name edit reflects immediately. Also independently watches for that
@@ -460,6 +480,11 @@ export default function ParentPortalPage() {
   const [removedStudentIds, setRemovedStudentIds] = useState<string[]>([]);
   const alertedRemovalsRef = useRef<Set<string>>(new Set());
   const [whatsappByStudent, setWhatsappByStudent] = useState<Record<string, string | undefined>>({});
+  // The parent's own WhatsApp number (saved on each linked child) — drives the pop-up and the header button.
+  const [parentWhatsappByStudent, setParentWhatsappByStudent] = useState<Record<string, string | undefined>>({});
+  const [whatsappModalOpen, setWhatsappModalOpen] = useState(false);
+  const [whatsappModalFirstTime, setWhatsappModalFirstTime] = useState(false);
+  const whatsappPromptHandledRef = useRef(false);
 
   const studentIds = (portalParent?.studentIds || []).filter((id) => !removedStudentIds.includes(id));
 
@@ -504,15 +529,44 @@ export default function ParentPortalPage() {
   useEffect(() => {
     if (studentIds.length === 0) {
       setWhatsappByStudent({});
+      setParentWhatsappByStudent({});
       return;
     }
     const unsubscribes = studentIds.map((sid) =>
       subscribeToStudent(sid, (data) => {
         setWhatsappByStudent((prev) => ({ ...prev, [sid]: data?.teacherWhatsapp }));
+        setParentWhatsappByStudent((prev) => ({ ...prev, [sid]: data?.parentWhatsapp || "" }));
       })
     );
     return () => unsubscribes.forEach((unsub) => unsub());
   }, [studentIds.join(",")]);
+
+  const parentWhatsapp = studentIds.map((sid) => parentWhatsappByStudent[sid]).find(Boolean) || "";
+  const parentWhatsappLoaded = studentIds.length > 0 && studentIds.every((sid) => parentWhatsappByStudent[sid] !== undefined);
+
+  // Once the children's records have loaded, ask for the parent's WhatsApp number — a single time per
+  // visit, and never again after they skip it or save a number (they can still add it from the header).
+  useEffect(() => {
+    if (whatsappPromptHandledRef.current || !portalParent || !parentWhatsappLoaded) return;
+    whatsappPromptHandledRef.current = true;
+    if (parentWhatsapp || isWhatsappPromptDismissed(portalParent.uid)) return;
+    setWhatsappModalFirstTime(true);
+    setWhatsappModalOpen(true);
+  }, [portalParent, parentWhatsappLoaded, parentWhatsapp]);
+
+  function openWhatsappModal() {
+    setWhatsappModalFirstTime(false);
+    setWhatsappModalOpen(true);
+  }
+
+  function closeWhatsappModal() {
+    if (portalParent) dismissWhatsappPrompt(portalParent.uid);
+    setWhatsappModalOpen(false);
+  }
+
+  async function saveParentWhatsapp(number: string | null) {
+    await setParentWhatsappForStudents(studentIds, number);
+  }
 
   // Only the classes this parent's own children actually belong to — not
   // every class in the school. Also triggers the celebration confetti once
@@ -610,6 +664,16 @@ export default function ParentPortalPage() {
   const currentRanking = ownRankings[classByStudent[currentStudentId]];
   const visibleRankings = currentRanking && (currentRanking.positions || []).length > 0 ? [currentRanking] : [];
 
+  const whatsappModalNode = (
+    <ParentWhatsappModal
+      open={whatsappModalOpen}
+      current={parentWhatsapp}
+      firstTime={whatsappModalFirstTime}
+      onSave={saveParentWhatsapp}
+      onClose={closeWhatsappModal}
+    />
+  );
+
   if (theme === "kid") {
     return (
       <KidParentPortalPage
@@ -625,6 +689,9 @@ export default function ParentPortalPage() {
         onSignOut={handleSignOut}
         canSwitchToTeacher={canSwitchToTeacher}
         onSwitchToTeacher={handleSwitchToTeacher}
+        hasParentWhatsapp={!!parentWhatsapp}
+        onEditWhatsapp={openWhatsappModal}
+        whatsappModal={whatsappModalNode}
       />
     );
   }
@@ -656,6 +723,14 @@ export default function ParentPortalPage() {
               {t("nav.switchToTeacher")}
             </button>
           )}
+          <button
+            onClick={openWhatsappModal}
+            className="flex items-center gap-1.5 rounded-lg border border-green-300 px-3 py-1.5 text-xs font-semibold text-green-700 hover:bg-green-50"
+            title={t("portal.waButtonTitle")}
+          >
+            <MessageCircle size={14} />
+            {parentWhatsapp ? t("portal.waButtonEdit") : t("portal.waButtonAdd")}
+          </button>
           <button
             onClick={handleSignOut}
             className="flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold text-navy/70 hover:bg-cream-400/60"
@@ -710,6 +785,7 @@ export default function ParentPortalPage() {
           <img src={whatsappIcon} alt="" className="h-full w-full rounded-full" />
         </a>
       )}
+      {whatsappModalNode}
     </div>
   );
 }

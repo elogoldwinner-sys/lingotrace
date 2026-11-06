@@ -102,6 +102,22 @@ export async function recordParentJoin(
 }
 
 /**
+ * Saves (or, when `number` is empty, removes) the parent's WhatsApp number on
+ * every student record linked to that parent, so each subject's teacher can see it.
+ * Parents are allowed to change this one field on their own children (see firestore.rules).
+ */
+export async function setParentWhatsappForStudents(studentIds: string[], number: string | null) {
+  const ids = Array.from(new Set(studentIds));
+  for (let i = 0; i < ids.length; i += 400) {
+    const batch = writeBatch(db);
+    ids.slice(i, i + 400).forEach((id) => {
+      batch.update(doc(db, "students", id), { parentWhatsapp: number ? number : deleteField() });
+    });
+    await batch.commit();
+  }
+}
+
+/**
  * Creates a single student manually (teacher-entered, no invite/Google
  * account involved). Used by the "Add student" form.
  */
@@ -132,7 +148,7 @@ export async function createStudentManual(data: {
  */
 export async function createStudentsBulk(
   classId: string,
-  rows: { name: string; nameAr?: string; nameEn?: string; parentName?: string; parentEmail?: string; subject?: string; teacherWhatsapp?: string }[]
+  rows: { name: string; nameAr?: string; nameEn?: string; parentName?: string; parentEmail?: string; parentWhatsapp?: string; subject?: string; teacherWhatsapp?: string }[]
 ) {
   const classSubject = await getClassSubject(classId);
   return service.createMany(
@@ -145,6 +161,7 @@ export async function createStudentsBulk(
           classId,
           parentName: row.parentName || undefined,
           parentEmail: row.parentEmail || undefined,
+          parentWhatsapp: row.parentWhatsapp || undefined,
           subject: row.subject || classSubject,
           teacherWhatsapp: row.teacherWhatsapp || undefined,
           points: 0,

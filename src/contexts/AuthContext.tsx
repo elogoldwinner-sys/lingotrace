@@ -15,7 +15,7 @@ import {
 } from "firebase/auth";
 import { collection, deleteField, doc, getDoc, updateDoc, getDocs, query, setDoc, serverTimestamp, where } from "firebase/firestore";
 import { auth, db } from "../lib/firebase";
-import type { ReasonPrefs, ParentProfile, StudentRecord, TeacherGender, UserProfile } from "../types";
+import type { ReasonPrefs, ReasonDefaults, ParentProfile, StudentRecord, TeacherGender, UserProfile } from "../types";
 import { findStudentByAuthUid, setTeacherWhatsappForClasses, syncSchoolLogoForTeacher } from "../lib/services/studentsService";
 import { getParentProfile } from "../lib/services/parentsService";
 import { claimPendingSubjects } from "../lib/services/classesService";
@@ -56,6 +56,8 @@ interface AuthContextValue {
   updateTeacherGender: (gender: TeacherGender) => Promise<void>;
   /** Saves which reasons the teacher sees when giving / deducting marks. */
   updateTeacherReasonPrefs: (prefs: ReasonPrefs) => Promise<void>;
+  /** Saves the default reasons pre-selected when giving / deducting marks (per class). */
+  updateTeacherReasonDefaults: (defaults: ReasonDefaults) => Promise<void>;
   /** Turns "marking attendance adds / deducts marks" on or off. */
   updateTeacherAttendancePoints: (enabled: boolean) => Promise<void>;
   /** Saves which assessment types (quiz, exam…) the mark sheet offers. */
@@ -377,6 +379,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setProfile((prev) => (prev ? { ...prev, reasonPrefs: prefs } : prev));
   }
 
+  async function updateTeacherReasonDefaults(reasonDefaults: ReasonDefaults) {
+    const currentUser = auth.currentUser;
+    if (!currentUser) return;
+    await updateDoc(doc(db, "teachers", currentUser.uid), { reasonDefaults });
+    setProfile((prev) => (prev ? { ...prev, reasonDefaults } : prev));
+  }
+
   async function updateTeacherAssessmentKinds(assessmentKinds: { hidden: string[]; custom: string[] }) {
     const currentUser = auth.currentUser;
     if (!currentUser) return;
@@ -426,6 +435,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         updateTeacherRankingPeriod,
         updateTeacherGender,
         updateTeacherReasonPrefs,
+        updateTeacherReasonDefaults,
         updateTeacherAttendancePoints,
         updateTeacherAssessmentKinds,
         updateTeacherTimetable,

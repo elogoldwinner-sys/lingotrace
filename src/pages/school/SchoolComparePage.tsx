@@ -171,7 +171,7 @@ export default function SchoolComparePage() {
             <h2>{t("sp.lineGraph", "Line graph — running total over time")}</h2>
             {result.labels.length > 0 ? (
               <>
-                <MultiLineChart labels={result.labels} series={colored.map((s) => ({ label: s.label, color: s.color, values: s.cumulative }))} />
+                <MultiLineChart labels={result.labels} series={colored.map((s) => ({ label: s.label, color: s.color, values: s.net }))} />
                 <Legend items={colored.map((s) => ({ label: s.label, color: s.color }))} />
               </>
             ) : (

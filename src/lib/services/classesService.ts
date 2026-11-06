@@ -142,22 +142,46 @@ async function copyStudentsIntoSubject(parentClassId: string, subjectClassId: st
   const existing = new Set(
     subjectSnap.docs.map((d) => String((d.data() as StudentRecord).name).trim().toLowerCase())
   );
-  // Backfill the subject label (and WhatsApp) on subject students copied before these existed.
+  // The parent's WhatsApp number (added by the parent in the portal) lives on the main class's record; subject copies get it too.
+  const nameKey = (name: string) => String(name).trim().toLowerCase();
+  const parentWhatsappByName = new Map<string, string>();
+  mainSnap.docs.forEach((d) => {
+    const m = d.data() as StudentRecord;
+    if (m.parentWhatsapp) parentWhatsappByName.set(nameKey(m.name), m.parentWhatsapp);
+  });
+  // Backfill the subject label (and WhatsApp numbers) on subject students copied before these existed.
   const stale = subjectSnap.docs.filter((d) => {
     const s = d.data() as StudentRecord;
-    return s.subject !== subject || (teacherWhatsapp && !s.teacherWhatsapp);
+    return (
+      s.subject !== subject ||
+      (teacherWhatsapp && !s.teacherWhatsapp) ||
+      (!s.parentWhatsapp && parentWhatsappByName.has(nameKey(s.name)))
+    );
   });
   for (let i = 0; i < stale.length; i += 400) {
     const batch = writeBatch(db);
-    stale.slice(i, i + 400).forEach((d) =>
-      batch.update(d.ref, { subject, ...(teacherWhatsapp ? { teacherWhatsapp } : {}) })
-    );
+    stale.slice(i, i + 400).forEach((d) => {
+      const s = d.data() as StudentRecord;
+      const pw = !s.parentWhatsapp ? parentWhatsappByName.get(nameKey(s.name)) : undefined;
+      batch.update(d.ref, {
+        subject,
+        ...(teacherWhatsapp ? { teacherWhatsapp } : {}),
+        ...(pw ? { parentWhatsapp: pw } : {}),
+      });
+    });
     await batch.commit();
   }
   const rows = mainSnap.docs
     .map((d) => d.data() as StudentRecord)
-    .filter((s) => !existing.has(String(s.name).trim().toLowerCase()))
-    .map((s) => ({ name: s.name, nameAr: s.nameAr, nameEn: s.nameEn, parentName: s.parentName, parentEmail: s.parentEmail }));
+    .filter((s) => !existing.has(nameKey(s.name)))
+    .map((s) => ({
+      name: s.name,
+      nameAr: s.nameAr,
+      nameEn: s.nameEn,
+      parentName: s.parentName,
+      parentEmail: s.parentEmail,
+      parentWhatsapp: s.parentWhatsapp,
+    }));
   if (rows.length > 0) await createStudentsBulk(subjectClassId, rows.map((r) => ({ ...r, subject, teacherWhatsapp })));
   return rows.length;
 }

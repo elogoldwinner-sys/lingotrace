@@ -25,6 +25,8 @@ export interface UserProfile {
   attendancePoints?: boolean;
   /** Which reasons the teacher sees when giving / deducting marks (all classes, with optional per-class overrides). */
   reasonPrefs?: ReasonPrefs;
+  /** The reason pre-selected when giving / deducting marks, per class (set from the Sessions page). It is only a default — the teacher can still pick another reason for any student. */
+  reasonDefaults?: ReasonDefaults;
   /** Which assessment types (quiz, exam…) the mark sheet offers this teacher. */
   assessmentKinds?: { hidden: string[]; custom: string[] };
   /** The teacher's weekly timetable: "<weekday>-<period index>" → class id (see lib/schedule.ts). */
@@ -56,6 +58,25 @@ export interface ReasonScope {
 export interface ReasonPrefs {
   all: ReasonScope;
   byClass?: Record<string, ReasonScope>;
+}
+
+/** How long a default reason stays in effect: one session, one calendar day, or until the teacher changes it. */
+export type FixedReasonDuration = "session" | "day" | "until";
+
+export interface FixedReason {
+  reason: PointsReason;
+  /** The text of a custom reason (only when `reason` is "custom"). */
+  note?: string;
+  duration: FixedReasonDuration;
+  /** For duration "session": the session it applies to. */
+  sessionId?: string;
+  /** For duration "day": the day it applies to (YYYY-MM-DD, local time). */
+  date?: string;
+}
+
+/** classId → default reason for giving (positive) and for deducting (negative) marks. */
+export interface ReasonDefaults {
+  byClass: Record<string, { positive?: FixedReason; negative?: FixedReason }>;
 }
 
 export type TeacherGender = "male" | "female";
@@ -137,6 +158,8 @@ export interface StudentRecord {
   classId: string;
   parentName?: string;
   parentEmail?: string;
+  /** The parent's WhatsApp number in international format (e.g. 00966501234567), added by the parent in the parent portal. Lets teachers contact the parent / send reports from the student's profile. */
+  parentWhatsapp?: string;
   /**
    * Auth uid(s) of parent portal account(s) linked to this student, recorded
    * at join time (see `recordParentJoin`) so the teacher can later revoke a

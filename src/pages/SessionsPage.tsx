@@ -40,6 +40,8 @@ import { unlockSound } from "../lib/sounds";
 import MarkReinforcement, { type MarkReinforcementEvent } from "../components/common/MarkReinforcement";
 import { reasonsForAmount, POSITIVE_POINTS_REASONS } from "../lib/pointsReasons";
 import ReasonPicker, { useSaveCustomReason } from "../components/common/ReasonPicker";
+import FixedReasonBar from "../components/common/FixedReasonBar";
+import { activeFixedReason, getReasonDefaults } from "../lib/reasonDefaults";
 
 const STATUS_STYLES: Record<AttendanceStatus, string> = {
   present: "bg-green-100 text-green-700 border-green-300",
@@ -65,7 +67,7 @@ function todayISO() {
  */
 export default function SessionsPage({ archived = false }: { archived?: boolean }) {
   const { t } = useTranslation();
-  const { user } = useAuth();
+  const { user, profile } = useAuth();
   const [classes, setClasses] = useState<ClassRecord[]>([]);
   const [selectedClassId, setSelectedClassId] = useState("");
   const [sessions, setSessions] = useState<SessionRecord[]>([]);
@@ -255,10 +257,18 @@ export default function SessionsPage({ archived = false }: { archived?: boolean 
     });
   }
 
+  /** The reason to pre-select: the teacher's default for this class (if one is in effect), else the first built-in one. It is only a starting choice — the picker still lets them choose another. */
+  function startingReason(classId: string, amount: number): { reason: PointsReason; note: string } {
+    const fixed = activeFixedReason(getReasonDefaults(profile), classId, amount >= 0, activeSessionId);
+    if (fixed) return { reason: fixed.reason, note: fixed.note || "" };
+    return { reason: reasonsForAmount(amount)[0], note: "" };
+  }
+
   function openPointsModal(student: StudentRecord, direction: 1 | -1 = 1) {
+    const start = startingReason(student.classId, direction);
     setPointsAmount(direction * 1);
-    setPointsReason(reasonsForAmount(direction)[0]);
-    setPointsNote("");
+    setPointsReason(start.reason);
+    setPointsNote(start.note);
     setAwardWholeGroup(false);
     setPointsModalStudent(student);
   }
@@ -268,8 +278,9 @@ export default function SessionsPage({ archived = false }: { archived?: boolean 
     const flipped = (next < 0) !== (pointsAmount < 0);
     setPointsAmount(next);
     if (flipped) {
-      setPointsReason(reasonsForAmount(next)[0]);
-      setPointsNote("");
+      const start = startingReason(pointsModalStudent?.classId || selectedClassId, next);
+      setPointsReason(start.reason);
+      setPointsNote(start.note);
     }
   }
 
@@ -451,6 +462,8 @@ export default function SessionsPage({ archived = false }: { archived?: boolean 
       </div>
 
       <ClassSelector classes={classes} selectedClassId={selectedClassId} onSelect={setSelectedClassId} />
+
+      {!archived && selectedClassId && <FixedReasonBar classId={selectedClassId} activeSessionId={activeSessionId} />}
 
       {loading ? (
         <Spinner />
@@ -857,6 +870,9 @@ export default function SessionsPage({ archived = false }: { archived?: boolean 
               }}
               remember={rememberReason}
               onRememberChange={setRememberReason}
+              extraCustom={
+                activeFixedReason(getReasonDefaults(profile), pointsModalStudent?.classId || "", pointsAmount >= 0, activeSessionId)?.note
+              }
             />
           </div>
           {pointsModalStudent?.group && (
