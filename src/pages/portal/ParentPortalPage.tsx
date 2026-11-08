@@ -25,6 +25,7 @@ import { formatNoteDate } from "../../lib/timestamps";
 import { whatsappLink } from "../../lib/whatsapp";
 import whatsappIcon from "../../assets/whatsapp-icon.png";
 import Logo from "../../components/common/Logo";
+import PwaInstallBanner from "../../components/common/PwaInstallBanner";
 import ThemeToggle from "../../components/common/ThemeToggle";
 import AnnouncementCard from "../../components/common/AnnouncementCard";
 import WeeklyChampions from "../../components/common/WeeklyChampions";
@@ -676,6 +677,7 @@ export default function ParentPortalPage() {
 
   if (theme === "kid") {
     return (
+      <>
       <KidParentPortalPage
         studentIds={studentIds}
         currentStudentId={currentStudentId}
@@ -693,6 +695,8 @@ export default function ParentPortalPage() {
         onEditWhatsapp={openWhatsappModal}
         whatsappModal={whatsappModalNode}
       />
+      <PwaInstallBanner />
+      </>
     );
   }
 
@@ -786,6 +790,7 @@ export default function ParentPortalPage() {
         </a>
       )}
       {whatsappModalNode}
+      <PwaInstallBanner />
     </div>
   );
 }

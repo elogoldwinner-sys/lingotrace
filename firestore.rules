@@ -150,9 +150,15 @@ service cloud.firestore {
     match /parents/{uid} {
       allow read: if isSignedIn() && request.auth.uid == uid;
       allow create: if isSignedIn() && request.auth.uid == uid && request.resource.data.uid == uid;
-      allow update: if isSignedIn() && request.auth.uid == uid &&
-        request.resource.data.diff(resource.data).affectedKeys().hasOnly(["studentIds"]) &&
-        request.resource.data.studentIds.size() >= resource.data.get('studentIds', []).size();
+      allow update: if isSignedIn() && request.auth.uid == uid && (
+        // 1) growing the linked-children list (existing behaviour)
+        (request.resource.data.diff(resource.data).affectedKeys().hasOnly(["studentIds"]) &&
+         request.resource.data.studentIds.size() >= resource.data.get('studentIds', []).size())
+        ||
+        // 2) saving this device's notification opt-in (nothing else may change)
+        request.resource.data.diff(resource.data).affectedKeys()
+          .hasOnly(["pushSubscriptions", "notificationsEnabled", "lastNotificationOptIn"])
+      );
       allow delete: if false;
     }
 

@@ -1280,5 +1280,26 @@
       "spelling": "Spelling exam",
       "project": "Project"
     }
+  },
+  "notifications": {
+    "enableTitle": "Alerts on this device",
+    "enableDesc": "Allow notifications so LingoTrace can alert you on this device.",
+    "enableBtn": "Enable notifications",
+    "enabled": "Notifications enabled",
+    "enabledDesc": "This device is set up to receive LingoTrace alerts.",
+    "blocked": "Notifications are blocked in your browser settings",
+    "testBtn": "Send test",
+    "testSent": "Sent!",
+    "welcomeTitle": "Welcome to LingoTrace!",
+    "welcomeBody": "Notifications are enabled on this device.",
+    "testSuccess": "Test notification sent. Check your device."
+  },
+  "pwa": {
+    "installTitle": "Install the LingoTrace app",
+    "installDesc": "Add LingoTrace to your home screen for quick, full-screen access.",
+    "iosTip": "On iPhone: tap the Share button, then choose \"Add to Home Screen\".",
+    "installBtn": "Install app",
+    "later": "Later",
+    "dismiss": "Dismiss"
   }
 }

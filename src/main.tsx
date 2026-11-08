@@ -4,6 +4,7 @@ import './index.css'
 import './i18n'
 import App from './App.tsx'
 import { ThemeProvider } from './contexts/ThemeContext'
+import { registerServiceWorker } from './lib/registerServiceWorker'
 
 // Click effect: a gold ring pops on any .btn-fx / .cls-fx / .chip-fx when it is pressed.
 document.addEventListener('pointerdown', (e) => {
@@ -22,3 +23,6 @@ createRoot(document.getElementById('root')!).render(
     </ThemeProvider>
   </StrictMode>,
 )
+
+// PWA: offline shell + install support (production builds only)
+registerServiceWorker()

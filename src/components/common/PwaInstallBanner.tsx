@@ -8,70 +8,113 @@ interface BeforeInstallPromptEvent extends Event {
 }
 
 const DISMISS_KEY = "lingotrace-pwa-dismissed";
-const DISMISS_DURATION_MS = 7 * 24 * 60 * 60 * 1000; // 7 days
+// How long the banner stays hidden after the parent taps X / Later.
+// Change this one number to make the "cancel for some time" shorter or longer.
+const DISMISS_DURATION_MS = 3 * 24 * 60 * 60 * 1000; // 3 days
+
+/* ------------------------------------------------------------------ */
+/* Capture `beforeinstallprompt` at module load.                       */
+/* Chrome fires it once, early. If we only listened inside a component */
+/* that mounts after login, the event would already be gone and the    */
+/* banner would never appear.                                          */
+/* ------------------------------------------------------------------ */
+let stashedPrompt: BeforeInstallPromptEvent | null = null;
+const promptListeners = new Set<() => void>();
+
+if (typeof window !== "undefined") {
+  window.addEventListener("beforeinstallprompt", (e) => {
+    e.preventDefault();
+    stashedPrompt = e as BeforeInstallPromptEvent;
+    promptListeners.forEach((fn) => fn());
+  });
+  window.addEventListener("appinstalled", () => {
+    stashedPrompt = null;
+    promptListeners.forEach((fn) => fn());
+  });
+}
+
+function isStandalone(): boolean {
+  return (
+    window.matchMedia("(display-mode: standalone)").matches ||
+    (window.navigator as unknown as { standalone?: boolean }).standalone === true
+  );
+}
+
+function isIosDevice(): boolean {
+  const ua = window.navigator.userAgent;
+  // iPadOS 13+ reports itself as "Macintosh" but has touch points
+  return /iphone|ipad|ipod/i.test(ua) || (/Macintosh/i.test(ua) && navigator.maxTouchPoints > 1);
+}
+
+function isDismissedRecently(): boolean {
+  try {
+    const raw = localStorage.getItem(DISMISS_KEY);
+    if (!raw) return false;
+    const at = parseInt(raw, 10);
+    return Number.isFinite(at) && Date.now() - at < DISMISS_DURATION_MS;
+  } catch {
+    return false;
+  }
+}
 
 export default function PwaInstallBanner() {
   const { t } = useTranslation();
-  const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null);
-  const [isIos, setIsIos] = useState(false);
+  const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(stashedPrompt);
   const [visible, setVisible] = useState(false);
+  const ios = typeof window !== "undefined" && isIosDevice();
 
   useEffect(() => {
-    // 1. Check if already installed as standalone PWA
-    const isStandalone =
-      window.matchMedia("(display-mode: standalone)").matches ||
-      (window.navigator as unknown as { standalone?: boolean }).standalone === true;
-    if (isStandalone) return;
+    if (isStandalone() || isDismissedRecently()) return;
 
-    // 2. Check if recently dismissed
-    const dismissedAt = localStorage.getItem(DISMISS_KEY);
-    if (dismissedAt) {
-      const timeSinceDismiss = Date.now() - parseInt(dismissedAt, 10);
-      if (timeSinceDismiss < DISMISS_DURATION_MS) return;
-    }
+    // Keep in sync with the module-level listener (covers late/early firing)
+    const sync = () => {
+      setDeferredPrompt(stashedPrompt);
+      if (stashedPrompt && !isDismissedRecently() && !isStandalone()) setVisible(true);
+      if (!stashedPrompt && !ios) setVisible(false); // app was installed
+    };
+    promptListeners.add(sync);
 
-    // 3. Detect iOS Safari
-    const ua = window.navigator.userAgent.toLowerCase();
-    const isIosDevice = /iphone|ipad|ipod/.test(ua);
-    if (isIosDevice) {
-      setIsIos(true);
-      // Wait 3 seconds after boot so we don't startle the user
-      const timer = setTimeout(() => setVisible(true), 3000);
-      return () => clearTimeout(timer);
-    }
-
-    // 4. Android / Chrome beforeinstallprompt
-    const handleBeforeInstallPrompt = (e: Event) => {
-      e.preventDefault();
-      setDeferredPrompt(e as BeforeInstallPromptEvent);
+    let timer: number | undefined;
+    if (ios) {
+      // iOS has no install event: show the "Add to Home Screen" tip after a short delay
+      timer = window.setTimeout(() => setVisible(true), 2500);
+    } else if (stashedPrompt) {
       setVisible(true);
-    };
+    }
 
-    window.addEventListener("beforeinstallprompt", handleBeforeInstallPrompt);
     return () => {
-      window.removeEventListener("beforeinstallprompt", handleBeforeInstallPrompt);
+      promptListeners.delete(sync);
+      if (timer) window.clearTimeout(timer);
     };
-  }, []);
+  }, [ios]);
+
+  function hideForAWhile() {
+    try {
+      localStorage.setItem(DISMISS_KEY, Date.now().toString());
+    } catch {
+      /* private mode: banner will simply come back next visit */
+    }
+    setVisible(false);
+  }
 
   async function handleInstallClick() {
     if (!deferredPrompt) return;
     await deferredPrompt.prompt();
     const choice = await deferredPrompt.userChoice;
+    stashedPrompt = null; // a prompt event can only be used once
+    setDeferredPrompt(null);
     if (choice.outcome === "accepted") {
       setVisible(false);
+    } else {
+      // They cancelled the native dialog -> treat like "Later"
+      hideForAWhile();
     }
-    setDeferredPrompt(null);
-  }
-
-  function handleDismiss() {
-    localStorage.setItem(DISMISS_KEY, Date.now().toString());
-    setVisible(false);
   }
 
   if (!visible) return null;
 
   return (
-    <div className="fixed bottom-4 inset-x-3 sm:inset-x-auto sm:end-4 z-50 max-w-md animate-fade-in">
+    <div className="fixed bottom-24 inset-x-3 sm:inset-x-auto sm:end-6 z-40 max-w-md">
       <div className="flex items-start gap-3 rounded-2xl border border-gold/40 bg-navy/95 p-4 text-cream shadow-2xl backdrop-blur-md">
         <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-gold/20 text-gold">
           <Smartphone size={22} />
@@ -82,43 +125,43 @@ export default function PwaInstallBanner() {
             {t("pwa.installTitle", "Install LingoTrace App")}
           </h4>
           <p className="mt-1 text-xs text-cream-400 leading-relaxed">
-            {isIos
+            {ios
               ? t(
                   "pwa.iosTip",
-                  "To install on iPhone: tap the Share button ⎋ at the bottom, then select 'Add to Home Screen' ➕"
+                  "To install on iPhone: tap the Share button at the bottom, then select 'Add to Home Screen'"
                 )
               : t(
                   "pwa.installDesc",
-                  "Add LingoTrace to your home screen for fast fullscreen access and instant alerts."
+                  "Add LingoTrace to your home screen for fast fullscreen access."
                 )}
           </p>
 
-          {!isIos && deferredPrompt && (
-            <div className="mt-3 flex items-center gap-2">
+          <div className="mt-3 flex items-center gap-2">
+            {!ios && deferredPrompt && (
               <button
                 type="button"
                 onClick={handleInstallClick}
-                className="inline-flex items-center gap-1.5 rounded-lg bg-gold px-3 py-1.5 text-xs font-semibold text-navy transition hover:bg-gold-light"
+                className="inline-flex items-center gap-1.5 rounded-lg bg-gold px-3 py-1.5 text-xs font-semibold text-navy transition hover:opacity-90"
               >
                 <Download size={14} />
                 <span>{t("pwa.installBtn", "Install App")}</span>
               </button>
-              <button
-                type="button"
-                onClick={handleDismiss}
-                className="text-xs text-cream-400 hover:text-white px-2 py-1"
-              >
-                {t("pwa.later", "Later")}
-              </button>
-            </div>
-          )}
+            )}
+            <button
+              type="button"
+              onClick={hideForAWhile}
+              className="text-xs text-cream-400 hover:text-white px-2 py-1"
+            >
+              {t("pwa.later", "Later")}
+            </button>
+          </div>
         </div>
 
         <button
           type="button"
-          onClick={handleDismiss}
+          onClick={hideForAWhile}
           className="shrink-0 rounded-lg p-1 text-cream-400 hover:bg-white/10 hover:text-white transition"
-          aria-label="Dismiss"
+          aria-label={t("pwa.dismiss", "Dismiss")}
         >
           <X size={16} />
         </button>

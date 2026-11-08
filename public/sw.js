@@ -1,128 +1,98 @@
-// LingoTrace Service Worker (PWA & Web Push Notifications)
-const CACHE_NAME = 'lingotrace-v1';
-const PRECACHE_ASSETS = [
-  './',
-  './index.html',
-  './manifest.json',
-  './favicon.ico',
-  './logo-192.png',
-  './logo-512.png',
-  './apple-touch-icon.png'
-];
+// LingoTrace Service Worker — offline shell + notification display.
+// Bump CACHE_NAME to force every client to drop old caches.
+const CACHE_NAME = 'lingotrace-v2';
+const SCOPE = self.registration.scope; // e.g. https://example.com/
+const PRECACHE = ['logo-192.png', 'logo-512.png', 'apple-touch-icon.png', 'favicon.ico', 'manifest.json'];
 
-// Install: Cache critical static assets
 self.addEventListener('install', (event) => {
   event.waitUntil(
-    caches.open(CACHE_NAME).then((cache) => {
-      return cache.addAll(PRECACHE_ASSETS).catch((err) => {
-        console.warn('PWA: Non-fatal precache item failure', err);
-      });
-    }).then(() => self.skipWaiting())
+    caches
+      .open(CACHE_NAME)
+      // Add one by one so a single missing file can't abort the whole precache
+      .then((cache) => Promise.all(PRECACHE.map((p) => cache.add(new URL(p, SCOPE)).catch(() => {}))))
+      .then(() => self.skipWaiting())
   );
 });
 
-// Activate: Clean up older cache versions
 self.addEventListener('activate', (event) => {
   event.waitUntil(
-    caches.keys().then((keys) => {
-      return Promise.all(
-        keys.filter((key) => key !== CACHE_NAME).map((key) => caches.delete(key))
-      );
-    }).then(() => self.clients.claim())
+    caches
+      .keys()
+      .then((keys) => Promise.all(keys.filter((k) => k !== CACHE_NAME).map((k) => caches.delete(k))))
+      .then(() => self.clients.claim())
   );
 });
 
-// Fetch: Network-first for dynamic Firestore and APIs, cache-first for static assets
 self.addEventListener('fetch', (event) => {
-  const url = new URL(event.request.url);
+  const req = event.request;
+  const url = new URL(req.url);
 
-  // Never cache Firebase Firestore, Auth, Cloudinary, or non-GET requests
-  if (
-    event.request.method !== 'GET' ||
-    url.hostname.includes('firestore.googleapis.com') ||
-    url.hostname.includes('identitytoolkit.googleapis.com') ||
-    url.hostname.includes('cloudinary.com') ||
-    url.hostname.includes('emailjs.com')
-  ) {
+  // Only handle same-origin GETs. Firebase, Cloudinary, EmailJS, fonts etc. go straight to the network.
+  if (req.method !== 'GET' || url.origin !== self.location.origin) return;
+
+  // Pages: network-first so a new deploy is picked up immediately; cached shell only when offline.
+  if (req.mode === 'navigate') {
+    event.respondWith(
+      fetch(req)
+        .then((res) => {
+          if (res && res.status === 200) {
+            const copy = res.clone();
+            caches.open(CACHE_NAME).then((c) => c.put(new URL('index.html', SCOPE), copy));
+          }
+          return res;
+        })
+        .catch(() => caches.match(new URL('index.html', SCOPE)).then((r) => r || Response.error()))
+    );
     return;
   }
 
+  // Hashed build assets (/assets/*) never change -> cache-first. Everything else: stale-while-revalidate.
+  const immutable = url.pathname.includes('/assets/');
   event.respondWith(
-    caches.match(event.request).then((cachedResponse) => {
-      if (cachedResponse) {
-        // Fetch new version in background (stale-while-revalidate)
-        fetch(event.request)
-          .then((networkResponse) => {
-            if (networkResponse && networkResponse.status === 200) {
-              caches.open(CACHE_NAME).then((cache) => cache.put(event.request, networkResponse));
-            }
-          })
-          .catch(() => {});
-        return cachedResponse;
-      }
-      return fetch(event.request).then((response) => {
-        if (!response || response.status !== 200 || response.type !== 'basic') {
-          return response;
-        }
-        const responseToCache = response.clone();
-        caches.open(CACHE_NAME).then((cache) => cache.put(event.request, responseToCache));
-        return response;
-      });
-    }).catch(() => {
-      // Offline fallback
-      if (event.request.mode === 'navigate') {
-        return caches.match('./index.html');
-      }
+    caches.match(req).then((cached) => {
+      if (cached && immutable) return cached;
+      const network = fetch(req)
+        .then((res) => {
+          if (res && res.status === 200 && res.type === 'basic') {
+            const copy = res.clone();
+            caches.open(CACHE_NAME).then((c) => c.put(req, copy));
+          }
+          return res;
+        })
+        .catch(() => cached || Response.error());
+      return cached || network;
     })
   );
 });
 
-// -------------------------------------------------------------
-// Push Notifications Handling
-// -------------------------------------------------------------
+// ---------------- Notifications ----------------
 self.addEventListener('push', (event) => {
   let data = {};
   if (event.data) {
-    try {
-      data = event.data.json();
-    } catch (e) {
-      data = { body: event.data.text() };
-    }
+    try { data = event.data.json(); } catch (e) { data = { body: event.data.text() }; }
   }
-
-  const title = data.title || 'لينغوتريس | LingoTrace';
-  const options = {
-    body: data.body || 'تنبيه جديد من المدرسة بشأن صفك أو ابنك.',
-    icon: data.icon || './logo-192.png',
-    badge: data.badge || './favicon-32x32.png',
-    data: {
-      url: data.url || './',
-      timestamp: Date.now()
-    },
-    dir: 'rtl',
-    lang: 'ar',
-    vibrate: [150, 50, 150],
-    requireInteraction: false
-  };
-
-  event.waitUntil(self.registration.showNotification(title, options));
+  const title = data.title || 'LingoTrace | لينغوتريس';
+  event.waitUntil(
+    self.registration.showNotification(title, {
+      body: data.body || '',
+      icon: data.icon || new URL('logo-192.png', SCOPE).href,
+      badge: data.badge || new URL('favicon-32x32.png', SCOPE).href,
+      data: { url: data.url || SCOPE },
+      dir: 'auto',
+      vibrate: [150, 50, 150],
+    })
+  );
 });
 
-// Notification Click: Open or focus LingoTrace window
 self.addEventListener('notificationclick', (event) => {
   event.notification.close();
-  const targetUrl = (event.notification.data && event.notification.data.url) ? event.notification.data.url : './';
-
+  const target = (event.notification.data && event.notification.data.url) || SCOPE;
   event.waitUntil(
-    clients.matchAll({ type: 'window', includeUncontrolled: true }).then((windowClients) => {
-      for (const client of windowClients) {
-        if (client.url.includes('lingotrace') && 'focus' in client) {
-          return client.focus();
-        }
+    self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((wins) => {
+      for (const w of wins) {
+        if (w.url.startsWith(SCOPE) && 'focus' in w) return w.focus();
       }
-      if (clients.openWindow) {
-        return clients.openWindow(targetUrl);
-      }
+      return self.clients.openWindow(target);
     })
   );
 });
