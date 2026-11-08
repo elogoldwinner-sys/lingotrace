@@ -7,10 +7,9 @@ interface BeforeInstallPromptEvent extends Event {
   userChoice: Promise<{ outcome: "accepted" | "dismissed" }>;
 }
 
-const DISMISS_KEY = "lingotrace-pwa-dismissed";
-// How long the banner stays hidden after the parent taps X / Later.
-// Change this one number to make the "cancel for some time" shorter or longer.
-const DISMISS_DURATION_MS = 3 * 24 * 60 * 60 * 1000; // 3 days
+// Closing the banner only hides it for the current visit (kept in memory, not saved).
+// It comes back on the next page load until the app is installed.
+let dismissedThisVisit = false;
 
 /* ------------------------------------------------------------------ */
 /* Capture `beforeinstallprompt` at module load.                       */
@@ -46,17 +45,6 @@ function isIosDevice(): boolean {
   return /iphone|ipad|ipod/i.test(ua) || (/Macintosh/i.test(ua) && navigator.maxTouchPoints > 1);
 }
 
-function isDismissedRecently(): boolean {
-  try {
-    const raw = localStorage.getItem(DISMISS_KEY);
-    if (!raw) return false;
-    const at = parseInt(raw, 10);
-    return Number.isFinite(at) && Date.now() - at < DISMISS_DURATION_MS;
-  } catch {
-    return false;
-  }
-}
-
 export default function PwaInstallBanner() {
   const { t } = useTranslation();
   const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(stashedPrompt);
@@ -64,12 +52,12 @@ export default function PwaInstallBanner() {
   const ios = typeof window !== "undefined" && isIosDevice();
 
   useEffect(() => {
-    if (isStandalone() || isDismissedRecently()) return;
+    if (isStandalone() || dismissedThisVisit) return;
 
     // Keep in sync with the module-level listener (covers late/early firing)
     const sync = () => {
       setDeferredPrompt(stashedPrompt);
-      if (stashedPrompt && !isDismissedRecently() && !isStandalone()) setVisible(true);
+      if (stashedPrompt && !dismissedThisVisit && !isStandalone()) setVisible(true);
       if (!stashedPrompt && !ios) setVisible(false); // app was installed
     };
     promptListeners.add(sync);
@@ -89,11 +77,7 @@ export default function PwaInstallBanner() {
   }, [ios]);
 
   function hideForAWhile() {
-    try {
-      localStorage.setItem(DISMISS_KEY, Date.now().toString());
-    } catch {
-      /* private mode: banner will simply come back next visit */
-    }
+    dismissedThisVisit = true;
     setVisible(false);
   }
 
