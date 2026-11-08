@@ -136,8 +136,15 @@ export async function getNotesForStudentInRange(
   const results = await Promise.allSettled(queries);
   const fulfilled = results.filter((r): r is PromiseFulfilledResult<Awaited<(typeof queries)[number]>> => r.status === "fulfilled");
   if (fulfilled.length === 0) {
-    const rejected = results.find((r) => r.status === "rejected") as PromiseRejectedResult | undefined;
-    throw rejected?.reason ?? new Error("Could not read notes.");
+    // Spell out what each query returned so the cause is visible in the UI / console.
+    const detail = results
+      .map((r, i) => {
+        const label = i === 0 ? "shared" : "own";
+        const reason = (r as PromiseRejectedResult).reason;
+        return `${label}: ${reason?.code || reason?.message || "failed"}`;
+      })
+      .join(" | ");
+    throw new Error(`Could not read notes (v3; uid=${uid ?? "none"}; ${detail})`);
   }
   const byId = new Map<string, NoteRecord>();
   fulfilled.forEach((r) =>
