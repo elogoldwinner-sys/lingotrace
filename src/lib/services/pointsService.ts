@@ -1,9 +1,10 @@
 import { doc, runTransaction, collection, serverTimestamp, getDocs, query, where, writeBatch, increment } from "firebase/firestore";
-import { db } from "../firebase";
+import { auth, db } from "../firebase";
 import { createFirestoreService } from "../firestoreService";
 import type { PointsTransaction, PointsReason } from "../../types";
 import { BADGE_CATALOG, evaluateBadgesForStudent } from "./badgesService";
 import { toMillis } from "../timestamps";
+import { getDocsFromAny } from "../safeQueries";
 import { markRankingStale } from "./classRankingsService";
 
 const service = createFirestoreService<PointsTransaction>("pointsTransactions");
@@ -77,15 +78,16 @@ export async function getPointsForStudentInRange(
   startMs: number,
   endMs: number
 ): Promise<PointsTransaction[]> {
-  const snapshot = await getDocs(
-    query(collection(db, "pointsTransactions"), where("studentId", "==", studentId))
-  );
-  return snapshot.docs
-    .map((d) => ({ id: d.id, ...d.data() } as PointsTransaction))
-    .filter((txn) => {
-      const created = toMillis(txn.createdAt);
-      return created >= startMs && created <= endMs;
-    });
+  const col = collection(db, "pointsTransactions");
+  const uid = auth.currentUser?.uid;
+  // Parent / student: the plain studentId query. Teacher: the points they awarded (rules can verify awardedBy).
+  const queries = [query(col, where("studentId", "==", studentId))];
+  if (uid) queries.push(query(col, where("studentId", "==", studentId), where("awardedBy", "==", uid)));
+  const all = await getDocsFromAny<PointsTransaction>("points", queries);
+  return all.filter((txn) => {
+    const created = toMillis(txn.createdAt);
+    return created >= startMs && created <= endMs;
+  });
 }
 
 /** Gives the same mark to several students at once (e.g. a whole group). Resolves with how many were saved. */

@@ -50,7 +50,7 @@ export async function sendPeriodReportToParent(input: SendPeriodReportInput) {
     labeled("points", getPointsForStudentInRange(input.studentId, startMs, endMs)),
     labeled(
       "attendance",
-      getAttendanceForStudentInRange(input.studentId, input.startDate, input.endDate)
+      getAttendanceForStudentInRange(input.studentId, input.startDate, input.endDate, student.classId)
     ),
     labeled("notes", getNotesForStudentInRange(input.studentId, startMs, endMs)),
   ]);
@@ -115,7 +115,7 @@ export async function getPeriodReportData(input: SendPeriodReportInput): Promise
   const endMs = new Date(`${input.endDate}T23:59:59`).getTime();
   const [points, attendance, notes] = await Promise.all([
     labeled("points", getPointsForStudentInRange(input.studentId, startMs, endMs)),
-    labeled("attendance", getAttendanceForStudentInRange(input.studentId, input.startDate, input.endDate)),
+    labeled("attendance", getAttendanceForStudentInRange(input.studentId, input.startDate, input.endDate, student.classId)),
     labeled("notes", getNotesForStudentInRange(input.studentId, startMs, endMs)),
   ]);
   const counts: Record<AttendanceStatus, number> = { present: 0, absent: 0, late: 0, excused: 0 };

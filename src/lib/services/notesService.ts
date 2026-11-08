@@ -1,8 +1,9 @@
-import { addDoc, collection, doc, getDocs, query, Timestamp, updateDoc, where } from "firebase/firestore";
+import { addDoc, collection, doc, query, Timestamp, updateDoc, where } from "firebase/firestore";
 import { auth, db } from "../firebase";
 import { createFirestoreService } from "../firestoreService";
 import type { NoteRecord, NoteSentiment } from "../../types";
 import { toMillis } from "../timestamps";
+import { getDocsFromAny } from "../safeQueries";
 import { sanitizeRichHtml } from "../richText";
 
 const service = createFirestoreService<NoteRecord>("notes");
@@ -107,50 +108,19 @@ export async function deleteNote(id: string) {
 
 /**
  * One-off (non-realtime) fetch of a student's notes within a date range, for reports.
- *
- * Firestore rejects a whole query unless EVERY document it could match is readable by the
- * current user, so a single broad `studentId == X` query is always denied. Instead two
- * narrow queries run independently and their results are merged:
- *   - notes the current user wrote (authorId == uid): allowed for any signed-in user, so
- *     this is what a teacher gets;
- *   - notes shared with the parent (visibleToParent == true): allowed only for the linked
- *     parent, so for a teacher this one is denied and simply ignored.
- * The call only fails if BOTH are denied.
+ * Teacher: the notes they wrote. Parent: the notes shared with them (see getDocsFromAny).
  */
 export async function getNotesForStudentInRange(
   studentId: string,
   startMs: number,
   endMs: number
 ): Promise<NoteRecord[]> {
+  const col = collection(db, "notes");
   const uid = auth.currentUser?.uid;
-  const queries = [
-    getDocs(
-      query(collection(db, "notes"), where("studentId", "==", studentId), where("visibleToParent", "==", true))
-    ),
-  ];
-  if (uid) {
-    queries.push(
-      getDocs(query(collection(db, "notes"), where("studentId", "==", studentId), where("authorId", "==", uid)))
-    );
-  }
-  const results = await Promise.allSettled(queries);
-  const fulfilled = results.filter((r): r is PromiseFulfilledResult<Awaited<(typeof queries)[number]>> => r.status === "fulfilled");
-  if (fulfilled.length === 0) {
-    // Spell out what each query returned so the cause is visible in the UI / console.
-    const detail = results
-      .map((r, i) => {
-        const label = i === 0 ? "shared" : "own";
-        const reason = (r as PromiseRejectedResult).reason;
-        return `${label}: ${reason?.code || reason?.message || "failed"}`;
-      })
-      .join(" | ");
-    throw new Error(`Could not read notes (v3; uid=${uid ?? "none"}; ${detail})`);
-  }
-  const byId = new Map<string, NoteRecord>();
-  fulfilled.forEach((r) =>
-    r.value.docs.forEach((d) => byId.set(d.id, { id: d.id, ...d.data() } as NoteRecord))
-  );
-  return Array.from(byId.values()).filter((n) => {
+  const queries = [query(col, where("studentId", "==", studentId), where("visibleToParent", "==", true))];
+  if (uid) queries.push(query(col, where("studentId", "==", studentId), where("authorId", "==", uid)));
+  const notes = await getDocsFromAny<NoteRecord>("notes", queries);
+  return notes.filter((n) => {
     const created = toMillis(n.createdAt);
     return created >= startMs && created <= endMs;
   });

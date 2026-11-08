@@ -261,7 +261,7 @@ service cloud.firestore {
         (isSignedIn() && resource.data.authUid == null &&
           request.resource.data.authUid == request.auth.uid) ||
         (isLinkedParent(studentId) &&
-          request.resource.data.diff(resource.data).affectedKeys().hasOnly(["parentName", "parentEmail", "parentUids"])) ||
+          request.resource.data.diff(resource.data).affectedKeys().hasOnly(["parentName", "parentEmail", "parentUids", "parentWhatsapp"])) ||
         // A student may choose their picture from the built-in gallery exactly once.
         (isLinkedStudent(studentId) &&
           request.resource.data.diff(resource.data).affectedKeys().hasOnly(["photoURL", "avatarPicked"]) &&
@@ -271,6 +271,21 @@ service cloud.firestore {
       allow create: if ownsClass(request.resource.data.classId) ||
         (isSignedIn() && request.resource.data.authUid == request.auth.uid);
       allow delete: if ownsClass(resource.data.classId);
+    }
+
+    // Certificates issued by a teacher to a student. The issuing teacher (or the
+    // class owner) manages them; the linked student / parent can read their own.
+    match /certificates/{certId} {
+      allow read: if isSignedIn() && (
+        resource.data.issuedBy == request.auth.uid ||
+        ownsClass(resource.data.classId) ||
+        isLinkedStudent(resource.data.studentId) ||
+        isLinkedParent(resource.data.studentId));
+      allow create: if isSignedIn() && request.resource.data.issuedBy == request.auth.uid &&
+        ownsClass(request.resource.data.classId);
+      allow delete: if isSignedIn() && (resource.data.issuedBy == request.auth.uid ||
+        ownsClass(resource.data.classId));
+      allow update: if false;
     }
 
     match /attendance/{recordId} {

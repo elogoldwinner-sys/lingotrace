@@ -1,7 +1,6 @@
 import {
   collection,
   doc,
-  getDocs,
   increment,
   query,
   serverTimestamp,
@@ -10,6 +9,7 @@ import {
   where,
 } from "firebase/firestore";
 import { db } from "../firebase";
+import { getDocsFromAny } from "../safeQueries";
 import { createFirestoreService } from "../firestoreService";
 import type { AttendanceRecord, AttendanceStatus } from "../../types";
 
@@ -28,18 +28,21 @@ export function subscribeToAttendanceByClass(
   return service.subscribe([service.where("classId", "==", classId)], onData, onError);
 }
 
-/** One-off (non-realtime) fetch of a student's attendance within a date range, for report emails. */
+/**
+ * One-off (non-realtime) fetch of a student's attendance within a date range, for reports.
+ * `classId` lets the class's teacher read it (the rules verify ownership through the class).
+ */
 export async function getAttendanceForStudentInRange(
   studentId: string,
   startDate: string,
-  endDate: string
+  endDate: string,
+  classId?: string
 ): Promise<AttendanceRecord[]> {
-  const snapshot = await getDocs(
-    query(collection(db, "attendance"), where("studentId", "==", studentId))
-  );
-  return snapshot.docs
-    .map((d) => ({ id: d.id, ...d.data() } as AttendanceRecord))
-    .filter((r) => r.date >= startDate && r.date <= endDate);
+  const col = collection(db, "attendance");
+  const queries = [query(col, where("studentId", "==", studentId))];
+  if (classId) queries.push(query(col, where("studentId", "==", studentId), where("classId", "==", classId)));
+  const all = await getDocsFromAny<AttendanceRecord>("attendance", queries);
+  return all.filter((r) => r.date >= startDate && r.date <= endDate);
 }
 
 export function subscribeToAttendanceByDate(
