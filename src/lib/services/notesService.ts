@@ -1,5 +1,5 @@
 import { addDoc, collection, doc, getDocs, query, Timestamp, updateDoc, where } from "firebase/firestore";
-import { db } from "../firebase";
+import { auth, db } from "../firebase";
 import { createFirestoreService } from "../firestoreService";
 import type { NoteRecord, NoteSentiment } from "../../types";
 import { toMillis } from "../timestamps";
@@ -105,19 +105,38 @@ export async function deleteNote(id: string) {
   return service.remove(id);
 }
 
-/** One-off (non-realtime) fetch of a student's notes within a date range, for report emails. */
+/**
+ * One-off (non-realtime) fetch of a student's notes within a date range, for report emails.
+ *
+ * Firestore rejects a whole query unless every document it could match is readable, and a
+ * parent may only read notes with visibleToParent == true. So instead of one broad
+ * `studentId == X` query we run two that are each provably allowed for any signed-in user:
+ *   1. the notes shared with the parent (visibleToParent == true), and
+ *   2. the notes the current user wrote themselves (authorId == their uid) — the teacher's own.
+ */
 export async function getNotesForStudentInRange(
   studentId: string,
   startMs: number,
   endMs: number
 ): Promise<NoteRecord[]> {
-  const snapshot = await getDocs(
-    query(collection(db, "notes"), where("studentId", "==", studentId))
+  const queries = [
+    getDocs(
+      query(collection(db, "notes"), where("studentId", "==", studentId), where("visibleToParent", "==", true))
+    ),
+  ];
+  const uid = auth.currentUser?.uid;
+  if (uid) {
+    queries.push(
+      getDocs(query(collection(db, "notes"), where("studentId", "==", studentId), where("authorId", "==", uid)))
+    );
+  }
+  const snapshots = await Promise.all(queries);
+  const byId = new Map<string, NoteRecord>();
+  snapshots.forEach((snap) =>
+    snap.docs.forEach((d) => byId.set(d.id, { id: d.id, ...d.data() } as NoteRecord))
   );
-  return snapshot.docs
-    .map((d) => ({ id: d.id, ...d.data() } as NoteRecord))
-    .filter((n) => {
-      const created = toMillis(n.createdAt);
-      return created >= startMs && created <= endMs;
-    });
+  return Array.from(byId.values()).filter((n) => {
+    const created = toMillis(n.createdAt);
+    return created >= startMs && created <= endMs;
+  });
 }
