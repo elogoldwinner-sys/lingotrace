@@ -106,34 +106,42 @@ export async function deleteNote(id: string) {
 }
 
 /**
- * One-off (non-realtime) fetch of a student's notes within a date range, for report emails.
+ * One-off (non-realtime) fetch of a student's notes within a date range, for reports.
  *
- * Firestore rejects a whole query unless every document it could match is readable, and a
- * parent may only read notes with visibleToParent == true. So instead of one broad
- * `studentId == X` query we run two that are each provably allowed for any signed-in user:
- *   1. the notes shared with the parent (visibleToParent == true), and
- *   2. the notes the current user wrote themselves (authorId == their uid) — the teacher's own.
+ * Firestore rejects a whole query unless EVERY document it could match is readable by the
+ * current user, so a single broad `studentId == X` query is always denied. Instead two
+ * narrow queries run independently and their results are merged:
+ *   - notes the current user wrote (authorId == uid): allowed for any signed-in user, so
+ *     this is what a teacher gets;
+ *   - notes shared with the parent (visibleToParent == true): allowed only for the linked
+ *     parent, so for a teacher this one is denied and simply ignored.
+ * The call only fails if BOTH are denied.
  */
 export async function getNotesForStudentInRange(
   studentId: string,
   startMs: number,
   endMs: number
 ): Promise<NoteRecord[]> {
+  const uid = auth.currentUser?.uid;
   const queries = [
     getDocs(
       query(collection(db, "notes"), where("studentId", "==", studentId), where("visibleToParent", "==", true))
     ),
   ];
-  const uid = auth.currentUser?.uid;
   if (uid) {
     queries.push(
       getDocs(query(collection(db, "notes"), where("studentId", "==", studentId), where("authorId", "==", uid)))
     );
   }
-  const snapshots = await Promise.all(queries);
+  const results = await Promise.allSettled(queries);
+  const fulfilled = results.filter((r): r is PromiseFulfilledResult<Awaited<(typeof queries)[number]>> => r.status === "fulfilled");
+  if (fulfilled.length === 0) {
+    const rejected = results.find((r) => r.status === "rejected") as PromiseRejectedResult | undefined;
+    throw rejected?.reason ?? new Error("Could not read notes.");
+  }
   const byId = new Map<string, NoteRecord>();
-  snapshots.forEach((snap) =>
-    snap.docs.forEach((d) => byId.set(d.id, { id: d.id, ...d.data() } as NoteRecord))
+  fulfilled.forEach((r) =>
+    r.value.docs.forEach((d) => byId.set(d.id, { id: d.id, ...d.data() } as NoteRecord))
   );
   return Array.from(byId.values()).filter((n) => {
     const created = toMillis(n.createdAt);
