@@ -1310,7 +1310,26 @@
     "dismiss": "Dismiss",
     "iosOtherTip": "On iPhone, open this page in Safari, then tap Share and choose \"Add to Home Screen\".",
     "inAppTip": "Open this page in your browser (Chrome or Safari) from the ⋮ or Share menu, then install the app.",
-    "manualTip": "To install: open your browser menu (⋮) and choose \"Install app\" or \"Add to Home screen\"."
+    "manualTip": "To install: open your browser menu (⋮) and choose \"Install app\" or \"Add to Home screen\".",
+    "card": {
+      "eyebrow": "Always one tap away",
+      "title": "Get the LingoTrace app",
+      "subtitle": "Follow your child's marks, attendance and notes straight from your home screen — no browser needed.",
+      "howTo": "How to install — it takes 10 seconds",
+      "iosS1": "Tap the Share button at the bottom of Safari",
+      "iosS2": "Scroll down and choose “Add to Home Screen”",
+      "iosS3": "Tap “Add” — the LingoTrace icon appears on your home screen",
+      "iosOtherS1": "Open this page in Safari (copy the link and paste it there)",
+      "inAppS1": "Tap the ⋮ (or Share) icon at the top of this screen",
+      "inAppS2": "Choose “Open in browser” (Chrome or Safari)",
+      "inAppS3": "Then follow the install steps shown here",
+      "manualS1": "Open your browser menu (⋮ or ⋯)",
+      "manualS2": "Choose “Install app” or “Add to Home screen”",
+      "manualS3": "Confirm — LingoTrace opens like a normal app",
+      "declined": "No problem — you can install it any time from here.",
+      "fold": "Fold",
+      "expand": "Show"
+    }
   },
   "alerts": {
     "noteHeader": "New note about {{student}} ({{className}}) from LingoTrace:",

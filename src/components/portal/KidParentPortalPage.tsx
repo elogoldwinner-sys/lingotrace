@@ -4,6 +4,7 @@ import { useTranslation } from "react-i18next";
 import Logo from "../common/Logo";
 import ThemeToggle from "../common/ThemeToggle";
 import AnnouncementCard from "../common/AnnouncementCard";
+import InstallAppCard from "../common/InstallAppCard";
 import WeeklyChampions from "../common/WeeklyChampions";
 import whatsappIcon from "../../assets/whatsapp-icon.png";
 import ChildSwitcher from "./ChildSwitcher";
@@ -135,6 +136,8 @@ export default function KidParentPortalPage({
       </div>
 
       <main className="relative z-10 mx-auto max-w-2xl space-y-5 px-4 py-6 sm:px-6 sm:py-8">
+        <InstallAppCard />
+
         {announcements.map((a) => (
           <AnnouncementCard key={a.id} announcement={a} />
         ))}

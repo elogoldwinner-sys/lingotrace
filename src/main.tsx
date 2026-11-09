@@ -5,6 +5,7 @@ import './i18n'
 import App from './App.tsx'
 import { ThemeProvider } from './contexts/ThemeContext'
 import { registerServiceWorker } from './lib/registerServiceWorker'
+import './lib/pwaInstall'
 
 // Click effect: a gold ring pops on any .btn-fx / .cls-fx / .chip-fx when it is pressed.
 document.addEventListener('pointerdown', (e) => {
