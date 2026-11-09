@@ -1314,7 +1314,7 @@
     "card": {
       "eyebrow": "Always one tap away",
       "title": "Get the LingoTrace app",
-      "subtitle": "Follow your child's marks, attendance and notes straight from your home screen — no browser needed.",
+      "subtitle": "Open LingoTrace straight from your home screen — fast, full-screen and no browser bar.",
       "howTo": "How to install — it takes 10 seconds",
       "iosS1": "Tap the Share button at the bottom of Safari",
       "iosS2": "Scroll down and choose “Add to Home Screen”",
@@ -1328,7 +1328,8 @@
       "manualS3": "Confirm — LingoTrace opens like a normal app",
       "declined": "No problem — you can install it any time from here.",
       "fold": "Fold",
-      "expand": "Show"
+      "expand": "Show",
+      "pill": "Get the app"
     }
   },
   "alerts": {

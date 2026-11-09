@@ -10,8 +10,25 @@ interface BeforeInstallPromptEvent extends Event {
 /** What this browser can do: a real install button ("native") or only written steps. */
 export type InstallMode = "native" | "ios" | "iosOther" | "inApp" | "manual";
 
+const INSTALLED_KEY = "lingotrace-app-installed";
+function readInstalledFlag(): boolean {
+  try {
+    return localStorage.getItem(INSTALLED_KEY) === "1";
+  } catch {
+    return false;
+  }
+}
+function markInstalled(): void {
+  installedNow = true;
+  try {
+    localStorage.setItem(INSTALLED_KEY, "1");
+  } catch {
+    /* private mode: the dock just stays hidden for this visit */
+  }
+}
+
 let stashedPrompt: BeforeInstallPromptEvent | null = null;
-let installedNow = false;
+let installedNow = typeof window !== "undefined" && readInstalledFlag();
 const listeners = new Set<() => void>();
 const notify = () => listeners.forEach((fn) => fn());
 
@@ -23,7 +40,7 @@ if (typeof window !== "undefined") {
   });
   window.addEventListener("appinstalled", () => {
     stashedPrompt = null;
-    installedNow = true;
+    markInstalled();
     notify();
   });
   window.matchMedia?.("(display-mode: standalone)").addEventListener?.("change", notify);
@@ -34,7 +51,7 @@ export function subscribeInstall(fn: () => void): () => void {
   return () => listeners.delete(fn);
 }
 
-/** True when the page is already running as the installed app (so there is nothing left to install). */
+/** True when the app is installed (running as the app, or installed from this browser earlier): nothing left to install. */
 export function isRunningAsApp(): boolean {
   if (typeof window === "undefined") return false;
   return (
@@ -74,6 +91,7 @@ export async function triggerInstall(): Promise<"accepted" | "dismissed" | "unav
   await evt.prompt();
   const choice = await evt.userChoice;
   stashedPrompt = null; // a prompt event can only be used once
+  if (choice.outcome === "accepted") markInstalled();
   notify();
   return choice.outcome;
 }

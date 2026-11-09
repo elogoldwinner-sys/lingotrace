@@ -4,6 +4,7 @@ import { SchoolProvider } from "./contexts/SchoolContext";
 import ProtectedRoute from "./components/auth/ProtectedRoute";
 import PortalRoute from "./components/auth/PortalRoute";
 import AppLayout from "./components/layout/AppLayout";
+import InstallDock from "./components/common/InstallDock";
 import HomePage from "./pages/HomePage";
 import LoginPage from "./pages/LoginPage";
 import PortalLoginPage from "./pages/PortalLoginPage";
@@ -112,6 +113,7 @@ export default function App() {
 
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
+        <InstallDock />
       </BrowserRouter>
       </SchoolProvider>
     </AuthProvider>

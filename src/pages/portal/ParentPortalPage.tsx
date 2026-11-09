@@ -25,7 +25,6 @@ import { formatNoteDate } from "../../lib/timestamps";
 import { whatsappLink } from "../../lib/whatsapp";
 import whatsappIcon from "../../assets/whatsapp-icon.png";
 import Logo from "../../components/common/Logo";
-import InstallAppCard from "../../components/common/InstallAppCard";
 import ThemeToggle from "../../components/common/ThemeToggle";
 import AnnouncementCard from "../../components/common/AnnouncementCard";
 import WeeklyChampions from "../../components/common/WeeklyChampions";
@@ -752,8 +751,6 @@ export default function ParentPortalPage() {
       </div>
 
       <main className="max-w-3xl mx-auto px-4 py-8 space-y-6">
-        <InstallAppCard />
-
         {announcements.map((a) => (
           <AnnouncementCard key={a.id} announcement={a} />
         ))}
