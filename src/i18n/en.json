@@ -1307,7 +1307,10 @@
     "iosTip": "On iPhone: tap the Share button, then choose \"Add to Home Screen\".",
     "installBtn": "Install app",
     "later": "Later",
-    "dismiss": "Dismiss"
+    "dismiss": "Dismiss",
+    "iosOtherTip": "On iPhone, open this page in Safari, then tap Share and choose \"Add to Home Screen\".",
+    "inAppTip": "Open this page in your browser (Chrome or Safari) from the ⋮ or Share menu, then install the app.",
+    "manualTip": "To install: open your browser menu (⋮) and choose \"Install app\" or \"Add to Home screen\"."
   },
   "alerts": {
     "noteHeader": "New note about {{student}} ({{className}}) from LingoTrace:",
