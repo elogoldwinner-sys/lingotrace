@@ -472,7 +472,10 @@ service cloud.firestore {
         request.resource.data.principalEmail != '' &&
         request.resource.data.principalEmail == request.resource.data.principalEmail.lower() &&
         // The letterhead is a plan feature: it can only be changed while the platform admin has it switched on.
-        (!request.resource.data.diff(resource.data).affectedKeys().hasAny(['letterhead']) || featureOn(schoolId, 'letterhead'));
+        (!request.resource.data.diff(resource.data).affectedKeys().hasAny(['letterhead']) || featureOn(schoolId, 'letterhead')) &&
+        // Automatic parent alerts are a plan feature: they can be switched ON only while the admin has the feature enabled (switching OFF is always allowed).
+        (!request.resource.data.diff(resource.data).affectedKeys().hasAny(['autoNotifyParents']) ||
+          request.resource.data.get('autoNotifyParents', false) == false || featureOn(schoolId, 'parentAlerts'));
       allow delete: if false;
 
       // Who opened / printed which report, approvals… Append-only; only the principal can read it.

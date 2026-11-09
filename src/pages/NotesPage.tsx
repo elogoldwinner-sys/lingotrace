@@ -2,6 +2,8 @@ import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Plus, Trash2, CheckCheck } from "lucide-react";
 import { useAuth } from "../contexts/AuthContext";
+import { useParentAlertsEnabled } from "../contexts/SchoolContext";
+import { buildNoteAlertText, finishWhatsappTab, openPendingWhatsappTab } from "../lib/parentAlerts";
 import { subscribeToClasses } from "../lib/services/classesService";
 import { subscribeToStudents } from "../lib/services/studentsService";
 import { subscribeToSessions } from "../lib/services/sessionsService";
@@ -29,6 +31,7 @@ import { formatNoteDate } from "../lib/timestamps";
 export default function NotesPage() {
   const { t, i18n } = useTranslation();
   const { user } = useAuth();
+  const parentAlerts = useParentAlertsEnabled();
   const [classes, setClasses] = useState<ClassRecord[]>([]);
   const [selectedClassId, setSelectedClassId] = useState("");
   const [students, setStudents] = useState<StudentRecord[]>([]);
@@ -95,15 +98,37 @@ export default function NotesPage() {
     if (!user || !selectedStudentId) return;
     const plainText = richHtmlToPlainText(contentHtml);
     if (!plainText) return;
-    await createNote({
-      studentId: selectedStudentId,
-      classId: selectedClassId,
-      authorId: user.uid,
-      content: plainText,
-      contentHtml: sanitizeRichHtml(contentHtml),
-      sentiment,
-      visibleToParent: true,
-    });
+    // Automatic parent alert: open the parent's WhatsApp chat right away (inside the click) when the school has it on.
+    const student = students.find((st) => st.id === selectedStudentId);
+    const waNumber = parentAlerts ? student?.parentWhatsapp : undefined;
+    const win = waNumber ? openPendingWhatsappTab() : null;
+    try {
+      await createNote({
+        studentId: selectedStudentId,
+        classId: selectedClassId,
+        authorId: user.uid,
+        content: plainText,
+        contentHtml: sanitizeRichHtml(contentHtml),
+        sentiment,
+        visibleToParent: true,
+      });
+    } catch (err) {
+      win?.close();
+      throw err;
+    }
+    if (waNumber && student) {
+      const className = classes.find((c) => c.id === selectedClassId)?.name || "";
+      finishWhatsappTab(
+        win,
+        waNumber,
+        buildNoteAlertText({
+          header: t("alerts.noteHeader", { student: student.name, className }),
+          positive: sentiment === "positive",
+          label: sentiment === "positive" ? t("alerts.positive") : t("alerts.negative"),
+          content: plainText,
+        })
+      );
+    }
     setContentHtml("");
     setSentiment("positive");
     setModalOpen(false);

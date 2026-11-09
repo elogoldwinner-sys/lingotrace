@@ -4,6 +4,8 @@ import { useSearchParams } from "react-router-dom";
 import { startOfWeek, addDays, format as formatDate, parseISO } from "date-fns";
 import { Plus, Minus, Trash2, Disc3, ChevronDown, X, Layers, NotebookPen, Users, ClipboardList } from "lucide-react";
 import { useAuth } from "../contexts/AuthContext";
+import { useParentAlertsEnabled } from "../contexts/SchoolContext";
+import { buildNoteAlertText, finishWhatsappTab, openPendingWhatsappTab } from "../lib/parentAlerts";
 import { subscribeToClasses } from "../lib/services/classesService";
 import { subscribeToStudents } from "../lib/services/studentsService";
 import { awardPoints, awardPointsToMany } from "../lib/services/pointsService";
@@ -68,6 +70,7 @@ function todayISO() {
 export default function SessionsPage({ archived = false }: { archived?: boolean }) {
   const { t } = useTranslation();
   const { user, profile } = useAuth();
+  const parentAlerts = useParentAlertsEnabled();
   const [classes, setClasses] = useState<ClassRecord[]>([]);
   const [selectedClassId, setSelectedClassId] = useState("");
   const [sessions, setSessions] = useState<SessionRecord[]>([]);
@@ -392,6 +395,9 @@ export default function SessionsPage({ archived = false }: { archived?: boolean 
     e.preventDefault();
     const plainNote = richHtmlToPlainText(noteContent);
     if (!noteModalStudent || !user || !plainNote) return;
+    // Automatic parent alert: open the parent's WhatsApp chat right away (inside the click) when the school has it on.
+    const waNumber = parentAlerts ? noteModalStudent.parentWhatsapp : undefined;
+    const win = waNumber ? openPendingWhatsappTab() : null;
     setNoteSubmitting(true);
     try {
       await createNote({
@@ -404,7 +410,23 @@ export default function SessionsPage({ archived = false }: { archived?: boolean 
         visibleToParent: true,
         sessionId: activeSessionId || undefined,
       });
+      if (waNumber) {
+        const className = classes.find((c) => c.id === noteModalStudent.classId)?.name || "";
+        finishWhatsappTab(
+          win,
+          waNumber,
+          buildNoteAlertText({
+            header: t("alerts.noteHeader", { student: noteModalStudent.name, className }),
+            positive: noteSentiment === "positive",
+            label: noteSentiment === "positive" ? t("alerts.positive") : t("alerts.negative"),
+            content: plainNote,
+          })
+        );
+      }
       setNoteModalStudent(null);
+    } catch (err) {
+      win?.close();
+      throw err;
     } finally {
       setNoteSubmitting(false);
     }

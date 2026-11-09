@@ -10,6 +10,7 @@ import { useNavigate } from "react-router-dom";
 import ImageUploadField from "../../components/school/ImageUploadField";
 import ScheduleEditor from "../../components/common/ScheduleEditor";
 import LetterheadCard from "../../components/school/LetterheadCard";
+import FeatureGate from "../../components/common/FeatureGate";
 import { DEFAULT_TIMEZONE, safeTimezone } from "../../lib/schedule";
 
 /** Principal only: school identity (name, logo, signature, stamp), approved subjects, and the "compare across subjects" switch. */
@@ -53,6 +54,7 @@ export default function SchoolSettingsPage() {
   };
 
   const compareOn = sch.allowSubjectCompare !== false;
+  const alertsOn = sch.autoNotifyParents === true;
 
   async function transfer() {
     if (!user?.email) return;
@@ -206,6 +208,26 @@ export default function SchoolSettingsPage() {
           <span className={`absolute top-0.5 h-6 w-6 rounded-full bg-white shadow transition-all ${compareOn ? "start-[22px]" : "start-0.5"}`} />
         </button>
       </section>
+
+      <FeatureGate feature="parentAlerts">
+        <section className="card flex flex-wrap items-center justify-between gap-3 p-4">
+          <div className="min-w-0 flex-1">
+            <h2 className="font-semibold text-navy">{t("sp.alertsToggleTitle", "Automatic parent alerts")}</h2>
+            <p className="text-xs text-cream-600">
+              {t("sp.alertsToggleHelp", "When on, every note a teacher saves for a student (positive or negative) opens that parent's WhatsApp chat with the note ready, so it reaches the parent with one tap. Only notes marked as visible to the parent are sent.")}
+            </p>
+          </div>
+          <button
+            type="button"
+            role="switch"
+            aria-checked={alertsOn}
+            onClick={() => run(() => updateSchool(sch.id, { autoNotifyParents: !alertsOn }), t("sp.alertsToggleTitle", "Automatic parent alerts"))}
+            className={`relative h-7 w-12 shrink-0 rounded-full transition ${alertsOn ? "bg-green-600" : "bg-cream-500"}`}
+          >
+            <span className={`absolute top-0.5 h-6 w-6 rounded-full bg-white shadow transition-all ${alertsOn ? "start-[22px]" : "start-0.5"}`} />
+          </button>
+        </section>
+      </FeatureGate>
 
       <section className="card space-y-3 border-red-200 p-4">
         <h2 className="font-semibold text-red-700">{t("sp.transferTitle", "Transfer the principal role")}</h2>

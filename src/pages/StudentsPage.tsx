@@ -38,9 +38,9 @@ import {
   createStudentsBulk,
   updateStudent,
 } from "../lib/services/studentsService";
-import { awardPoints, subscribeToStudentPointsHistory } from "../lib/services/pointsService";
-import { subscribeToStudentAttendance } from "../lib/services/attendanceService";
-import { subscribeToStudentNotes, deleteNote } from "../lib/services/notesService";
+import { awardPoints, subscribeToStudentPointsHistoryAsTeacher } from "../lib/services/pointsService";
+import { subscribeToStudentAttendanceAsTeacher } from "../lib/services/attendanceService";
+import { subscribeToStudentNotesAsTeacher, deleteNote } from "../lib/services/notesService";
 import { subscribeToSessions } from "../lib/services/sessionsService";
 import { sendPeriodReportToParent, getPeriodReportData } from "../lib/services/reportService";
 import { whatsappLink } from "../lib/whatsapp";
@@ -281,11 +281,11 @@ export default function StudentsPage() {
   }, [selectedClassId, authLoading, profile?.rankingPeriodStart, profile?.rankingPeriodEnd]);
 
   useEffect(() => {
-    if (!detailStudent) return;
+    if (!detailStudent || !user) return;
     setResetDone(false);
-    const unsubPoints = subscribeToStudentPointsHistory(detailStudent.id, setDetailPoints);
-    const unsubAttendance = subscribeToStudentAttendance(detailStudent.id, setDetailAttendance);
-    const unsubNotes = subscribeToStudentNotes(detailStudent.id, setDetailNotes);
+    const unsubPoints = subscribeToStudentPointsHistoryAsTeacher(detailStudent.id, user.uid, setDetailPoints, console.error);
+    const unsubAttendance = subscribeToStudentAttendanceAsTeacher(detailStudent.id, detailStudent.classId, setDetailAttendance, console.error);
+    const unsubNotes = subscribeToStudentNotesAsTeacher(detailStudent.id, user.uid, setDetailNotes, console.error);
     const unsubSessions = subscribeToSessions(detailStudent.classId, setDetailSessions);
     return () => {
       unsubPoints();
@@ -1119,6 +1119,17 @@ export default function StudentsPage() {
                 <LineChart size={14} />
                 {t("reports.studentReport")}
               </button>
+              {detailStudent.parentWhatsapp && (
+                <button
+                  onClick={handleWhatsappReport}
+                  disabled={sendingWaReport}
+                  title={t("students.waOneClickHint", "Opens the parent's WhatsApp chat with the report ready — just tap Send")}
+                  className="btn-secondary py-1.5 px-3 text-sm disabled:opacity-50"
+                >
+                  <MessageCircle size={14} />
+                  {sendingWaReport ? t("common.loading") : t("students.waSendReport")}
+                </button>
+              )}
               <button
                 onClick={handleResetStudent}
                 disabled={resettingStudent}
@@ -1300,16 +1311,6 @@ export default function StudentsPage() {
                       ? t("attendance.sent")
                       : t("attendance.sendReport")}
                 </button>
-                {detailStudent.parentWhatsapp && (
-                  <button
-                    onClick={handleWhatsappReport}
-                    disabled={sendingWaReport}
-                    className="btn-secondary py-2 px-4 text-sm disabled:opacity-50"
-                  >
-                    <MessageCircle size={16} />
-                    {sendingWaReport ? t("common.loading") : t("students.waSendReport")}
-                  </button>
-                )}
               </div>
               {!detailStudent.parentEmail && (
                 <p className="text-xs text-cream-600 mt-2">{t("attendance.noParentEmail")}</p>

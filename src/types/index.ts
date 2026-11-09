@@ -528,6 +528,8 @@ export interface School {
   subjects: string[];
   /** When false, teachers of this school cannot use "compare across subjects" in Class statistics. Default true. */
   allowSubjectCompare?: boolean;
+  /** Principal switch: notes teachers write are sent to the parent's WhatsApp automatically. Needs the "parentAlerts" feature. Default off. */
+  autoNotifyParents?: boolean;
   /** A letterhead the principal uploaded (PDF). Printed reports are placed on its first page. Needs the "letterhead" feature. */
   letterhead?: SchoolLetterhead;
   /** Period times, school days and timezone, set by the principal; teachers build their timetables on it. */

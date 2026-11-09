@@ -20,6 +20,20 @@ export function subscribeToStudentNotes(
   );
 }
 
+/** Teacher view: the notes this teacher wrote about the student (the rules verify `authorId`). Sorted here (no index). */
+export function subscribeToStudentNotesAsTeacher(
+  studentId: string,
+  teacherUid: string,
+  onData: (notes: NoteRecord[]) => void,
+  onError?: (error: Error) => void
+) {
+  return service.subscribe(
+    [service.where("studentId", "==", studentId), service.where("authorId", "==", teacherUid)],
+    (rows) => onData([...rows].sort((a, b) => toMillis(b.createdAt) - toMillis(a.createdAt))),
+    onError
+  );
+}
+
 /**
  * Every note the teacher wrote for a class (all students), newest first. Two equality clauses only
  * (no orderBy → no composite index); `authorId` is included so the Firestore rules can verify the query.

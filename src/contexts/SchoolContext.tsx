@@ -202,6 +202,17 @@ export function useSubjectCompareAllowed() {
 }
 
 /**
+ * Teachers: are automatic parent alerts on? Needs ALL of: the teacher is an approved member of a school, the admin
+ * enabled the "parentAlerts" feature for it, and the principal switched the school setting on. Off everywhere else.
+ */
+export function useParentAlertsEnabled(): boolean {
+  const { memberSchool, membership } = useSchool();
+  const featureOn = useFeature("parentAlerts");
+  if (!memberSchool || !membership || membership.status !== "approved") return false;
+  return featureOn && memberSchool.autoNotifyParents === true;
+}
+
+/**
  * The logo to show and print for this teacher. Once the principal has approved the teacher, the SCHOOL's logo
  * (set by the principal) is used everywhere and the teacher can no longer change it; otherwise the teacher's own logo.
  */

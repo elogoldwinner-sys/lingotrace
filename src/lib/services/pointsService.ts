@@ -22,6 +22,24 @@ export function subscribeToStudentPointsHistory(
 }
 
 /**
+ * Teacher view of a student's points history. Firestore rules are not filters, so a teacher's query must carry a
+ * filter the rules can verify (`awardedBy` = the teacher); `orderBy` is dropped (no composite index) and the
+ * list is sorted here instead.
+ */
+export function subscribeToStudentPointsHistoryAsTeacher(
+  studentId: string,
+  teacherUid: string,
+  onData: (transactions: PointsTransaction[]) => void,
+  onError?: (error: Error) => void
+) {
+  return service.subscribe(
+    [service.where("studentId", "==", studentId), service.where("awardedBy", "==", teacherUid)],
+    (rows) => onData([...rows].sort((a, b) => toMillis(b.createdAt) - toMillis(a.createdAt))),
+    onError
+  );
+}
+
+/**
  * Awards (or deducts) points for a student. Runs as a Firestore transaction so
  * the student's running total and the transaction log stay consistent even
  * under concurrent writes ("instant updates" from the spec). After the points

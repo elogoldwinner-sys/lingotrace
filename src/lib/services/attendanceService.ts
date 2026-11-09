@@ -70,6 +70,20 @@ export function subscribeToStudentAttendance(
   );
 }
 
+/** Teacher view: carries `classId` so the rules can verify the teacher owns the class. Sorted here (no index). */
+export function subscribeToStudentAttendanceAsTeacher(
+  studentId: string,
+  classId: string,
+  onData: (records: AttendanceRecord[]) => void,
+  onError?: (error: Error) => void
+) {
+  return service.subscribe(
+    [service.where("studentId", "==", studentId), service.where("classId", "==", classId)],
+    (rows) => onData([...rows].sort((a, b) => (a.date < b.date ? 1 : a.date > b.date ? -1 : 0))),
+    onError
+  );
+}
+
 /**
  * Attendance taken from inside a specific session (as opposed to the
  * standalone by-date Attendance page). A day can have more than one session,

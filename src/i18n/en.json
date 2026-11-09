@@ -160,7 +160,8 @@
     "waSendReport": "Send via WhatsApp",
     "waReportHeader": "Progress report for {{student}} ({{className}}), {{start}} to {{end}}",
     "waReportPoints": "Points this period: {{points}}",
-    "waReportAttendance": "Attendance — Present: {{present}}, Late: {{late}}, Absent: {{absent}}, Excused: {{excused}}"
+    "waReportAttendance": "Attendance — Present: {{present}}, Late: {{late}}, Absent: {{absent}}, Excused: {{excused}}",
+    "waOneClickHint": "Opens the parent's WhatsApp chat with the report ready — just tap Send"
   },
   "attendance": {
     "title": "Attendance",
@@ -989,7 +990,9 @@
     "editGradeSection": "Change grade / section",
     "setGradeSection": "Set grade and section",
     "teacherUsage": "Teachers in your plan",
-    "teacherLimitReached": "limit reached, you can't approve more teachers."
+    "teacherLimitReached": "limit reached, you can't approve more teachers.",
+    "alertsToggleTitle": "Automatic parent alerts",
+    "alertsToggleHelp": "When on, every note a teacher saves for a student (positive or negative) opens that parent's WhatsApp chat with the note ready, so it reaches the parent with one tap. Only notes marked as visible to the parent are sent."
   },
   "feat": {
     "locked": "Locked",
@@ -1039,6 +1042,10 @@
     "letterhead": {
       "label": "School letterhead",
       "description": "The principal uploads a PDF letterhead and every printed report is placed on it."
+    },
+    "parentAlerts": {
+      "label": "Automatic parent alerts",
+      "description": "The principal can switch on automatic alerts: every note a teacher writes is sent to the parent's WhatsApp."
     }
   },
   "adm": {
@@ -1301,5 +1308,11 @@
     "installBtn": "Install app",
     "later": "Later",
     "dismiss": "Dismiss"
+  },
+  "alerts": {
+    "noteHeader": "New note about {{student}} ({{className}}) from LingoTrace:",
+    "positive": "Positive",
+    "negative": "Needs attention",
+    "opened": "WhatsApp opened for the parent: tap Send to deliver the note."
   }
 }
