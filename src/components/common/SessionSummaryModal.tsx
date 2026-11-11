@@ -1,12 +1,13 @@
 import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Printer } from "lucide-react";
+import { Download, Printer } from "lucide-react";
 import Modal from "./Modal";
 import Spinner from "./Spinner";
 import { useAuth } from "../../contexts/AuthContext";
 import { useEffectiveSchoolLogo } from "../../contexts/SchoolContext";
 import { getSessionTransactions } from "../../lib/services/pointsService";
 import { toMillis } from "../../lib/timestamps";
+import { buildCsv, downloadTextFile } from "../../lib/csv";
 import { PrintPortal, printReport, ReportHeader, StatCards, PrintedOn } from "../reports/reportParts";
 import type { PointsTransaction, SessionRecord, StudentRecord } from "../../types";
 
@@ -88,6 +89,26 @@ export default function SessionSummaryModal({
     new Date(toMillis(tx.createdAt)).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
   const signed = (n: number) => (n > 0 ? `+${n}` : n < 0 ? `−${Math.abs(n)}` : "0");
 
+  function download() {
+    if (!session) return;
+    const header = [
+      t("sessionSummary.student"),
+      t("reports.gained"),
+      t("reports.lost"),
+      t("reports.net"),
+      t("sessionSummary.details"),
+    ];
+    const body = rows.map((r) => [
+      r.student.name,
+      String(r.gained),
+      String(r.lost),
+      String(r.net),
+      r.items.map((tx) => `${signed(tx.amount)} ${reasonLabel(tx)} (${time(tx)})`).join(" | "),
+    ]);
+    body.push([t("reports.net"), String(totals.gained), String(totals.lost), String(totals.net), ""]);
+    downloadTextFile(`session summary - ${session.title} - ${session.date}.csv`.replace(/[\\/:*?"<>|]/g, "-"), buildCsv(header, body));
+  }
+
   const sheet = (
     <div className="lt-report">
       <ReportHeader
@@ -146,7 +167,16 @@ export default function SessionSummaryModal({
     <>
       <Modal open onClose={onClose} title={`${t("sessionSummary.title")} — ${session.title}`} widthClassName="max-w-3xl">
         <div className="space-y-4">
-          <div className="flex justify-end">
+          <div className="flex flex-wrap justify-end gap-2">
+            <button
+              type="button"
+              disabled={loading || error || rows.length === 0}
+              onClick={download}
+              className="btn-secondary py-2 px-4 text-sm disabled:opacity-50"
+            >
+              <Download size={16} />
+              {t("sessionSummary.download")}
+            </button>
             <button
               type="button"
               disabled={loading || error}

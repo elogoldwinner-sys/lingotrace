@@ -40,6 +40,7 @@ export default function KidParentPortalPage({
   hasParentWhatsapp,
   onEditWhatsapp,
   whatsappModal,
+  alertsBell,
 }: {
   studentIds: string[];
   currentStudentId: string;
@@ -60,6 +61,8 @@ export default function KidParentPortalPage({
   onEditWhatsapp?: () => void;
   /** The WhatsApp number window itself (rendered by ParentPortalPage). */
   whatsappModal?: ReactNode;
+  /** The alerts bell (live notifications + log), rendered by ParentPortalPage. */
+  alertsBell?: ReactNode;
 }) {
   const { t } = useTranslation();
 
@@ -104,6 +107,7 @@ export default function KidParentPortalPage({
               <span className="hidden sm:inline">{t("nav.switchToTeacher")}</span>
             </button>
           )}
+          {alertsBell}
           {onEditWhatsapp && (
             <button
               type="button"

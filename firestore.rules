@@ -158,7 +158,22 @@ service cloud.firestore {
         // 2) saving this device's notification opt-in (nothing else may change)
         request.resource.data.diff(resource.data).affectedKeys()
           .hasOnly(["pushSubscriptions", "notificationsEnabled", "lastNotificationOptIn"])
+        ||
+        // 3) the parent's choices for instant alerts (nothing else may change)
+        request.resource.data.diff(resource.data).affectedKeys().hasOnly(["alertPrefs"])
       );
+      allow delete: if false;
+    }
+
+    // Parent alerts: written by the teacher of the child's class the moment a note / mark / attendance / certificate
+    // is recorded; read live by the child's linked parent(s). A parent can only add their uid to `readBy`.
+    // Alerts are a log: nobody can edit their content or delete them.
+    match /parentAlerts/{alertId} {
+      allow read: if isSignedIn() && isLinkedParent(resource.data.studentId);
+      allow create: if isSignedIn() && request.resource.data.createdBy == request.auth.uid &&
+        ownsClass(request.resource.data.classId);
+      allow update: if isSignedIn() && isLinkedParent(resource.data.studentId) &&
+        request.resource.data.diff(resource.data).affectedKeys().hasOnly(['readBy']);
       allow delete: if false;
     }
 

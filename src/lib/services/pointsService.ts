@@ -6,6 +6,7 @@ import { BADGE_CATALOG, evaluateBadgesForStudent } from "./badgesService";
 import { toMillis } from "../timestamps";
 import { getDocsFromAny } from "../safeQueries";
 import { markRankingStale } from "./classRankingsService";
+import { sendParentAlert } from "./parentAlertsService";
 
 const service = createFirestoreService<PointsTransaction>("pointsTransactions");
 
@@ -83,6 +84,19 @@ export async function awardPoints(data: {
   });
 
   markRankingStale(data.classId);
+
+  // Instant alert + log entry for the parent.
+  if (data.amount !== 0) {
+    sendParentAlert({
+      studentId: data.studentId,
+      classId: data.classId,
+      type: "points",
+      tone: data.amount > 0 ? "positive" : "negative",
+      amount: data.amount,
+      reason: data.reason,
+      text: (data.note || "").trim().slice(0, 160),
+    });
+  }
 
   // Self-healing re-evaluation: check if the new total unlocks any badges.
   await evaluateBadgesForStudent(data.studentId, newTotal);
@@ -214,6 +228,24 @@ export async function awardSheet(
   await commit();
 
   if (saved.length > 0) markRankingStale(classId);
+
+  // One instant alert per saved student, summarising the whole sheet (net marks).
+  for (const id of saved) {
+    const e = entries.find((x) => x.studentId === id);
+    if (!e) continue;
+    const net = e.marks.reduce((sum, m) => sum + m.amount, 0);
+    if (net === 0) continue;
+    const names = e.marks.map((m) => m.assessment?.name || m.note || "").filter(Boolean);
+    sendParentAlert({
+      studentId: id,
+      classId,
+      type: "points",
+      tone: net > 0 ? "positive" : "negative",
+      amount: net,
+      reason: e.marks.length === 1 ? e.marks[0].reason : "manual",
+      text: names.join(", ").slice(0, 160),
+    });
+  }
 
   // Badge check only where a threshold was actually crossed (avoids a read per student).
   const byId = new Map(entries.map((e) => [e.studentId, e]));

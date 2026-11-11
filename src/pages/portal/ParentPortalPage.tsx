@@ -9,6 +9,7 @@ import KidParentPortalPage from "../../components/portal/KidParentPortalPage";
 import ChildSwitcher from "../../components/portal/ChildSwitcher";
 import { subscribeToStudent, getStudentOnce, setParentWhatsappForStudents } from "../../lib/services/studentsService";
 import ParentWhatsappModal from "../../components/portal/ParentWhatsappModal";
+import ParentAlertsBell from "../../components/portal/ParentAlertsBell";
 import { subscribeToStudentPointsHistory } from "../../lib/services/pointsService";
 import { subscribeToStudentAttendance } from "../../lib/services/attendanceService";
 import { setNoteReadByParent, subscribeToVisibleParentNotes } from "../../lib/services/notesService";
@@ -692,6 +693,7 @@ export default function ParentPortalPage() {
         hasParentWhatsapp={!!parentWhatsapp}
         onEditWhatsapp={openWhatsappModal}
         whatsappModal={whatsappModalNode}
+        alertsBell={<ParentAlertsBell parentUid={portalParent.uid} studentIds={studentIds} variant="kid" />}
       />
     );
   }
@@ -723,6 +725,7 @@ export default function ParentPortalPage() {
               {t("nav.switchToTeacher")}
             </button>
           )}
+          <ParentAlertsBell parentUid={portalParent.uid} studentIds={studentIds} />
           <button
             onClick={openWhatsappModal}
             className="flex items-center gap-1.5 rounded-lg border border-green-300 px-3 py-1.5 text-xs font-semibold text-green-700 hover:bg-green-50"

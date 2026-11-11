@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useSearchParams } from "react-router-dom";
 import { startOfWeek, addDays, format as formatDate, parseISO } from "date-fns";
-import { Plus, Minus, Trash2, Disc3, ChevronDown, X, Layers, NotebookPen, Users, ClipboardList } from "lucide-react";
+import { Plus, Minus, Trash2, Disc3, ChevronDown, X, Layers, NotebookPen, Users, ClipboardList, CalendarCheck } from "lucide-react";
 import { useAuth } from "../contexts/AuthContext";
 import { useParentAlertsEnabled } from "../contexts/SchoolContext";
 import { buildNoteAlertText, finishWhatsappTab, openPendingWhatsappTab } from "../lib/parentAlerts";
@@ -36,6 +36,7 @@ import ClassSelector from "../components/common/ClassSelector";
 import NumberedHeadsModal from "../components/common/NumberedHeadsModal";
 import FeatureGate from "../components/common/FeatureGate";
 import SessionSummaryModal from "../components/common/SessionSummaryModal";
+import SessionAttendanceModal from "../components/common/SessionAttendanceModal";
 import NamesWheelModal from "../components/common/NamesWheelModal";
 import SoundToggle from "../components/common/SoundToggle";
 import { unlockSound } from "../lib/sounds";
@@ -112,6 +113,7 @@ export default function SessionsPage({ archived = false }: { archived?: boolean 
   const [pickedCount, setPickedCount] = useState(0);
   const [groupPickOpen, setGroupPickOpen] = useState(false);
   const [summarySession, setSummarySession] = useState<SessionRecord | null>(null);
+  const [attendanceReportSession, setAttendanceReportSession] = useState<SessionRecord | null>(null);
   // "Give the same mark to the whole group" tick in the marks window.
   const [awardWholeGroup, setAwardWholeGroup] = useState(false);
 
@@ -584,6 +586,13 @@ export default function SessionsPage({ archived = false }: { archived?: boolean 
                                   <ClipboardList size={16} />
                                   {t("sessionSummary.button")}
                                 </button>
+                                <button
+                                  onClick={() => setAttendanceReportSession(s)}
+                                  className="btn-secondary py-1.5 px-3 text-sm"
+                                >
+                                  <CalendarCheck size={16} />
+                                  {t("sessionSummary.attendanceButton")}
+                                </button>
                                 <SoundToggle />
                                 <button
                                   onClick={() => setActiveSessionId(null)}
@@ -737,6 +746,14 @@ export default function SessionsPage({ archived = false }: { archived?: boolean 
         students={students}
         teacherId={user?.uid || ""}
         onClose={() => setSummarySession(null)}
+      />
+
+      <SessionAttendanceModal
+        session={attendanceReportSession}
+        students={students}
+        records={sessionAttendance}
+        className={classes.find((c) => c.id === selectedClassId)?.name || ""}
+        onClose={() => setAttendanceReportSession(null)}
       />
 
       <MarkReinforcement event={reinforcement} onDone={() => setReinforcement(null)} />

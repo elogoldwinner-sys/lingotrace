@@ -5,6 +5,7 @@ import type { NoteRecord, NoteSentiment } from "../../types";
 import { toMillis } from "../timestamps";
 import { getDocsFromAny } from "../safeQueries";
 import { sanitizeRichHtml } from "../richText";
+import { sendParentAlert } from "./parentAlertsService";
 
 const service = createFirestoreService<NoteRecord>("notes");
 
@@ -113,6 +114,16 @@ export async function createNote(data: {
     ...(safeHtml ? { contentHtml: safeHtml } : {}),
     createdAt: Timestamp.now(),
   });
+  // Instant alert + log entry for the parent (only for notes the teacher shared with the parent).
+  if (data.visibleToParent) {
+    sendParentAlert({
+      studentId: data.studentId,
+      classId: data.classId,
+      type: "note",
+      tone: data.sentiment === "positive" ? "positive" : data.sentiment === "negative" ? "negative" : "neutral",
+      text: data.content.trim().slice(0, 160),
+    });
+  }
   return docRef.id;
 }
 

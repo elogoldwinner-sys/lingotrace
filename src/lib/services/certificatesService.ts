@@ -4,6 +4,7 @@ import { createFirestoreService } from "../firestoreService";
 import { toMillis } from "../timestamps";
 import type { CertificateRecord, PointsTransaction, StudentRecord } from "../../types";
 import { getBadgeDefinition } from "./badgesService";
+import { sendParentAlert } from "./parentAlertsService";
 import type { CertificateRenderData } from "../certificate";
 
 const service = createFirestoreService<CertificateRecord>("certificates");
@@ -43,7 +44,12 @@ export function subscribeToIssuedCertificates(
 }
 
 export async function issueCertificates(records: Omit<CertificateRecord, "id" | "createdAt">[]) {
-  return service.createMany(records);
+  const result = await service.createMany(records);
+  // Instant alert + log entry for each student's parent.
+  for (const r of records) {
+    sendParentAlert({ studentId: r.studentId, classId: r.classId, type: "certificate", tone: "positive", text: (r.reason || "").slice(0, 160) });
+  }
+  return result;
 }
 
 export async function deleteCertificate(id: string) {

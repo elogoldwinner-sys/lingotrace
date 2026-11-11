@@ -95,7 +95,8 @@ export default function ClassesPage() {
     e.preventDefault();
     if (!user || !teacherForClass) return;
     const email = normalizeEmail(teacherEmail);
-    if (!/^[^\s@]+@gmail\.com$/.test(email)) {
+    // Any email address is accepted (Gmail, or a school Google Workspace address such as name@school.edu.sa).
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email)) {
       setTeacherError(t("classes.invalidEmail"));
       return;
     }
@@ -592,7 +593,7 @@ export default function ClassesPage() {
               dir="ltr"
               value={teacherEmail}
               onChange={(e) => setTeacherEmail(e.target.value)}
-              placeholder="name@gmail.com"
+              placeholder="name@gmail.com / name@school.edu.sa"
               className="input-field"
             />
             <p className="text-xs text-cream-600 mt-1.5">{t("classes.addTeacherHint")}</p>

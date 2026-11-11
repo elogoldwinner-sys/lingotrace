@@ -12,6 +12,7 @@ import { db } from "../firebase";
 import { getDocsFromAny } from "../safeQueries";
 import { createFirestoreService } from "../firestoreService";
 import type { AttendanceRecord, AttendanceStatus } from "../../types";
+import { sendParentAlert } from "./parentAlertsService";
 
 const service = createFirestoreService<AttendanceRecord>("attendance");
 
@@ -101,6 +102,16 @@ export function subscribeToAttendanceBySession(
   );
 }
 
+function sendAttendanceAlert(studentId: string, classId: string, status: AttendanceStatus) {
+  sendParentAlert({
+    studentId,
+    classId,
+    type: "attendance",
+    tone: status === "present" ? "positive" : status === "excused" ? "neutral" : "negative",
+    status,
+  });
+}
+
 export async function recordAttendance(data: {
   classId: string;
   studentId: string;
@@ -110,10 +121,12 @@ export async function recordAttendance(data: {
   sessionId?: string;
   pointsAwarded?: number;
 }) {
-  return service.create({ ...data, recordedAt: Date.now() } as Omit<
+  const created = await service.create({ ...data, recordedAt: Date.now() } as Omit<
     AttendanceRecord,
     "id"
   >);
+  sendAttendanceAlert(data.studentId, data.classId, data.status);
+  return created;
 }
 
 export async function updateAttendance(
@@ -189,6 +202,7 @@ export async function setAttendanceStatusWithPoints(params: {
 
   // Fired together (not chained), so neither write waits on the other.
   await Promise.all(writes);
+  sendAttendanceAlert(params.studentId, params.classId, params.status);
 
   return attendanceRef.id;
 }
