@@ -226,13 +226,16 @@ export function useParentAlertsEnabled(): boolean {
 }
 
 /**
- * The logo to show and print for this teacher. Once the principal has approved the teacher, the SCHOOL's logo
- * (set by the principal) is used everywhere and the teacher can no longer change it; otherwise the teacher's own logo.
+ * The logo to show and print for this teacher. Once the principal has approved the teacher, the logo is the one the
+ * principal chose for the SCHOOL (read live from the teacher's own school, so a change shows up without a reload) and
+ * the teacher can no longer change it. While the school has no logo yet, a logo the teacher saved earlier keeps being
+ * shown (read-only). A teacher who is not an approved member of a school manages their own logo as before.
  */
 export function useEffectiveSchoolLogo(): { logo: string | undefined; locked: boolean } {
-  const { school, membership } = useSchool();
+  const { memberSchool, membership } = useSchool();
   const { profile } = useAuth();
-  const member = !!school && !!membership && membership.status === "approved" && membership.schoolId === school.id;
-  if (member && school!.logoURL) return { logo: school!.logoURL, locked: true };
+  if (membership?.status === "approved") {
+    return { logo: memberSchool?.logoURL || profile?.schoolLogoURL || undefined, locked: true };
+  }
   return { logo: profile?.schoolLogoURL, locked: false };
 }

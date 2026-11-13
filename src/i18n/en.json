@@ -624,7 +624,8 @@
     "remove": "Remove school logo",
     "logoAlt": "School logo",
     "confirmRemove": "Remove the school logo?",
-    "uploadError": "Couldn't upload the logo. Please try again."
+    "uploadError": "Couldn't upload the logo. Please try again.",
+    "setByPrincipal": "Your school's logo is set by your principal."
   },
   "reports": {
     "studentReport": "Student report",

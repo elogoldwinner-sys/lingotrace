@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { ImagePlus, X } from "lucide-react";
+import { Building2, ImagePlus, X } from "lucide-react";
 import { useAuth } from "../../contexts/AuthContext";
 import { useEffectiveSchoolLogo } from "../../contexts/SchoolContext";
 import { uploadToCloudinary } from "../../lib/cloudinary";
@@ -66,10 +66,20 @@ export default function SchoolLogo({ size = 48 }: { size?: number }) {
     }
   }
 
-  if (locked && logo) {
+  // Teacher of a school: the logo belongs to the school (set by the principal) — shown here, never editable.
+  if (locked) {
     return (
       <div className="relative shrink-0" style={{ width: size, height: size }}>
-        <img src={logo} alt={t("school.logoAlt")} className="h-full w-full rounded-full border-2 border-gold/60 bg-white object-cover shadow-sm" />
+        {logo ? (
+          <img src={logo} alt={t("school.logoAlt")} className="h-full w-full rounded-full border-2 border-gold/60 bg-white object-cover shadow-sm" />
+        ) : (
+          <span
+            title={t("school.setByPrincipal", "Your school's logo is set by your principal.")}
+            className="flex h-full w-full items-center justify-center rounded-full border-2 border-gold/40 bg-white text-gold"
+          >
+            <Building2 size={Math.round(size * 0.45)} />
+          </span>
+        )}
       </div>
     );
   }
