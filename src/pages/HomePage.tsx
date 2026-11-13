@@ -1,6 +1,6 @@
 import { useTranslation } from "react-i18next";
 import { Link } from "react-router-dom";
-import { Building2, GraduationCap, Heart } from "lucide-react";
+import { Building2, GraduationCap, Heart, ShieldCheck } from "lucide-react";
 import Logo from "../components/common/Logo";
 import ThemeToggle from "../components/common/ThemeToggle";
 import KidHome from "../components/home/KidHome";
@@ -64,6 +64,15 @@ export default function HomePage() {
           </div>
         </Link>
       </div>
+      {/* Discreet platform-admin entry: almost invisible until hovered / focused. Real protection is the Firestore rules. */}
+      <Link
+        to="/admin-login"
+        aria-label={t("adm.loginTitle", "Admin portal")}
+        title={t("adm.loginTitle", "Admin portal")}
+        className="absolute bottom-3 start-3 z-10 rounded-full p-2 text-navy opacity-[0.08] outline-none transition hover:opacity-80 focus-visible:opacity-80"
+      >
+        <ShieldCheck size={16} />
+      </Link>
     </div>
   );
 }

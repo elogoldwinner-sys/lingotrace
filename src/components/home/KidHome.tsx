@@ -1,7 +1,7 @@
 import type { ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import { Link } from "react-router-dom";
-import { ArrowRight, Building2 } from "lucide-react";
+import { ArrowRight, Building2, ShieldCheck } from "lucide-react";
 import Logo from "../common/Logo";
 import ThemeToggle from "../common/ThemeToggle";
 import {
@@ -218,6 +218,15 @@ export default function KidHome() {
           {t("sp.schoolPortalLink", "School portal")}
         </Link>
       </main>
+      {/* Discreet platform-admin entry: almost invisible until hovered / focused. Real protection is the Firestore rules. */}
+      <Link
+        to="/admin-login"
+        aria-label={t("adm.loginTitle", "Admin portal")}
+        title={t("adm.loginTitle", "Admin portal")}
+        className="absolute bottom-3 start-3 z-20 rounded-full p-2 text-navy-700 opacity-[0.08] outline-none transition hover:opacity-80 focus-visible:opacity-80"
+      >
+        <ShieldCheck size={16} />
+      </Link>
     </div>
   );
 }

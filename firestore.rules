@@ -246,7 +246,22 @@ service cloud.firestore {
       // The principal can attach an approved teacher's classes to the school (grade / section / subject).
       (principalOfTeacher(resource.data.teacherId) &&
         request.resource.data.diff(resource.data).affectedKeys().hasOnly(["schoolId", "grade", "section", "classKey", "subject"]) &&
-        request.resource.data.schoolId == get(/databases/$(database)/documents/schoolTeachers/$(resource.data.teacherId)).data.schoolId);
+        request.resource.data.schoolId == get(/databases/$(database)/documents/schoolTeachers/$(resource.data.teacherId)).data.schoolId) ||
+      // "Replace a teacher" (plan feature): the principal hands an approved teacher's class to a new Gmail. The class
+      // becomes unclaimed (teacherId '') and the new teacher claims it on first sign-in, exactly like a subject class.
+      (isSchoolPrincipal(resource.data.get('schoolId', '')) &&
+        featureOn(resource.data.get('schoolId', ''), 'teacherReplacement') &&
+        resource.data.get('teacherId', '') != '' && principalOfTeacher(resource.data.teacherId) &&
+        request.resource.data.diff(resource.data).affectedKeys().hasOnly(["teacherId", "teacherEmail", "replacedFrom"]) &&
+        request.resource.data.teacherId == '' &&
+        request.resource.data.teacherEmail is string && request.resource.data.teacherEmail == request.resource.data.teacherEmail.lower() &&
+        request.resource.data.replacedFrom == resource.data.teacherId) ||
+      // ...and, if the Gmail was mistyped and nobody has signed in yet, point the waiting class at another Gmail.
+      (isSchoolPrincipal(resource.data.get('schoolId', '')) &&
+        featureOn(resource.data.get('schoolId', ''), 'teacherReplacement') &&
+        resource.data.get('teacherId', '') == '' && resource.data.get('replacedFrom', '') != '' &&
+        request.resource.data.diff(resource.data).affectedKeys().hasOnly(["teacherEmail"]) &&
+        request.resource.data.teacherEmail is string && request.resource.data.teacherEmail == request.resource.data.teacherEmail.lower());
       allow delete: if isSignedIn() && (
         resource.data.teacherId == request.auth.uid ||
         resource.data.get('ownerId', '') == request.auth.uid
@@ -540,7 +555,11 @@ service cloud.firestore {
           resource.data.addedByUid == request.auth.uid && headMayGrant(request.resource.data)));
       allow delete: if isSignedIn() && (
         isSchoolPrincipal(resource.data.schoolId) ||
-        (hasStaff() && resource.data.addedByUid == request.auth.uid && resource.data.role in ['supervisor', 'coordinator']));
+        (hasStaff() && resource.data.addedByUid == request.auth.uid && resource.data.role in ['supervisor', 'coordinator']) ||
+        // Anyone may give up their OWN access (so a removed / paused account is never a dead end and the Gmail can
+        // go on to join another school). The principal can't: that would orphan the school — transfer the role instead.
+        (request.auth.token.email != null && request.auth.token.email_verified == true &&
+          request.auth.token.email.lower() == email && resource.data.role != 'principal'));
     }
 
     // A teacher's request to join a school (doc id = the teacher's uid). It can only be CREATED as "pending";
@@ -552,8 +571,17 @@ service cloud.firestore {
       allow list: if isAdmin() || isSignedIn() && (isSchoolPrincipal(resource.data.schoolId) ||
         (hasStaff() && staffSchool() == resource.data.schoolId));
       allow create: if isSignedIn() && request.auth.uid == uid &&
-        request.resource.data.uid == uid && request.resource.data.status == 'pending' &&
-        exists(/databases/$(database)/documents/schools/$(request.resource.data.schoolId));
+        request.resource.data.uid == uid &&
+        exists(/databases/$(database)/documents/schools/$(request.resource.data.schoolId)) && (
+          request.resource.data.status == 'pending' ||
+          // Handed-over teacher: the principal's teacherReplacements note for this Gmail makes them approved at once,
+          // for exactly that school and subject.
+          (request.resource.data.status == 'approved' && request.auth.token.email != null &&
+            request.auth.token.email_verified == true &&
+            request.resource.data.email == request.auth.token.email.lower() &&
+            exists(/databases/$(database)/documents/teacherReplacements/$(request.auth.token.email.lower())) &&
+            get(/databases/$(database)/documents/teacherReplacements/$(request.auth.token.email.lower())).data.schoolId == request.resource.data.schoolId &&
+            get(/databases/$(database)/documents/teacherReplacements/$(request.auth.token.email.lower())).data.subject == request.resource.data.subject));
       allow update: if isSignedIn() && (
         (isSchoolPrincipal(resource.data.schoolId) &&
           request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'subject'])) ||
@@ -562,6 +590,24 @@ service cloud.firestore {
           (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['subject', 'status', 'classMap', 'schoolId']) &&
             request.resource.data.status == 'pending'))));
       allow delete: if isSignedIn() && (request.auth.uid == uid || isSchoolPrincipal(resource.data.schoolId));
+    }
+
+    // A principal's pending hand-over of a teacher's classes to a new Gmail (doc id = that Gmail, lower-cased).
+    // Only while the admin has "teacherReplacement" on for the school. The new teacher can read and delete their own
+    // note (the delete happens once they have signed in and become an approved member).
+    match /teacherReplacements/{email} {
+      allow get: if (isSignedIn() && request.auth.token.email != null && request.auth.token.email_verified == true &&
+          request.auth.token.email.lower() == email) || isSchoolPrincipal(resource.data.schoolId);
+      allow list: if isSchoolPrincipal(resource.data.schoolId);
+      allow create: if isSchoolPrincipal(request.resource.data.schoolId) &&
+        featureOn(request.resource.data.schoolId, 'teacherReplacement') &&
+        request.resource.data.email == email && email == email.lower();
+      allow update: if isSchoolPrincipal(resource.data.schoolId) &&
+        request.resource.data.schoolId == resource.data.schoolId &&
+        featureOn(resource.data.schoolId, 'teacherReplacement') &&
+        request.resource.data.email == email;
+      allow delete: if (isSignedIn() && request.auth.token.email != null && request.auth.token.email_verified == true &&
+          request.auth.token.email.lower() == email) || isSchoolPrincipal(resource.data.schoolId);
     }
 
     // ---- Platform admin: plans, notes, log, support tickets ----

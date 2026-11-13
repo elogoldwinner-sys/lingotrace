@@ -6,6 +6,7 @@ import { db } from "../lib/firebase";
 import { subscribeEntitlements } from "../lib/services/entitlementsService";
 import type { FeatureKey, LimitKey } from "../lib/features";
 import {
+  acceptReplacement,
   getMembership,
   getSchool,
   getSchoolAssets,
@@ -61,14 +62,23 @@ export function SchoolProvider({ children }: { children: ReactNode }) {
       user.email ? getStaffAccess(user.email).catch(() => null) : Promise.resolve(null),
       getMembership(user.uid).catch(() => null),
     ]);
-    const schoolId = staffDoc?.schoolId || memberDoc?.schoolId;
+    // A principal may have handed classes to this Gmail: that makes the person an approved teacher right away.
+    let member = memberDoc;
+    if (user.email && member?.status !== "approved") {
+      const joined = await acceptReplacement({ uid: user.uid, email: user.email, displayName: user.displayName }, member).catch((err) => {
+        console.error("Couldn't accept the teacher hand-over", err);
+        return null;
+      });
+      if (joined) member = joined;
+    }
+    const schoolId = staffDoc?.schoolId || member?.schoolId;
     const [schoolDoc, assetDoc] = await Promise.all([
       schoolId ? getSchool(schoolId).catch(() => null) : Promise.resolve(null),
       staffDoc ? getSchoolAssets(staffDoc.schoolId) : Promise.resolve({}),
     ]);
     if (mine !== token.current) return;
     setStaff(staffDoc);
-    setMembership(memberDoc);
+    setMembership(member);
     setSchool(schoolDoc);
     setAssets(assetDoc);
     setLoading(false);
@@ -121,13 +131,16 @@ export function SchoolProvider({ children }: { children: ReactNode }) {
     );
   }, [memberSchoolId]);
 
-  // A teacher waiting for approval picks the decision up as soon as they come back to the tab.
+  // Re-read the person's access whenever they come back to the tab: a teacher waiting for approval picks the decision
+  // up, and a person whose access was removed (or added) stops seeing — or starts seeing — the old role without a
+  // manual reload. Without this the tab keeps showing a role that no longer exists in the database.
+  const watching = membership?.status === "pending" || !!staff;
   useEffect(() => {
-    if (membership?.status !== "pending") return;
+    if (!watching) return;
     const onFocus = () => load();
     window.addEventListener("focus", onFocus);
     return () => window.removeEventListener("focus", onFocus);
-  }, [membership?.status, load]);
+  }, [watching, load]);
 
   // Once the principal approves a teacher, attach that teacher's classes to the school (once per session).
   useEffect(() => {

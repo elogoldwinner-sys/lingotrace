@@ -133,6 +133,8 @@ export interface ClassRecord {
   ownerName?: string;
   /** Lower-cased Gmail the co-teacher signs in with; claimed on their first sign-in. */
   teacherEmail?: string;
+  /** Set when the principal handed this class to a new teacher: the uid of the teacher it was taken from. */
+  replacedFrom?: string;
   /** Which avatar collection this class's students choose from. Set once (at creation, or one time for older classes) and then locked. */
   avatarGender?: "boys" | "girls" | "mixed";
   /** School this class belongs to (set once the teacher's membership is approved). */
@@ -601,7 +603,22 @@ export interface SchoolTeacher {
   createdAt: number;
 }
 
-export type AuditAction = "report_opened" | "report_printed" | "feedback_sent" | "teacher_approved" | "teacher_rejected" | "teacher_removed" | "settings_changed";
+/** A principal's pending hand-over of a teacher's classes to a new Gmail (doc id = the new Gmail, lower-cased). Deleted once the new teacher signs in. */
+export interface TeacherReplacement {
+  id: string;
+  email: string;
+  schoolId: string;
+  subject: string;
+  oldUid: string;
+  oldName: string;
+  oldEmail: string;
+  newName?: string;
+  classCount: number;
+  createdByUid: string;
+  createdAt: number;
+}
+
+export type AuditAction = "report_opened" | "report_printed" | "feedback_sent" | "teacher_approved" | "teacher_rejected" | "teacher_removed" | "teacher_replaced" | "settings_changed";
 
 export interface AuditEntry {
   id: string;

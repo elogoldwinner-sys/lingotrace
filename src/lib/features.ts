@@ -16,6 +16,7 @@ export const FEATURE_KEYS = [
   "certificates",
   "letterhead",
   "parentAlerts",
+  "teacherReplacement",
 ] as const;
 
 export type FeatureKey = (typeof FEATURE_KEYS)[number];
@@ -89,6 +90,12 @@ export const FEATURES: FeatureMeta[] = [
     key: "parentAlerts",
     label: "Automatic parent alerts",
     description: "The principal can switch on automatic alerts: every note a teacher writes is sent to the parent's WhatsApp.",
+    audience: "principal",
+  },
+  {
+    key: "teacherReplacement",
+    label: "Replace a teacher",
+    description: "The principal can swap a teacher's Gmail for a new teacher's; the new teacher takes over the classes the first time they sign in.",
     audience: "principal",
   },
 ];

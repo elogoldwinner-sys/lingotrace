@@ -978,7 +978,8 @@
       "teacher_approved": "Approved a teacher",
       "teacher_rejected": "Rejected a teacher",
       "teacher_removed": "Removed a teacher",
-      "settings_changed": "Changed settings"
+      "settings_changed": "Changed settings",
+      "teacher_replaced": "Replaced a teacher"
     },
     "target": {
       "grade": "A grade",
@@ -999,7 +1000,21 @@
     "teacherUsage": "Teachers in your plan",
     "teacherLimitReached": "limit reached, you can't approve more teachers.",
     "alertsToggleTitle": "Automatic parent alerts",
-    "alertsToggleHelp": "When on, every note a teacher saves for a student (positive or negative) opens that parent's WhatsApp chat with the note ready, so it reaches the parent with one tap. Only notes marked as visible to the parent are sent."
+    "alertsToggleHelp": "When on, every note a teacher saves for a student (positive or negative) opens that parent's WhatsApp chat with the note ready, so it reaches the parent with one tap. Only notes marked as visible to the parent are sent.",
+    "confirmLeave": "Remove this school access from your Gmail? You can then join another school or be added again later.",
+    "leaveAccess": "Remove this access from my Gmail",
+    "rejectedTeachers": "Rejected requests",
+    "replaceTeacher": "Replace teacher",
+    "replaceConfirm": "Replace",
+    "newTeacherGmail": "New teacher's Gmail",
+    "replaceSame": "That is the same Gmail. Enter the new teacher's Gmail.",
+    "replaceExists": "This Gmail already belongs to a teacher in your school.",
+    "replaceError": "Couldn't complete this. Check that the feature is enabled for your school and that no other school already uses this Gmail, then try again.",
+    "replaceHelp": "{{name}} is removed from the school and their classes — with all students, marks and attendance — go to the Gmail below. When the new teacher signs in with it they become the teacher of these classes for {{subject}}, with no further approval.",
+    "waitingReplacements": "Waiting for the new teacher to sign in",
+    "replacingInfo": "Takes over from {{old}} · {{subject}} · {{n}} class(es)",
+    "changeEmail": "Change Gmail",
+    "changeEmailHelp": "The new teacher hasn't signed in yet. Enter the correct Gmail and the waiting classes will go to it instead."
   },
   "feat": {
     "locked": "Locked",
@@ -1053,6 +1068,10 @@
     "parentAlerts": {
       "label": "Automatic parent alerts",
       "description": "The principal can switch on automatic alerts: every note a teacher writes is sent to the parent's WhatsApp."
+    },
+    "teacherReplacement": {
+      "label": "Replace a teacher",
+      "description": "The principal can swap a teacher's Gmail for a new teacher's; the new teacher takes over the classes the first time they sign in."
     }
   },
   "adm": {

@@ -5,7 +5,7 @@ import { Globe, LogOut, Repeat, Building2, Lock } from "lucide-react";
 import { useAuth } from "../../contexts/AuthContext";
 import { useFeature, useSchool } from "../../contexts/SchoolContext";
 import Spinner from "../common/Spinner";
-import { updateSchool } from "../../lib/services/schoolService";
+import { leaveSchoolAsStaff, updateSchool } from "../../lib/services/schoolService";
 import { subscribeUnreadCount } from "../../lib/services/ticketsService";
 import { SchoolDataProvider } from "./SchoolDataContext";
 import type { StaffRole } from "../../types";
@@ -32,6 +32,7 @@ export default function SchoolPortalLayout() {
   const leadershipOn = useFeature("leadership");
   const supervisorsOn = useFeature("supervisors");
   const [unreadTickets, setUnreadTickets] = useState(0);
+  const [leaving, setLeaving] = useState(false);
   const principalSchoolId = staff?.role === "principal" ? school?.id : undefined;
 
   // Principal: a dot on the Support tab when the admin has answered.
@@ -164,6 +165,27 @@ export default function SchoolPortalLayout() {
               <p className="text-sm text-cream-600">
                 {t("feat.pausedBody", "Your school's plan doesn't include this kind of account right now. Please contact your principal.")}
               </p>
+              {staff.role !== "principal" && (
+                <button
+                  type="button"
+                  disabled={leaving}
+                  className="btn-secondary mt-2 text-sm"
+                  onClick={async () => {
+                    if (!window.confirm(t("sp.confirmLeave", "Remove this school access from your Gmail? You can then join another school or be added again later."))) return;
+                    setLeaving(true);
+                    try {
+                      await leaveSchoolAsStaff(staff.email);
+                      await refresh();
+                    } catch (err) {
+                      console.error("Couldn't leave the school", err);
+                    } finally {
+                      setLeaving(false);
+                    }
+                  }}
+                >
+                  {t("sp.leaveAccess", "Remove this access from my Gmail")}
+                </button>
+              )}
             </div>
           ) : (
             <Outlet />

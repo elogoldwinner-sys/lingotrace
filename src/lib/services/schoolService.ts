@@ -30,6 +30,7 @@ import type {
   StaffAccess,
   StudentRecord,
   TeacherMembershipStatus,
+  TeacherReplacement,
 } from "../../types";
 
 export const normEmail = (email: string) => email.trim().toLowerCase();
@@ -216,6 +217,139 @@ export async function detachTeacherClasses(schoolId: string, teacherUid: string)
     snap.docs.slice(i, i + 400).forEach((d) => batch.update(d.ref, { schoolId: "" }));
     await batch.commit();
   }
+}
+
+/**
+ * Principal: completely remove a person from the school, so the same Gmail is a blank slate again and can join
+ * another school, be re-added, or take any other role.
+ *
+ * A person's place in a school lives in TWO documents with different keys:
+ *   - schoolTeachers/{uid}  — the teacher membership (keyed by auth uid)
+ *   - staffAccess/{email}   — the school-portal role: head / counselor / supervisor … (keyed by Gmail)
+ * Deleting only the membership leaves the staffAccess doc behind, and that is the one that keeps the school
+ * portal (and the "account is paused" screen) coming back. Both are cleared here. The principal's own
+ * staffAccess doc is never touched.
+ */
+export async function removePersonFromSchool(
+  schoolId: string,
+  person: { uid?: string; email: string },
+  opts: { keepClasses?: boolean } = {}
+) {
+  const email = normEmail(person.email);
+  if (person.uid) {
+    if (!opts.keepClasses) await detachTeacherClasses(schoolId, person.uid);
+    await removeMembership(person.uid);
+  }
+  // Look the staff doc up with a query the rules can prove (a plain get/delete on a missing doc is denied).
+  const staff = await listStaff(schoolId);
+  const match = staff.find((s) => normEmail(s.email) === email && s.role !== "principal");
+  if (match) await removeStaffAccess(match.email);
+}
+
+/* ───────────────────────────── replacing a teacher ───────────────────────────── */
+
+/**
+ * Principal: hand a teacher's classes to a new Gmail.
+ *
+ * The classes keep everything (students, marks, attendance, grade / section / subject, school link); only the teacher
+ * changes. Each class is set to "unclaimed" (teacherId "" + the new Gmail) — the same mechanism subject classes use —
+ * so the new teacher takes it over the first time they sign in. A `teacherReplacements/{newGmail}` doc records the
+ * hand-over so that the new teacher is also made an approved member of the school automatically, with the same
+ * subject. The old teacher is then removed from the school (membership and any school-portal role on their Gmail).
+ * Order matters: if a step fails the earlier ones are harmless and the whole thing can simply be run again.
+ */
+export async function replaceTeacher(input: { school: School; old: SchoolTeacher; newEmail: string; newName?: string }): Promise<number> {
+  const { school, old } = input;
+  const email = normEmail(input.newEmail);
+  if (!email || email === normEmail(old.email)) throw new Error("same-email");
+  const snap = await getDocs(query(collection(db, "classes"), where("schoolId", "==", school.id), where("teacherId", "==", old.uid)));
+  await setDoc(doc(db, "teacherReplacements", email), {
+    email,
+    schoolId: school.id,
+    subject: old.subject,
+    oldUid: old.uid,
+    oldName: old.name,
+    oldEmail: normEmail(old.email),
+    newName: input.newName?.trim() || null,
+    classCount: snap.size,
+    createdByUid: school.principalUid,
+    createdAt: serverTimestamp(),
+  });
+  for (let i = 0; i < snap.docs.length; i += 400) {
+    const batch = writeBatch(db);
+    snap.docs.slice(i, i + 400).forEach((d) => batch.update(d.ref, { teacherId: "", teacherEmail: email, replacedFrom: old.uid }));
+    await batch.commit();
+  }
+  await removePersonFromSchool(school.id, { uid: old.uid, email: old.email }, { keepClasses: true });
+  return snap.size;
+}
+
+export async function listReplacements(schoolId: string): Promise<TeacherReplacement[]> {
+  const snap = await getDocs(query(collection(db, "teacherReplacements"), where("schoolId", "==", schoolId)));
+  return snap.docs.map((d) => ({ ...(d.data() as TeacherReplacement), id: d.id, createdAt: toMillis(d.data().createdAt) }));
+}
+
+/** Principal: the new teacher hasn't signed in yet and the Gmail was wrong — point the waiting classes at another Gmail. */
+export async function retargetReplacement(schoolId: string, rep: TeacherReplacement, newEmail: string) {
+  const email = normEmail(newEmail);
+  if (!email || email === rep.email) return;
+  const classes = await getDocs(
+    query(collection(db, "classes"), where("schoolId", "==", schoolId), where("teacherId", "==", ""), where("teacherEmail", "==", rep.email))
+  );
+  const { id: _id, createdAt: _c, ...rest } = rep;
+  await setDoc(doc(db, "teacherReplacements", email), { ...rest, email, createdAt: serverTimestamp() });
+  for (let i = 0; i < classes.docs.length; i += 400) {
+    const batch = writeBatch(db);
+    classes.docs.slice(i, i + 400).forEach((d) => batch.update(d.ref, { teacherEmail: email }));
+    await batch.commit();
+  }
+  await deleteDoc(doc(db, "teacherReplacements", rep.email));
+}
+
+/**
+ * Called when someone signs in: if a principal handed classes to this Gmail, make them an approved teacher of that
+ * school (same subject) without waiting for another approval, then delete the hand-over note. Returns the new
+ * membership, or null when there is nothing to do (no note, or they are already an approved member somewhere).
+ */
+export async function acceptReplacement(
+  user: { uid: string; email: string; displayName: string | null },
+  membership: SchoolTeacher | null
+): Promise<SchoolTeacher | null> {
+  const email = normEmail(user.email);
+  const repRef = doc(db, "teacherReplacements", email);
+  const snap = await getDoc(repRef);
+  if (!snap.exists()) return null;
+  const rep = snap.data() as TeacherReplacement;
+  if (membership?.status === "approved") {
+    // Already approved here -> nothing to create. Approved at ANOTHER school -> leave their membership alone.
+    if (membership.schoolId === rep.schoolId) await deleteDoc(repRef).catch(() => {});
+    return null;
+  }
+  const memRef = doc(db, "schoolTeachers", user.uid);
+  // A pending / rejected request is replaced: the principal's hand-over already approves this person.
+  if (membership) await deleteDoc(memRef);
+  await setDoc(memRef, {
+    uid: user.uid,
+    schoolId: rep.schoolId,
+    name: user.displayName || rep.newName || email,
+    email,
+    whatsapp: null,
+    subject: rep.subject,
+    status: "approved",
+    classMap: {},
+    createdAt: serverTimestamp(),
+  });
+  await deleteDoc(repRef).catch(() => {});
+  return getMembership(user.uid);
+}
+
+/**
+ * Staff (head / counselor / supervisor / coordinator): give up your own school-portal access, e.g. when the account
+ * is paused or you moved to another school. The principal cannot do this (that would orphan the school — transfer
+ * the role instead).
+ */
+export async function leaveSchoolAsStaff(email: string) {
+  await removeStaffAccess(email);
 }
 
 /* ───────────────────────────── audit trail & feedback log ───────────────────────────── */

@@ -230,7 +230,8 @@ export async function claimPendingSubjects(uid: string, email: string | null) {
     }
     if (!claimed) continue;
     const parentClassId = (d.data() as ClassRecord).parentClassId;
-    if (parentClassId) {
+    // A class the principal handed over (replacedFrom) already has its students — never copy them in a second time.
+    if (parentClassId && !(d.data() as ClassRecord).replacedFrom) {
       try {
         await copyStudentsIntoSubject(parentClassId, d.id, (d.data() as ClassRecord).subject || "", uid);
       } catch (err) {
