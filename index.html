@@ -33,6 +33,27 @@
         }
       })(window.location);
     </script>
+    <!-- One site, several installable apps (teacher / parent / student): pick the manifest for this page before the app loads. Keep in sync with src/lib/appIdentity.ts -->
+    <script type="text/javascript">
+      (function () {
+        var p = location.pathname.replace(/\/+$/, "") || "/";
+        var app = "default";
+        if (/^\/portal\/parent(\/|$)/.test(p)) app = "parent";
+        else if (/^\/portal\/student(\/|$)/.test(p)) app = "student";
+        else if (/^\/(login|dashboard|preferences|classes|students|attendance|sessions|archive|notes|projects|linked-activities)(\/|$)/.test(p)) app = "teacher";
+        if (app === "default") return;
+        var color = { teacher: "#36207C", parent: "#0F8B8D", student: "#EA580C" }[app];
+        var title = { teacher: "LT Teacher", parent: "LT Parents", student: "LT Students" }[app];
+        var m = document.querySelector('link[rel="manifest"]');
+        if (m) m.setAttribute("href", "%BASE_URL%manifest-" + app + ".json");
+        var t = document.querySelector('link[rel="apple-touch-icon"]');
+        if (t) t.setAttribute("href", "%BASE_URL%icons/" + app + "-apple-touch.png");
+        var c = document.querySelector('meta[name="theme-color"]');
+        if (c) c.setAttribute("content", color);
+        var a = document.querySelector('meta[name="apple-mobile-web-app-title"]');
+        if (a) a.setAttribute("content", title);
+      })();
+    </script>
     <!-- Self-heal after a new deploy: if a hashed /assets/ file from a stale cached page is gone (404), reload once to pick up the new index.html. -->
     <script type="text/javascript">
       (function () {

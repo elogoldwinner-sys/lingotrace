@@ -1,4 +1,6 @@
-import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { useEffect } from "react";
+import { BrowserRouter, Routes, Route, Navigate, useLocation } from "react-router-dom";
+import { applyAppIdentity, appForPath } from "./lib/appIdentity";
 import { AuthProvider } from "./contexts/AuthContext";
 import { SchoolProvider } from "./contexts/SchoolContext";
 import ProtectedRoute from "./components/auth/ProtectedRoute";
@@ -40,6 +42,13 @@ import AdminTicketsPage from "./pages/admin/AdminTicketsPage";
 import SubmitProjectPage from "./pages/SubmitProjectPage";
 import StudentPortalPage from "./pages/portal/StudentPortalPage";
 import ParentPortalPage from "./pages/portal/ParentPortalPage";
+
+/** Keeps the manifest / theme colour / home-screen icon pointed at the app that belongs to the current page. */
+function AppIdentitySync() {
+  const { pathname } = useLocation();
+  useEffect(() => applyAppIdentity(appForPath(pathname)), [pathname]);
+  return null;
+}
 
 export default function App() {
   return (
@@ -113,6 +122,7 @@ export default function App() {
 
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
+        <AppIdentitySync />
         <InstallDock />
       </BrowserRouter>
       </SchoolProvider>
