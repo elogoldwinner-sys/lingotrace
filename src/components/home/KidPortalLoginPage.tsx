@@ -93,7 +93,7 @@ export default function KidPortalLoginPage({
           <p className="mt-6 text-sm font-semibold text-cream-600">{t("auth.noPortalAccount")}</p>
           <p className="mt-2 text-sm font-semibold text-cream-600">
             {t("auth.areYouATeacher")}{" "}
-            <Link to="/login" className="font-extrabold text-gold-600 hover:underline">
+            <Link to="/teacher/login" className="font-extrabold text-gold-600 hover:underline">
               {t("auth.teacherLoginLink")}
             </Link>
           </p>

@@ -22,16 +22,16 @@ import {
 } from "lucide-react";
 
 const navItems = [
-  { to: "/dashboard", key: "dashboard", icon: LayoutDashboard },
-  { to: "/preferences", key: "preferences", icon: SlidersHorizontal },
-  { to: "/classes", key: "classes", icon: BookOpen },
-  { to: "/students", key: "students", icon: Users },
-  { to: "/attendance", key: "attendance", icon: CalendarCheck },
-  { to: "/sessions", key: "sessions", icon: ClipboardList },
-  { to: "/archive", key: "archive", icon: Archive },
-  { to: "/notes", key: "notes", icon: NotebookPen },
-  { to: "/projects", key: "projects", icon: FolderCheck },
-  { to: "/linked-activities", key: "linkedActivities", icon: GraduationCap },
+  { to: "/teacher/dashboard", key: "dashboard", icon: LayoutDashboard },
+  { to: "/teacher/preferences", key: "preferences", icon: SlidersHorizontal },
+  { to: "/teacher/classes", key: "classes", icon: BookOpen },
+  { to: "/teacher/students", key: "students", icon: Users },
+  { to: "/teacher/attendance", key: "attendance", icon: CalendarCheck },
+  { to: "/teacher/sessions", key: "sessions", icon: ClipboardList },
+  { to: "/teacher/archive", key: "archive", icon: Archive },
+  { to: "/teacher/notes", key: "notes", icon: NotebookPen },
+  { to: "/teacher/projects", key: "projects", icon: FolderCheck },
+  { to: "/teacher/linked-activities", key: "linkedActivities", icon: GraduationCap },
 ];
 
 interface SidebarProps {

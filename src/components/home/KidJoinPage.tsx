@@ -111,7 +111,7 @@ export default function KidJoinPage({
 
           <p className="mt-6 text-center text-sm font-semibold text-cream-600">
             {t("join.haveAccountAlready")}{" "}
-            <Link to="/portal-login" className="font-extrabold text-gold-600 hover:underline">
+            <Link to="/parent/login" className="font-extrabold text-gold-600 hover:underline">
               {t("auth.portalLoginLink")}
             </Link>
           </p>

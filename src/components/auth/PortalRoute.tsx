@@ -4,7 +4,7 @@ import Spinner from "../common/Spinner";
 import type { ReactNode } from "react";
 
 /**
- * Guards /portal/student and /portal/parent. Checks whether THIS account has
+ * Guards /student/portal and /parent/portal. Checks whether THIS account has
  * the requested portal identity (portalParent / portalStudent) rather than a
  * single exclusive "role" — an account can have a teacher profile and a
  * parent/student profile at the same time, so having one doesn't disqualify
@@ -28,16 +28,18 @@ export default function PortalRoute({
     );
   }
 
+  // Each portal has its own login URL so each installed app stays inside its own scope.
+  const loginPath = allow === "student" ? "/student/login" : "/parent/login";
   if (!user) {
-    return <Navigate to="/portal-login" replace />;
+    return <Navigate to={loginPath} replace />;
   }
 
   const hasRequested = allow === "parent" ? !!portalParent : !!portalStudent;
   if (!hasRequested) {
-    if (profile) return <Navigate to="/dashboard" replace />;
-    if (portalParent) return <Navigate to="/portal/parent" replace />;
-    if (portalStudent) return <Navigate to="/portal/student" replace />;
-    return <Navigate to="/portal-login" replace />;
+    if (profile) return <Navigate to="/teacher/dashboard" replace />;
+    if (portalParent) return <Navigate to="/parent/portal" replace />;
+    if (portalStudent) return <Navigate to="/student/portal" replace />;
+    return <Navigate to={loginPath} replace />;
   }
 
   return <>{children}</>;

@@ -469,7 +469,7 @@ export default function ParentPortalPage() {
   // instead of a separate login (see AuthContext.resolveRole).
   const canSwitchToTeacher = !!profile;
   function handleSwitchToTeacher() {
-    navigate("/dashboard");
+    navigate("/teacher/dashboard");
   }
   const { theme } = useTheme();
   const [activeStudentId, setActiveStudentId] = useState("");
@@ -633,7 +633,7 @@ export default function ParentPortalPage() {
 
   async function handleSignOut() {
     await signOut();
-    navigate("/portal-login");
+    navigate("/parent/login");
   }
 
   function toggleLanguage() {

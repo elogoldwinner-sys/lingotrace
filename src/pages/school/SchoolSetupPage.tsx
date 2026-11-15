@@ -26,7 +26,7 @@ export default function SchoolSetupPage() {
   const [error, setError] = useState("");
 
   if (authLoading || loading) return <div className="flex min-h-screen items-center justify-center bg-cream"><Spinner /></div>;
-  if (!user) return <Navigate to="/school-login" replace />;
+  if (!user) return <Navigate to="/school/login" replace />;
   if (staff) return <Navigate to="/school" replace />;
 
   function addSubject(value: string) {
@@ -117,7 +117,7 @@ export default function SchoolSetupPage() {
         </div>
         {error && <p className="text-sm text-red-600">{error}</p>}
         <div className="flex justify-between gap-2">
-          <Link to="/school-login" className="btn-secondary">
+          <Link to="/school/login" className="btn-secondary">
             {t("common.cancel")}
           </Link>
           <button type="submit" disabled={busy || !name.trim()} className="btn-primary disabled:opacity-50">

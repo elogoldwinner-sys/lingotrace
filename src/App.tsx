@@ -43,6 +43,12 @@ import SubmitProjectPage from "./pages/SubmitProjectPage";
 import StudentPortalPage from "./pages/portal/StudentPortalPage";
 import ParentPortalPage from "./pages/portal/ParentPortalPage";
 
+/** Sends an old URL to its new home, keeping the query string and hash (invite codes, class/session ids…). */
+function LegacyRedirect({ to }: { to: string }) {
+  const { search, hash } = useLocation();
+  return <Navigate to={`${to}${search}${hash}`} replace />;
+}
+
 // The app (teacher / parent / student / school) whose manifest the browser read when this page was loaded.
 const loadedApp = currentApp();
 
@@ -72,12 +78,13 @@ export default function App() {
       <BrowserRouter basename={import.meta.env.BASE_URL}>
         <Routes>
           <Route path="/" element={<HomePage />} />
-          <Route path="/login" element={<LoginPage />} />
-          <Route path="/portal-login" element={<PortalLoginPage />} />
-          <Route path="/sign-in" element={<Navigate to="/login" replace />} />
-          <Route path="/sign-up" element={<Navigate to="/login" replace />} />
+          <Route path="/teacher/login" element={<LoginPage />} />
+          <Route path="/parent/login" element={<PortalLoginPage />} />
+          <Route path="/student/login" element={<PortalLoginPage />} />
+          <Route path="/sign-in" element={<Navigate to="/teacher/login" replace />} />
+          <Route path="/sign-up" element={<Navigate to="/teacher/login" replace />} />
           <Route path="/join/:token" element={<JoinPage />} />
-          <Route path="/school-login" element={<SchoolLoginPage />} />
+          <Route path="/school/login" element={<SchoolLoginPage />} />
           <Route path="/school/setup" element={<SchoolSetupPage />} />
           <Route path="/school" element={<SchoolPortalLayout />}>
             <Route index element={<SchoolOverviewPage />} />
@@ -100,7 +107,7 @@ export default function App() {
           <Route path="/submit/:projectId" element={<SubmitProjectPage />} />
 
           <Route
-            path="/portal/student"
+            path="/student/portal"
             element={
               <PortalRoute allow="student">
                 <StudentPortalPage />
@@ -108,7 +115,7 @@ export default function App() {
             }
           />
           <Route
-            path="/portal/parent"
+            path="/parent/portal"
             element={
               <PortalRoute allow="parent">
                 <ParentPortalPage />
@@ -123,18 +130,28 @@ export default function App() {
               </ProtectedRoute>
             }
           >
-            <Route path="/dashboard" element={<DashboardPage />} />
-            <Route path="/preferences" element={<PreferencesPage />} />
-            <Route path="/classes" element={<ClassesPage />} />
-            <Route path="/students" element={<StudentsPage />} />
-            <Route path="/attendance" element={<AttendancePage />} />
-            <Route path="/sessions" element={<SessionsPage />} />
-            <Route path="/archive" element={<ArchivePage />} />
-            <Route path="/notes" element={<NotesPage />} />
-            <Route path="/projects" element={<ProjectsPage />} />
-            <Route path="/linked-activities" element={<LinkedActivitiesPage />} />
+            <Route path="/teacher/dashboard" element={<DashboardPage />} />
+            <Route path="/teacher/preferences" element={<PreferencesPage />} />
+            <Route path="/teacher/classes" element={<ClassesPage />} />
+            <Route path="/teacher/students" element={<StudentsPage />} />
+            <Route path="/teacher/attendance" element={<AttendancePage />} />
+            <Route path="/teacher/sessions" element={<SessionsPage />} />
+            <Route path="/teacher/archive" element={<ArchivePage />} />
+            <Route path="/teacher/notes" element={<NotesPage />} />
+            <Route path="/teacher/projects" element={<ProjectsPage />} />
+            <Route path="/teacher/linked-activities" element={<LinkedActivitiesPage />} />
           </Route>
 
+
+          {/* Old URLs (bookmarks, links already sent to parents/students, installed shortcuts) → the new per-portal URLs */}
+          <Route path="/login" element={<LegacyRedirect to="/teacher/login" />} />
+          <Route path="/portal-login" element={<LegacyRedirect to="/parent/login" />} />
+          <Route path="/school-login" element={<LegacyRedirect to="/school/login" />} />
+          <Route path="/portal/parent" element={<LegacyRedirect to="/parent/portal" />} />
+          <Route path="/portal/student" element={<LegacyRedirect to="/student/portal" />} />
+          {["dashboard", "preferences", "classes", "students", "attendance", "sessions", "archive", "notes", "projects", "linked-activities"].map((n) => (
+            <Route key={n} path={`/${n}`} element={<LegacyRedirect to={`/teacher/${n}`} />} />
+          ))}
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
         <AppIdentitySync />

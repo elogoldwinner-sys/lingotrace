@@ -78,7 +78,7 @@ export default function PeriodNowCard({ classes }: { classes: ClassRecord[] }) {
     setError(false);
     try {
       const sessionId = await ensurePeriodSession(classId, now.date, periodNumber);
-      navigate(`/attendance?classId=${encodeURIComponent(classId)}&sessionId=${encodeURIComponent(sessionId)}`);
+      navigate(`/teacher/attendance?classId=${encodeURIComponent(classId)}&sessionId=${encodeURIComponent(sessionId)}`);
     } catch (err) {
       console.error("Couldn't open the period's attendance", err);
       setError(true);

@@ -408,7 +408,7 @@ export default function AttendancePage({ archived = false }: { archived?: boolea
                               {expandedSessionId === s.id && (
                                 <div className="px-5 pb-5 space-y-2 bg-cream-100/60 pt-2">
                                   <div className="flex justify-end">
-                                    <Link to={`/sessions?classId=${encodeURIComponent(s.classId)}&sessionId=${encodeURIComponent(s.id)}`} className="btn-gold py-1.5 px-3 text-sm">
+                                    <Link to={`/teacher/sessions?classId=${encodeURIComponent(s.classId)}&sessionId=${encodeURIComponent(s.id)}`} className="btn-gold py-1.5 px-3 text-sm">
                                       <Play size={15} />
                                       {t("sched.goToSession", "Go to this session")}
                                     </Link>

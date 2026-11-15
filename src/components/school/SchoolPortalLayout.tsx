@@ -59,7 +59,7 @@ export default function SchoolPortalLayout() {
       </div>
     );
   }
-  if (!user || !staff || !school) return <Navigate to="/school-login" replace />;
+  if (!user || !staff || !school) return <Navigate to="/school/login" replace />;
 
   const tabs = TABS.filter((x) => x.roles.includes(staff.role));
   const roleText = staff.jobTitle || t(`sp.role.${staff.role}`, staff.role);
@@ -100,7 +100,7 @@ export default function SchoolPortalLayout() {
               {/* Role switcher: the same Google account can also be a teacher / parent / student. */}
               {profile && (
                 <button
-                  onClick={() => navigate("/dashboard")}
+                  onClick={() => navigate("/teacher/dashboard")}
                   className="flex items-center gap-1.5 rounded-lg border border-gold/40 px-3 py-1.5 text-xs font-semibold text-navy hover:bg-gold-50"
                 >
                   <Repeat size={14} />
@@ -109,7 +109,7 @@ export default function SchoolPortalLayout() {
               )}
               {portalParent && (
                 <button
-                  onClick={() => navigate("/portal/parent")}
+                  onClick={() => navigate("/parent/portal")}
                   className="flex items-center gap-1.5 rounded-lg border border-gold/40 px-3 py-1.5 text-xs font-semibold text-navy hover:bg-gold-50"
                 >
                   <Repeat size={14} />
@@ -118,7 +118,7 @@ export default function SchoolPortalLayout() {
               )}
               {!portalParent && portalStudent && (
                 <button
-                  onClick={() => navigate("/portal/student")}
+                  onClick={() => navigate("/student/portal")}
                   className="flex items-center gap-1.5 rounded-lg border border-gold/40 px-3 py-1.5 text-xs font-semibold text-navy hover:bg-gold-50"
                 >
                   <Repeat size={14} />
@@ -128,7 +128,7 @@ export default function SchoolPortalLayout() {
               <button
                 onClick={async () => {
                   await signOut();
-                  navigate("/school-login");
+                  navigate("/school/login");
                 }}
                 className="flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold text-navy/70 hover:bg-cream-400/60"
               >

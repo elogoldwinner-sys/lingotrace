@@ -1,6 +1,6 @@
 // LingoTrace Service Worker — offline shell + notification display.
 // Bump CACHE_NAME to force every client to drop old caches.
-const CACHE_NAME = 'lingotrace-v2';
+const CACHE_NAME = 'lingotrace-v3';
 const SCOPE = self.registration.scope; // e.g. https://example.com/
 const PRECACHE = ['logo-192.png', 'logo-512.png', 'apple-touch-icon.png', 'favicon.ico', 'manifest.json'];
 
@@ -38,6 +38,19 @@ self.addEventListener('fetch', (event) => {
           if (res && res.status === 200) {
             const copy = res.clone();
             caches.open(CACHE_NAME).then((c) => c.put(new URL('index.html', SCOPE), copy));
+            return res;
+          }
+          // GitHub Pages has no real file for app routes like /teacher/dashboard and answers 404 — serve the app shell
+          // instead (HTTP 200) so deep links and installed-app launches open straight into the app.
+          if (res && res.status === 404) {
+            return fetch(new URL('index.html', SCOPE)).then((shell) => {
+              if (shell && shell.status === 200) {
+                const copy = shell.clone();
+                caches.open(CACHE_NAME).then((c) => c.put(new URL('index.html', SCOPE), copy));
+                return shell;
+              }
+              return res;
+            });
           }
           return res;
         })

@@ -38,10 +38,10 @@
       (function () {
         var p = location.pathname.replace(/\/+$/, "") || "/";
         var app = "default";
-        if (p === "/portal-login" || /^\/portal\/parent(\/|$)/.test(p)) app = "parent";
-        else if (/^\/portal\/student(\/|$)/.test(p)) app = "student";
-        else if (p === "/school-login" || /^\/school(\/|$)/.test(p)) app = "school";
-        else if (/^\/(login|dashboard|preferences|classes|students|attendance|sessions|archive|notes|projects|linked-activities)(\/|$)/.test(p)) app = "teacher";
+        if (/^\/(parent|portal\/parent)(\/|$)/.test(p) || p === "/portal-login") app = "parent";
+        else if (/^\/(student|portal\/student)(\/|$)/.test(p)) app = "student";
+        else if (/^\/school(\/|$)/.test(p) || p === "/school-login") app = "school";
+        else if (/^\/(teacher|login|dashboard|preferences|classes|students|attendance|sessions|archive|notes|projects|linked-activities)(\/|$)/.test(p)) app = "teacher";
         if (app === "default") return;
         var color = { teacher: "#36207C", parent: "#0F8B8D", student: "#EA580C", school: "#2563EB" }[app];
         var title = { teacher: "LT Teacher", parent: "LT Parents", student: "LT Students", school: "LT School" }[app];

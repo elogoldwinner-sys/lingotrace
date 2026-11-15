@@ -21,7 +21,7 @@ export default function LoginPage() {
     setSubmitting(true);
     try {
       await signInTeacherWithGoogle();
-      navigate("/dashboard", { replace: true });
+      navigate("/teacher/dashboard", { replace: true });
     } catch (err) {
       if (isDismissedPopupError(err)) {
         // User closed the popup or a second click superseded it — no error to show.
@@ -81,13 +81,13 @@ export default function LoginPage() {
 
           <p className="mt-6 text-center text-sm text-cream-600">
             {t("sp.areYouSchoolStaff", "School principal, department head or counselor?")}{" "}
-            <Link to="/school-login" className="font-semibold text-gold hover:underline">
+            <Link to="/school/login" className="font-semibold text-gold hover:underline">
               {t("sp.schoolPortalLink", "School portal")}
             </Link>
           </p>
           <p className="mt-2 text-center text-sm text-cream-600">
             {t("auth.areYouAStudent")}{" "}
-            <Link to="/portal-login" className="font-semibold text-gold hover:underline">
+            <Link to="/parent/login" className="font-semibold text-gold hover:underline">
               {t("auth.portalLoginLink")}
             </Link>
           </p>

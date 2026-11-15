@@ -193,14 +193,14 @@ export default function KidHome() {
 
         <div className="mt-7 grid w-full grid-cols-1 gap-5 sm:grid-cols-2 sm:gap-6 lg:mt-9 lg:gap-8">
           <PortalCard
-            to="/login"
+            to="/teacher/login"
             tone="teacher"
             icon={<CapIcon className="h-11 w-11 sm:h-14 sm:w-14" />}
             title={t("home.teacherPortal")}
             desc={t("home.teacherPortalDesc")}
           />
           <PortalCard
-            to="/portal-login"
+            to="/parent/login"
             tone="parent"
             icon={<HeartRibbonIcon className="h-11 w-11 sm:h-14 sm:w-14" />}
             title={t("home.parentPortal")}
@@ -209,7 +209,7 @@ export default function KidHome() {
         </div>
 
         <Link
-          to="/school-login"
+          to="/school/login"
           className="mt-6 inline-flex items-center gap-3 rounded-full border-x-[3px] border-t-[3px] border-b-[6px] border-[#E4D5FD] border-b-[#B98BF1] bg-gradient-to-b from-white to-[#F5F0FF] px-6 py-3 text-lg font-extrabold text-navy-700 shadow-[0_14px_26px_-16px_rgba(101,58,205,0.55)] outline-none transition-transform duration-200 hover:-translate-y-1 focus-visible:ring-4 focus-visible:ring-navy-300 motion-reduce:transition-none motion-reduce:hover:translate-y-0"
         >
           <span className="flex h-9 w-9 items-center justify-center rounded-full bg-gradient-to-b from-[#6C41CE] to-[#4522A6] text-white">

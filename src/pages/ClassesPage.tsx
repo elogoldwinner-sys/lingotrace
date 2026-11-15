@@ -289,7 +289,7 @@ export default function ClassesPage() {
               <div className="flex items-start justify-between">
                 <div>
                   <Link
-                    to={`/students?classId=${c.id}`}
+                    to={`/teacher/students?classId=${c.id}`}
                     className="font-semibold text-navy hover:text-gold"
                   >
                     {c.name}

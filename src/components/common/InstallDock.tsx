@@ -70,7 +70,7 @@ export default function InstallDock() {
   // Each portal offers its own app: pages that belong to no single portal (home, school, admin, invites) show no bar.
   // The parent portal page has its own permanent install card, so the floating bar is skipped there.
   const app = appForPath(pathname);
-  if (app === "default" || pathname.replace(/\/+$/, "").startsWith("/portal/parent")) return null;
+  if (app === "default" || pathname.replace(/\/+$/, "").startsWith("/parent/portal")) return null;
   if (isRunningAsApp()) return null;
   const appName = t(`pwa.appName.${app}`);
 

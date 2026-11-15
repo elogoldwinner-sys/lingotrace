@@ -30,7 +30,7 @@ export default function HomePage() {
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
           <Link
-            to="/login"
+            to="/teacher/login"
             className="card p-8 flex flex-col items-center gap-3 hover:shadow-md hover:border-gold/40 border border-transparent transition"
           >
             <div className="flex h-16 w-16 items-center justify-center rounded-full bg-navy text-gold">
@@ -41,7 +41,7 @@ export default function HomePage() {
           </Link>
 
           <Link
-            to="/portal-login"
+            to="/parent/login"
             className="card p-8 flex flex-col items-center gap-3 hover:shadow-md hover:border-gold/40 border border-transparent transition"
           >
             <div className="flex h-16 w-16 items-center justify-center rounded-full bg-gold-50 text-gold">
@@ -52,7 +52,7 @@ export default function HomePage() {
           </Link>
         </div>
         <Link
-          to="/school-login"
+          to="/school/login"
           className="card mt-6 flex items-center justify-center gap-3 p-5 hover:shadow-md hover:border-gold/40 border border-transparent transition"
         >
           <div className="flex h-11 w-11 items-center justify-center rounded-full bg-navy text-gold">

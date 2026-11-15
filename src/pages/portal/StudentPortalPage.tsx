@@ -157,7 +157,7 @@ export default function StudentPortalPage() {
 
   async function handleSignOut() {
     await signOut();
-    navigate("/portal-login");
+    navigate("/student/login");
   }
 
   function toggleLanguage() {
@@ -206,7 +206,7 @@ export default function StudentPortalPage() {
           </button>
           {canSwitchToTeacher && (
             <button
-              onClick={() => navigate("/dashboard")}
+              onClick={() => navigate("/teacher/dashboard")}
               className="flex items-center gap-1.5 rounded-lg border border-gold/40 px-3 py-1.5 text-xs font-semibold text-navy hover:bg-gold-50"
               title={t("nav.switchToTeacher")}
             >

@@ -68,7 +68,7 @@ export default function JoinPage() {
       if (existingStudent) {
         await refreshPortalRole();
         setStage("done");
-        navigate("/portal/student", { replace: true });
+        navigate("/student/portal", { replace: true });
         return;
       }
       const newStudentId = await createStudent({
@@ -91,7 +91,7 @@ export default function JoinPage() {
       if (existingStudent) {
         await refreshPortalRole();
         setStage("done");
-        navigate("/portal/student", { replace: true });
+        navigate("/student/portal", { replace: true });
         return;
       }
       // Adds this child to the parent's account — creates the account on
@@ -116,7 +116,7 @@ export default function JoinPage() {
     }
     await refreshPortalRole();
     setStage("done");
-    navigate(invite.role === "student" ? "/portal/student" : "/portal/parent", {
+    navigate(invite.role === "student" ? "/student/portal" : "/parent/portal", {
       replace: true,
     });
   }
@@ -252,7 +252,7 @@ export default function JoinPage() {
 
         <p className="mt-6 text-center text-sm text-cream-600">
           {t("join.haveAccountAlready")}{" "}
-          <Link to="/portal-login" className="font-semibold text-gold hover:underline">
+          <Link to="/parent/login" className="font-semibold text-gold hover:underline">
             {t("auth.portalLoginLink")}
           </Link>
         </p>

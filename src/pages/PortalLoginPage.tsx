@@ -31,12 +31,12 @@ export default function PortalLoginPage() {
 
     const parent = await getParentProfile(uid);
     if (parent) {
-      navigate("/portal/parent", { replace: true });
+      navigate("/parent/portal", { replace: true });
       return;
     }
     const student = await findStudentByAuthUid(uid);
     if (student) {
-      navigate("/portal/student", { replace: true });
+      navigate("/student/portal", { replace: true });
       return;
     }
     setError(t("auth.notRegisteredError"));
@@ -103,7 +103,7 @@ export default function PortalLoginPage() {
           <p className="mt-6 text-center text-sm text-cream-600">{t("auth.noPortalAccount")}</p>
           <p className="mt-2 text-center text-sm text-cream-600">
             {t("auth.areYouATeacher")}{" "}
-            <Link to="/login" className="font-semibold text-gold hover:underline">
+            <Link to="/teacher/login" className="font-semibold text-gold hover:underline">
               {t("auth.teacherLoginLink")}
             </Link>
           </p>

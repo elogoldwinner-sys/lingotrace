@@ -23,13 +23,13 @@ export default function ProtectedRoute({ children }: { children: ReactNode }) {
   }
 
   if (!user) {
-    return <Navigate to="/login" replace />;
+    return <Navigate to="/teacher/login" replace />;
   }
 
   if (!profile) {
     if (staff) return <Navigate to="/school" replace />;
-    if (portalParent) return <Navigate to="/portal/parent" replace />;
-    if (portalStudent) return <Navigate to="/portal/student" replace />;
+    if (portalParent) return <Navigate to="/parent/portal" replace />;
+    if (portalStudent) return <Navigate to="/student/portal" replace />;
   }
 
   return <>{children}</>;

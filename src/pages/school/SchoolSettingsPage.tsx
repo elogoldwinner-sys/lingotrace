@@ -80,7 +80,7 @@ export default function SchoolSettingsPage() {
         toName,
       });
       await refresh(); // this account no longer has access → the portal sends it back to the sign-in page
-      navigate("/school-login", { replace: true });
+      navigate("/school/login", { replace: true });
     } catch (err) {
       console.error("Principal transfer failed", err);
       setError(t("sp.transferError", "Couldn't transfer the role. Check the Gmail — it may already be used for another school."));

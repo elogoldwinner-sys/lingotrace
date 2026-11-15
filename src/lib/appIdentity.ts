@@ -19,16 +19,20 @@ export const APP_META: Record<AppId, { manifest: string; themeColor: string; tit
   student: { manifest: "manifest-student.json", themeColor: "#EA580C", title: "LT Students", touchIcon: "icons/student-apple-touch.png" },
 };
 
-const TEACHER_PATHS = ["/login", "/dashboard", "/preferences", "/classes", "/students", "/attendance", "/sessions", "/archive", "/notes", "/projects", "/linked-activities"];
+// Each app owns one URL prefix so the installed apps' scopes never overlap (an overlap makes Chrome offer
+// "Open in app" instead of "Install"): /teacher, /parent, /student, /school.
+// The pre-restructure URLs are still recognised because they redirect to the new ones.
+const LEGACY_TEACHER = ["/login", "/dashboard", "/preferences", "/classes", "/students", "/attendance", "/sessions", "/archive", "/notes", "/projects", "/linked-activities"];
+
+const under = (p: string, prefix: string) => p === prefix || p.startsWith(prefix + "/");
 
 /** Which app a path (without the router base) belongs to. */
 export function appForPath(path: string): AppId {
   const p = path.replace(/\/+$/, "") || "/";
-  // /portal-login is the entry of the "Parent Portal" card on the home page.
-  if (p === "/portal-login" || p === "/portal/parent" || p.startsWith("/portal/parent/")) return "parent";
-  if (p === "/portal/student" || p.startsWith("/portal/student/")) return "student";
-  if (p === "/school-login" || p === "/school" || p.startsWith("/school/")) return "school";
-  if (TEACHER_PATHS.some((t) => p === t || p.startsWith(t + "/"))) return "teacher";
+  if (under(p, "/parent") || p === "/portal-login" || under(p, "/portal/parent")) return "parent";
+  if (under(p, "/student") || under(p, "/portal/student")) return "student";
+  if (under(p, "/school") || p === "/school-login") return "school";
+  if (under(p, "/teacher") || LEGACY_TEACHER.some((t) => under(p, t))) return "teacher";
   return "default";
 }
 

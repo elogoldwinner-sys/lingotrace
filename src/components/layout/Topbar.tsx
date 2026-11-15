@@ -40,7 +40,7 @@ export default function Topbar() {
   // This same Google account may ALSO have a parent or student portal
   // profile (e.g. a teacher who joined a class as a parent too) — when it
   // does, offer a one-click switch instead of forcing a separate login.
-  const otherPortalPath = portalParent ? "/portal/parent" : portalStudent ? "/portal/student" : null;
+  const otherPortalPath = portalParent ? "/parent/portal" : portalStudent ? "/student/portal" : null;
   const otherPortalLabel = portalParent
     ? t("nav.switchToParentPortal")
     : t("nav.switchToStudentPortal");
@@ -70,7 +70,7 @@ export default function Topbar() {
 
   async function handleSignOut() {
     await signOut();
-    navigate("/login");
+    navigate("/teacher/login");
   }
 
   function toggleLanguage() {

@@ -98,7 +98,7 @@ export default function SchoolLoginPage() {
 
           <p className="mt-6 text-center text-sm text-cream-600">
             {t("sp.areYouTeacher", "Are you a teacher?")}{" "}
-            <Link to="/login" className="font-semibold text-gold hover:underline">
+            <Link to="/teacher/login" className="font-semibold text-gold hover:underline">
               {t("sp.teacherLogin", "Teacher login")}
             </Link>
           </p>

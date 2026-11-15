@@ -169,7 +169,7 @@ function RecentClasses({
     <section className={`p-5 sm:p-6 ${CARD}`}>
       <div className="mb-4 flex items-center justify-between gap-3">
         <SectionTitle icon={<Users size={24} />}>{t("dashboard.recentClasses")}</SectionTitle>
-        <TextLink to="/classes">{t("dashboard.viewAll")}</TextLink>
+        <TextLink to="/teacher/classes">{t("dashboard.viewAll")}</TextLink>
       </div>
 
       {rows.length === 0 ? (
@@ -220,7 +220,7 @@ function RecentClasses({
                     </td>
                     <td className="px-2 py-3 text-end">
                       <Link
-                        to="/classes"
+                        to="/teacher/classes"
                         title={t("dashboard.openClass")}
                         aria-label={t("dashboard.openClass")}
                         className="inline-flex rounded-full p-1.5 text-cream-600 hover:bg-navy-50 hover:text-navy-700"
@@ -242,9 +242,9 @@ function RecentClasses({
 /* ───────────────────────────── quick actions ───────────────────────────── */
 
 const ACTIONS = [
-  { to: "/classes", key: "createClass", icon: CirclePlus, tone: "bg-[#E6DEFF] border-[#D4C8FB] text-navy-800" },
-  { to: "/students", key: "addStudents", icon: Users, tone: "bg-[#DDEBFF] border-[#C6DBFA] text-[#2A63C4]" },
-  { to: "/sessions", key: "createSession", icon: FileText, tone: "bg-[#D9F6E8] border-[#B8EAD2] text-[#178F63]" },
+  { to: "/teacher/classes", key: "createClass", icon: CirclePlus, tone: "bg-[#E6DEFF] border-[#D4C8FB] text-navy-800" },
+  { to: "/teacher/students", key: "addStudents", icon: Users, tone: "bg-[#DDEBFF] border-[#C6DBFA] text-[#2A63C4]" },
+  { to: "/teacher/sessions", key: "createSession", icon: FileText, tone: "bg-[#D9F6E8] border-[#B8EAD2] text-[#178F63]" },
 ] as const;
 
 const ACTION_BOX =
@@ -284,7 +284,7 @@ function QuickActions({ classes }: { classes: ClassRecord[] }) {
     setBusy(true);
     try {
       const sessionId = await ensurePeriodSession(current.classId, current.date, current.period);
-      navigate(`/attendance?classId=${encodeURIComponent(current.classId)}&sessionId=${encodeURIComponent(sessionId)}`);
+      navigate(`/teacher/attendance?classId=${encodeURIComponent(current.classId)}&sessionId=${encodeURIComponent(sessionId)}`);
     } catch (err) {
       console.error("Couldn't open the current session's attendance", err);
       setError(true);
@@ -355,7 +355,7 @@ function UpcomingCalendar({ sessionDates, today, classes }: { sessionDates: Set<
     <section className={`relative p-5 sm:p-6 ${CARD}`}>
       <div className="mb-3 flex items-center justify-between gap-3">
         <SectionTitle icon={<CalendarDays size={24} />}>{t("dashboard.upcoming")}</SectionTitle>
-        <TextLink to="/sessions">{t("dashboard.viewCalendar")}</TextLink>
+        <TextLink to="/teacher/sessions">{t("dashboard.viewCalendar")}</TextLink>
       </div>
 
       <PeriodNowCard classes={classes} />
@@ -499,7 +499,7 @@ export default function KidDashboard({
 
         <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
           <StatCard
-            to="/classes"
+            to="/teacher/classes"
             icon={<BookOpen size={26} />}
             label={t("dashboard.totalClasses")}
             value={classes.length}
@@ -507,7 +507,7 @@ export default function KidDashboard({
             tone={{ disc: "bg-[#E9E2FF] text-[#6D4AE0]", label: "text-[#6D4AE0]", arrow: "bg-[#7A5AF0]" }}
           />
           <StatCard
-            to="/students"
+            to="/teacher/students"
             icon={<Users size={26} />}
             label={t("dashboard.totalStudents")}
             value={totalStudents}
@@ -515,7 +515,7 @@ export default function KidDashboard({
             tone={{ disc: "bg-[#DDEBFF] text-[#3B82F6]", label: "text-[#3B7FD8]", arrow: "bg-[#3B82F6]" }}
           />
           <StatCard
-            to="/sessions"
+            to="/teacher/sessions"
             icon={<CalendarCheck size={26} />}
             label={t("dashboard.todaySessions")}
             value={todayCount}
