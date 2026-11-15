@@ -69,6 +69,7 @@
     "addStudents": "Add Students",
     "viewAttendance": "View Attendance",
     "currentAttendance": "Current Session Attendance",
+    "noCurrentSession": "Available during your sessions only",
     "createSession": "Create Session",
     "upcoming": "Upcoming",
     "viewCalendar": "View calendar",

@@ -69,6 +69,7 @@
     "addStudents": "إضافة طلاب",
     "viewAttendance": "عرض الحضور",
     "currentAttendance": "حضور الحصة الحالية",
+    "noCurrentSession": "متاح أثناء حصصك فقط",
     "createSession": "إنشاء حصة",
     "upcoming": "القادم",
     "viewCalendar": "عرض التقويم",

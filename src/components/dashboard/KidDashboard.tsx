@@ -257,38 +257,52 @@ function QuickActions({ classes }: { classes: ClassRecord[] }) {
   const { schedule } = useSchedule();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState(false);
+  const [tick, setTick] = useState(0);
 
-  // Opens the attendance sheet of the session the teacher is in right now (same lookup as the "Current period" card:
-  // timetable + the school's period times). Outside a timetabled period it just opens the attendance page.
-  async function openCurrentAttendance() {
-    if (busy) return;
-    setError(false);
-    if (schedule) {
-      const now = zonedNow(schedule.timezone);
-      const state = periodState(schedule, now);
-      if (state.kind === "during") {
-        const classId = (profile?.timetable || {})[slotKey(now.weekday, state.index)];
-        if (classId && classes.some((c) => c.id === classId)) {
-          setBusy(true);
-          try {
-            const sessionId = await ensurePeriodSession(classId, now.date, state.index + 1);
-            navigate(`/attendance?classId=${encodeURIComponent(classId)}&sessionId=${encodeURIComponent(sessionId)}`);
-            return;
-          } catch (err) {
-            console.error("Couldn't open the current session's attendance", err);
-            setError(true);
-            setBusy(false);
-            return;
-          }
-        }
-      }
+  // Re-check every 15 seconds so the button switches on/off as periods start and end.
+  useEffect(() => {
+    const id = window.setInterval(() => setTick((n) => n + 1), 15000);
+    return () => window.clearInterval(id);
+  }, []);
+
+  // The class the teacher has right now (timetable + school period times), or null outside a timetabled period.
+  void tick;
+  let current: { classId: string; period: number; date: string } | null = null;
+  if (schedule) {
+    const now = zonedNow(schedule.timezone);
+    const state = periodState(schedule, now);
+    if (state.kind === "during") {
+      const classId = (profile?.timetable || {})[slotKey(now.weekday, state.index)];
+      if (classId && classes.some((c) => c.id === classId)) current = { classId, period: state.index + 1, date: now.date };
     }
-    navigate("/attendance");
   }
 
-  const attendanceBox = `${ACTION_BOX} bg-[#FFF0C6] border-[#F6DD92] text-[#C27500] disabled:opacity-70`;
+  // Opens the attendance sheet of the session in progress (same lookup as the "Current period" card).
+  async function openCurrentAttendance() {
+    if (busy || !current) return;
+    setError(false);
+    setBusy(true);
+    try {
+      const sessionId = await ensurePeriodSession(current.classId, current.date, current.period);
+      navigate(`/attendance?classId=${encodeURIComponent(current.classId)}&sessionId=${encodeURIComponent(sessionId)}`);
+    } catch (err) {
+      console.error("Couldn't open the current session's attendance", err);
+      setError(true);
+      setBusy(false);
+    }
+  }
+
+  const inSession = !!current;
+  const attendanceBox = `${ACTION_BOX} bg-[#FFF0C6] border-[#F6DD92] text-[#C27500] disabled:cursor-not-allowed disabled:opacity-45 disabled:hover:translate-y-0`;
   const attendanceButton = (
-    <button key="currentAttendance" type="button" onClick={openCurrentAttendance} disabled={busy} className={attendanceBox}>
+    <button
+      key="currentAttendance"
+      type="button"
+      onClick={openCurrentAttendance}
+      disabled={busy || !inSession}
+      title={inSession ? undefined : t("dashboard.noCurrentSession", "Available during your sessions only")}
+      className={attendanceBox}
+    >
       <CalendarCheck size={26} />
       {busy ? t("common.loading") : t("dashboard.currentAttendance", "Current Session Attendance")}
     </button>
