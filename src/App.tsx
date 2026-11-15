@@ -1,6 +1,6 @@
 import { useEffect } from "react";
 import { BrowserRouter, Routes, Route, Navigate, useLocation } from "react-router-dom";
-import { applyAppIdentity, appForPath } from "./lib/appIdentity";
+import { applyAppIdentity, appForPath, currentApp } from "./lib/appIdentity";
 import { AuthProvider } from "./contexts/AuthContext";
 import { SchoolProvider } from "./contexts/SchoolContext";
 import ProtectedRoute from "./components/auth/ProtectedRoute";
@@ -43,10 +43,25 @@ import SubmitProjectPage from "./pages/SubmitProjectPage";
 import StudentPortalPage from "./pages/portal/StudentPortalPage";
 import ParentPortalPage from "./pages/portal/ParentPortalPage";
 
-/** Keeps the manifest / theme colour / home-screen icon pointed at the app that belongs to the current page. */
+// The app (teacher / parent / student / school) whose manifest the browser read when this page was loaded.
+const loadedApp = currentApp();
+
+/**
+ * Keeps the manifest / theme colour / home-screen icon pointed at the app that belongs to the current page.
+ * Browsers decide installability from the manifest they read at page load, so when the visitor moves to a different
+ * portal inside the site without a reload (e.g. teacher login → school login), reload once so the new portal's own
+ * "Install app" button is offered instead of the previous portal's (already installed) one.
+ */
 function AppIdentitySync() {
   const { pathname } = useLocation();
-  useEffect(() => applyAppIdentity(appForPath(pathname)), [pathname]);
+  useEffect(() => {
+    const app = appForPath(pathname);
+    if (app !== "default" && app !== loadedApp) {
+      window.location.replace(window.location.href);
+      return;
+    }
+    applyAppIdentity(app);
+  }, [pathname]);
   return null;
 }
 
