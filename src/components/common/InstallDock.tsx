@@ -1,4 +1,6 @@
 import { useEffect, useState } from "react";
+import { useLocation } from "react-router-dom";
+import { appForPath } from "../../lib/appIdentity";
 import { useTranslation } from "react-i18next";
 import { ChevronDown, ChevronUp, Download, Share2, MoreVertical, ExternalLink, PlusSquare, Check, Smartphone } from "lucide-react";
 import { getInstallMode, isRunningAsApp, subscribeInstall, triggerInstall, type InstallMode } from "../../lib/pwaInstall";
@@ -57,6 +59,7 @@ function Step({ n, icon, children }: { n: number; icon: React.ReactNode; childre
  */
 export default function InstallDock() {
   const { t } = useTranslation();
+  const { pathname } = useLocation();
   const [, force] = useState(0);
   const [open, setOpen] = useState(openThisVisit);
   const [busy, setBusy] = useState(false);
@@ -64,7 +67,12 @@ export default function InstallDock() {
 
   useEffect(() => subscribeInstall(() => force((n) => n + 1)), []);
 
+  // Each portal offers its own app: pages that belong to no single portal (home, school, admin, invites) show no bar.
+  // The parent portal page has its own permanent install card, so the floating bar is skipped there.
+  const app = appForPath(pathname);
+  if (app === "default" || pathname.replace(/\/+$/, "").startsWith("/portal/parent")) return null;
   if (isRunningAsApp()) return null;
+  const appName = t(`pwa.appName.${app}`);
 
   const mode: InstallMode = getInstallMode();
   const setOpenSticky = (v: boolean) => {
@@ -114,7 +122,7 @@ export default function InstallDock() {
     >
       {open && (
         <section
-          aria-label={t("pwa.card.title", "Get the LingoTrace app")}
+          aria-label={t("pwa.card.titleApp", { defaultValue: "Get the LingoTrace {{app}} app", app: appName })}
           className="pointer-events-auto relative max-h-[75vh] w-full max-w-md overflow-y-auto rounded-3xl border border-gold/50 bg-gradient-to-br from-navy via-navy to-navy/85 p-4 text-cream-100 shadow-2xl sm:p-5"
         >
           <div className="pointer-events-none absolute -end-10 -top-10 h-40 w-40 rounded-full bg-gold/15 blur-2xl" aria-hidden="true" />
@@ -124,7 +132,7 @@ export default function InstallDock() {
             <PhoneArt />
             <div className="min-w-0 flex-1">
               <p className="text-[11px] font-bold uppercase tracking-widest text-gold">{t("pwa.card.eyebrow", "Always one tap away")}</p>
-              <h2 className="font-serif text-lg font-semibold leading-tight text-white sm:text-xl">{t("pwa.card.title", "Get the LingoTrace app")}</h2>
+              <h2 className="font-serif text-lg font-semibold leading-tight text-white sm:text-xl">{t("pwa.card.titleApp", { defaultValue: "Get the LingoTrace {{app}} app", app: appName })}</h2>
               <p className="mt-1 text-xs leading-relaxed text-cream-300 sm:text-sm">
                 {t("pwa.card.subtitle", "Open LingoTrace straight from your home screen — fast, full-screen and no browser bar.")}
               </p>
@@ -179,7 +187,7 @@ export default function InstallDock() {
             <span className="flex h-6 w-6 items-center justify-center rounded-full bg-gold/25 text-gold">
               <Smartphone size={14} />
             </span>
-            {t("pwa.card.pill", "Get the app")}
+            {t("pwa.card.pillApp", { defaultValue: "Get the {{app}} app", app: appName })}
             <ChevronUp size={14} className="text-gold" />
           </button>
           {mode === "native" && (

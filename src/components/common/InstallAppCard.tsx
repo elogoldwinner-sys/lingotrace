@@ -109,7 +109,7 @@ export default function InstallAppCard() {
 
   return (
     <section
-      aria-label={t("pwa.card.title", "Get the LingoTrace app")}
+      aria-label={t("pwa.card.titleApp", { defaultValue: "Get the LingoTrace {{app}} app", app: t("pwa.appName.parent") })}
       className="relative overflow-hidden rounded-3xl border border-gold/50 bg-gradient-to-br from-navy via-navy to-navy/85 p-4 text-cream-100 shadow-xl sm:p-5"
     >
       <div className="pointer-events-none absolute -end-10 -top-10 h-40 w-40 rounded-full bg-gold/15 blur-2xl" aria-hidden="true" />
@@ -120,7 +120,7 @@ export default function InstallAppCard() {
 
         <div className="min-w-0 flex-1">
           <p className="text-[11px] font-bold uppercase tracking-widest text-gold">{t("pwa.card.eyebrow", "Always one tap away")}</p>
-          <h2 className="font-serif text-lg font-semibold leading-tight text-white sm:text-xl">{t("pwa.card.title", "Get the LingoTrace app")}</h2>
+          <h2 className="font-serif text-lg font-semibold leading-tight text-white sm:text-xl">{t("pwa.card.titleApp", { defaultValue: "Get the LingoTrace {{app}} app", app: t("pwa.appName.parent") })}</h2>
           {!folded && (
             <p className="mt-1 text-xs leading-relaxed text-cream-300 sm:text-sm">
               {t("pwa.card.subtitle", "Follow your child's marks, attendance and notes straight from your home screen — no browser needed.")}

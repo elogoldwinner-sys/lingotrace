@@ -1384,7 +1384,15 @@
       "declined": "No problem — you can install it any time from here.",
       "fold": "Fold",
       "expand": "Show",
-      "pill": "Get the app"
+      "pill": "Get the app",
+      "pillApp": "Get the {{app}} app",
+      "titleApp": "Get the LingoTrace {{app}} app"
+    },
+    "appName": {
+      "teacher": "Teacher",
+      "parent": "Parent",
+      "student": "Student",
+      "school": "School"
     }
   },
   "alerts": {

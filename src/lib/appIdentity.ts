@@ -9,12 +9,13 @@
  * The same mapping lives in a tiny inline script in index.html so the right manifest is in place before the app loads —
  * keep the two in sync.
  */
-export type AppId = "teacher" | "parent" | "student" | "default";
+export type AppId = "teacher" | "parent" | "student" | "school" | "default";
 
 export const APP_META: Record<AppId, { manifest: string; themeColor: string; title: string; touchIcon: string }> = {
   default: { manifest: "manifest.json", themeColor: "#0d1b2a", title: "LingoTrace", touchIcon: "apple-touch-icon.png" },
   teacher: { manifest: "manifest-teacher.json", themeColor: "#36207C", title: "LT Teacher", touchIcon: "icons/teacher-apple-touch.png" },
   parent: { manifest: "manifest-parent.json", themeColor: "#0F8B8D", title: "LT Parents", touchIcon: "icons/parent-apple-touch.png" },
+  school: { manifest: "manifest-school.json", themeColor: "#2563EB", title: "LT School", touchIcon: "icons/school-apple-touch.png" },
   student: { manifest: "manifest-student.json", themeColor: "#EA580C", title: "LT Students", touchIcon: "icons/student-apple-touch.png" },
 };
 
@@ -23,8 +24,10 @@ const TEACHER_PATHS = ["/login", "/dashboard", "/preferences", "/classes", "/stu
 /** Which app a path (without the router base) belongs to. */
 export function appForPath(path: string): AppId {
   const p = path.replace(/\/+$/, "") || "/";
-  if (p === "/portal/parent" || p.startsWith("/portal/parent/")) return "parent";
+  // /portal-login is the entry of the "Parent Portal" card on the home page.
+  if (p === "/portal-login" || p === "/portal/parent" || p.startsWith("/portal/parent/")) return "parent";
   if (p === "/portal/student" || p.startsWith("/portal/student/")) return "student";
+  if (p === "/school-login" || p === "/school" || p.startsWith("/school/")) return "school";
   if (TEACHER_PATHS.some((t) => p === t || p.startsWith(t + "/"))) return "teacher";
   return "default";
 }
