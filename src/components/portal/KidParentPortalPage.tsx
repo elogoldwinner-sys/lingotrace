@@ -81,8 +81,8 @@ export default function KidParentPortalPage({
       </div>
 
       {/* ───────────── header + child/subject selector: one sticky block with an opaque backdrop, so the scenery never shows through it ───────────── */}
-      <div className="sticky top-0 z-30 drop-shadow-sm">
-      <header className="flex items-center justify-between gap-3 bg-white/30 px-4 py-3 backdrop-blur-xl sm:px-6">
+      <div className="sticky top-0 z-30 border-b border-navy-100/70 bg-white/85 shadow-[0_8px_24px_-16px_rgba(90,60,200,0.5)] backdrop-blur">
+      <header className="flex items-center justify-between gap-3 px-4 py-3 sm:px-6">
         <div className="flex items-center gap-2">
           <Logo size={32} />
           <span className="font-serif text-lg font-extrabold text-navy-700 sm:text-xl">{t("app.name")}</span>

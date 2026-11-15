@@ -148,7 +148,7 @@ export default function ChildSwitcher({
     <div
       className={
         variant === "kid"
-          ? "bg-white/30 shadow-[0_8px_16px_-12px_rgba(90,60,200,0.35)] backdrop-blur-xl"
+          ? ""
           : "border-b border-cream-400 bg-cream-100/95 backdrop-blur"
       }
     >
