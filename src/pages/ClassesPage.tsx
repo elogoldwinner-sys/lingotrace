@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Link } from "react-router-dom";
 import { Plus, Trash2, Link2, Check, UserPlus, RefreshCw, Pencil } from "lucide-react";
+import { BTN_TONES } from "../lib/uiColors";
 import { useAuth } from "../contexts/AuthContext";
 import { useLimit, useSchool } from "../contexts/SchoolContext";
 import { GRADES, SECTIONS, classKeyOf } from "../lib/school/scope";
@@ -254,9 +255,9 @@ export default function ClassesPage() {
           }}
           disabled={classLimitReached}
           title={classLimitReached ? t("limits.classesReached", { defaultValue: "Your school's plan allows {{n}} classes per teacher. Ask your principal to request more.", n: maxClasses }) : undefined}
-          className="btn-primary disabled:cursor-not-allowed disabled:opacity-50"
+          className={`btn-fx ${BTN_TONES.purple} disabled:cursor-not-allowed`}
         >
-          <Plus size={16} />
+          <span className="fx-tile"><Plus size={16} /></span>
           {t("classes.newClass")}
         </button>
       </div>
@@ -322,7 +323,8 @@ export default function ClassesPage() {
                 </div>
                 <button
                   onClick={() => handleDelete(c.id)}
-                  className="text-cream-600 hover:text-red-600 p-1"
+                  className="grid h-8 w-8 shrink-0 place-items-center rounded-[10px] border-2 border-red-200 bg-red-50 text-red-600 transition hover:-translate-y-0.5 hover:border-red-600 hover:bg-red-600 hover:text-white hover:shadow-[0_6px_14px_rgba(220,38,38,0.35)] active:scale-95"
+                  aria-label={t("common.delete", "Delete")}
                 >
                   <Trash2 size={16} />
                 </button>
@@ -350,20 +352,20 @@ export default function ClassesPage() {
               <div className="flex gap-2 pt-1 border-t border-cream-400/70 mt-1">
                 <button
                   onClick={() => handleCopyInvite(c)}
-                  className="btn-secondary flex-1 text-xs py-2"
+                  className={`btn-fx ${BTN_TONES.teal} min-w-0 flex-1 !pe-2 text-xs leading-tight`}
                 >
-                  {copiedKey === c.id ? <Check size={14} /> : <Link2 size={14} />}
+                  <span className="fx-tile shrink-0">{copiedKey === c.id ? <Check size={15} /> : <Link2 size={15} />}</span>
                   {copiedKey === c.id ? t("classes.copied") : t("classes.parentInvite")}
                 </button>
                 {isSubjectOfOther ? (
-                  <button onClick={() => handleSync(c)} className="btn-secondary flex-1 text-xs py-2">
-                    <RefreshCw size={14} />
+                  <button onClick={() => handleSync(c)} className={`btn-fx ${BTN_TONES.blue} min-w-0 flex-1 !pe-2 text-xs leading-tight`}>
+                    <span className="fx-tile shrink-0"><RefreshCw size={15} /></span>
                     {t("classes.syncStudents")}
                   </button>
                 ) : (
                   !c.parentClassId && (
-                    <button onClick={() => openAddTeacher(c)} className="btn-secondary flex-1 text-xs py-2">
-                      <UserPlus size={14} />
+                    <button onClick={() => openAddTeacher(c)} className={`btn-fx ${BTN_TONES.blue} min-w-0 flex-1 !pe-2 text-xs leading-tight`}>
+                      <span className="fx-tile shrink-0"><UserPlus size={15} /></span>
                       {t("classes.addTeacher")}
                     </button>
                   )
@@ -388,7 +390,7 @@ export default function ClassesPage() {
                               deleteClass(g.id).catch(() => setInviteError(t("classes.addTeacherError")));
                             }
                           }}
-                          className="text-cream-600 hover:text-red-600"
+                          className="grid h-7 w-7 place-items-center rounded-lg border-2 border-red-200 bg-red-50 text-red-600 transition hover:border-red-600 hover:bg-red-600 hover:text-white active:scale-95"
                           title={t("classes.removeTeacher")}
                         >
                           <Trash2 size={13} />

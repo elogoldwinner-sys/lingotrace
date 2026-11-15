@@ -68,6 +68,7 @@
     "createClass": "إنشاء صف",
     "addStudents": "إضافة طلاب",
     "viewAttendance": "عرض الحضور",
+    "currentAttendance": "حضور الحصة الحالية",
     "createSession": "إنشاء حصة",
     "upcoming": "القادم",
     "viewCalendar": "عرض التقويم",

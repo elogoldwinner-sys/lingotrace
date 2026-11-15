@@ -12,7 +12,7 @@ import {
   normalizeAnnouncementUrl,
 } from "../lib/services/announcementsService";
 import { computeAndSaveRankingsForClasses, getDefaultRankingPeriod } from "../lib/services/classRankingsService";
-import { triggerWeeklyChampionsCelebration } from "../lib/confetti";
+import { triggerWeeklyChampionsCelebration, canCelebrateToday, markCelebrated } from "../lib/confetti";
 import { uploadToCloudinary } from "../lib/cloudinary";
 import type { ClassRecord, Announcement, AnnouncementLink } from "../types";
 import AnnouncementCard from "../components/common/AnnouncementCard";
@@ -561,7 +561,11 @@ export default function DashboardPage() {
         if (cancelled) return;
         if (!celebratedRef.current && results.some((r) => (r.positions || []).length > 0)) {
           celebratedRef.current = true;
-          triggerWeeklyChampionsCelebration();
+          // Once per 24 hours: only play if a whole day has passed since the last time it played on this device.
+          if (canCelebrateToday(user?.uid)) {
+            markCelebrated(user?.uid);
+            triggerWeeklyChampionsCelebration();
+          }
         }
       })
       .catch((err) => console.error("Could not compute the champions boards", err));

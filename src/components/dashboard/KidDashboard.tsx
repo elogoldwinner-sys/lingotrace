@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { addDays, addMonths, format, isSameDay, isSameMonth, startOfMonth, startOfWeek } from "date-fns";
 import {
   ArrowRight,
@@ -22,6 +22,9 @@ import { subscribeToSessions } from "../../lib/services/sessionsService";
 import type { ClassRecord, SessionRecord, TeacherGender } from "../../types";
 import { Sparks, Star } from "../home/KidHomeArt";
 import PeriodNowCard from "../common/PeriodNowCard";
+import { useSchedule } from "../../lib/useSchedule";
+import { periodState, slotKey, zonedNow } from "../../lib/schedule";
+import { ensurePeriodSession } from "../../lib/services/sessionsService";
 import bannerFemale from "../../assets/kid-dashboard/banner-female.webp";
 import bannerMale from "../../assets/kid-dashboard/banner-male.webp";
 import cornerDecor from "../../assets/kid-dashboard/corner-decor.webp";
@@ -241,29 +244,77 @@ function RecentClasses({
 const ACTIONS = [
   { to: "/classes", key: "createClass", icon: CirclePlus, tone: "bg-[#E6DEFF] border-[#D4C8FB] text-navy-800" },
   { to: "/students", key: "addStudents", icon: Users, tone: "bg-[#DDEBFF] border-[#C6DBFA] text-[#2A63C4]" },
-  { to: "/attendance", key: "viewAttendance", icon: CalendarCheck, tone: "bg-[#FFF0C6] border-[#F6DD92] text-[#C27500]" },
   { to: "/sessions", key: "createSession", icon: FileText, tone: "bg-[#D9F6E8] border-[#B8EAD2] text-[#178F63]" },
 ] as const;
 
-function QuickActions() {
+const ACTION_BOX =
+  "flex min-h-[5.25rem] flex-col items-center justify-center gap-1.5 rounded-2xl border px-2 py-3 text-center text-sm font-bold transition-transform duration-200 ease-bouncy hover:-translate-y-1 motion-reduce:transition-none motion-reduce:hover:translate-y-0";
+
+function QuickActions({ classes }: { classes: ClassRecord[] }) {
   const { t } = useTranslation();
+  const navigate = useNavigate();
+  const { profile } = useAuth();
+  const { schedule } = useSchedule();
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState(false);
+
+  // Opens the attendance sheet of the session the teacher is in right now (same lookup as the "Current period" card:
+  // timetable + the school's period times). Outside a timetabled period it just opens the attendance page.
+  async function openCurrentAttendance() {
+    if (busy) return;
+    setError(false);
+    if (schedule) {
+      const now = zonedNow(schedule.timezone);
+      const state = periodState(schedule, now);
+      if (state.kind === "during") {
+        const classId = (profile?.timetable || {})[slotKey(now.weekday, state.index)];
+        if (classId && classes.some((c) => c.id === classId)) {
+          setBusy(true);
+          try {
+            const sessionId = await ensurePeriodSession(classId, now.date, state.index + 1);
+            navigate(`/attendance?classId=${encodeURIComponent(classId)}&sessionId=${encodeURIComponent(sessionId)}`);
+            return;
+          } catch (err) {
+            console.error("Couldn't open the current session's attendance", err);
+            setError(true);
+            setBusy(false);
+            return;
+          }
+        }
+      }
+    }
+    navigate("/attendance");
+  }
+
+  const attendanceBox = `${ACTION_BOX} bg-[#FFF0C6] border-[#F6DD92] text-[#C27500] disabled:opacity-70`;
+  const attendanceButton = (
+    <button key="currentAttendance" type="button" onClick={openCurrentAttendance} disabled={busy} className={attendanceBox}>
+      <CalendarCheck size={26} />
+      {busy ? t("common.loading") : t("dashboard.currentAttendance", "Current Session Attendance")}
+    </button>
+  );
+
   return (
     <section className={`p-5 sm:p-6 ${CARD}`}>
       <div className="mb-4">
         <SectionTitle icon={<Zap size={24} />}>{t("dashboard.quickActions")}</SectionTitle>
       </div>
       <div className="grid grid-cols-2 gap-3">
-        {ACTIONS.map(({ to, key, icon: Icon, tone }) => (
-          <Link
-            key={key}
-            to={to}
-            className={`flex min-h-[5.25rem] flex-col items-center justify-center gap-1.5 rounded-2xl border px-2 py-3 text-center text-sm font-bold transition-transform duration-200 ease-bouncy hover:-translate-y-1 motion-reduce:transition-none motion-reduce:hover:translate-y-0 ${tone}`}
-          >
+        {ACTIONS.slice(0, 2).map(({ to, key, icon: Icon, tone }) => (
+          <Link key={key} to={to} className={`${ACTION_BOX} ${tone}`}>
+            <Icon size={26} />
+            {t(`dashboard.${key}`)}
+          </Link>
+        ))}
+        {attendanceButton}
+        {ACTIONS.slice(2).map(({ to, key, icon: Icon, tone }) => (
+          <Link key={key} to={to} className={`${ACTION_BOX} ${tone}`}>
             <Icon size={26} />
             {t(`dashboard.${key}`)}
           </Link>
         ))}
       </div>
+      {error && <p className="mt-2 text-xs text-red-600">{t("sched.openError", "Couldn't open the attendance. Please try again.")}</p>}
     </section>
   );
 }
@@ -465,7 +516,7 @@ export default function KidDashboard({
       </div>
 
       <div className="min-w-0 space-y-5">
-        <QuickActions />
+        <QuickActions classes={classes} />
         <UpcomingCalendar sessionDates={sessionDates} today={today} classes={classes} />
       </div>
     </div>

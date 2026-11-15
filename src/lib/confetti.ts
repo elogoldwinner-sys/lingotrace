@@ -43,3 +43,29 @@ export function triggerWeeklyChampionsCelebration() {
     }, delay);
   });
 }
+
+const CELEBRATION_COOLDOWN_MS = 24 * 60 * 60 * 1000;
+const celebrationKey = (uid: string) => `lingotrace:champions-confetti:${uid}`;
+
+/**
+ * Teacher login confetti is limited to once per 24 hours per device: it plays on the first login/dashboard visit, then
+ * stays quiet for a whole day. The timestamp is only stored when the celebration actually plays.
+ */
+export function canCelebrateToday(uid: string | undefined): boolean {
+  if (!uid) return true;
+  try {
+    const last = Number(localStorage.getItem(celebrationKey(uid)));
+    return !last || Date.now() - last >= CELEBRATION_COOLDOWN_MS;
+  } catch {
+    return true;
+  }
+}
+
+export function markCelebrated(uid: string | undefined) {
+  if (!uid) return;
+  try {
+    localStorage.setItem(celebrationKey(uid), String(Date.now()));
+  } catch {
+    /* storage unavailable — the in-memory guard still prevents repeats within this visit */
+  }
+}

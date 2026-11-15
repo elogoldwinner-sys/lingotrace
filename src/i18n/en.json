@@ -68,6 +68,7 @@
     "createClass": "Create Class",
     "addStudents": "Add Students",
     "viewAttendance": "View Attendance",
+    "currentAttendance": "Current Session Attendance",
     "createSession": "Create Session",
     "upcoming": "Upcoming",
     "viewCalendar": "View calendar",
