@@ -1,4 +1,4 @@
-import { deleteDoc, doc, getDoc, onSnapshot, runTransaction, serverTimestamp } from "firebase/firestore";
+import { collection, deleteDoc, doc, documentId, getDoc, getDocs, onSnapshot, query, runTransaction, serverTimestamp, where } from "firebase/firestore";
 import { db } from "../firebase";
 import { createFirestoreService } from "../firestoreService";
 import { awardPoints } from "./pointsService";
@@ -68,6 +68,70 @@ export function subscribeToLinkedResult(
     },
     () => onData(null)
   );
+}
+
+/** Which exam/game results exist, and which marks were already added, for a whole class at once. */
+export interface ClassAnswerStatus {
+  /** Result-doc ids (`${assignmentId}_${studentId}`) that exist — the student has answered. */
+  answered: Set<string>;
+  /** Ids of results whose mark the teacher already turned into points. */
+  awarded: Set<string>;
+  /** False when the awards couldn't be read, so "marks still to add" can't be told apart from "answered". */
+  awardsOk: boolean;
+}
+
+/**
+ * One shared live feed for the teacher's list, so every exam/game can show "students have answered" without being
+ * opened: the answers are looked up by id in batches of 30 (one listener per batch, not one per student), and the
+ * marks already added come from a single query on the class.
+ */
+export function subscribeToClassAnswerStatus(
+  classId: string,
+  refs: string[],
+  onData: (status: ClassAnswerStatus) => void
+) {
+  const chunks: string[][] = [];
+  for (let i = 0; i < refs.length; i += 30) chunks.push(refs.slice(i, i + 30));
+  const answeredByChunk = new Map<number, Set<string>>();
+  let awarded: Set<string> | null = null;
+  let awardsOk = true;
+
+  const emit = () => {
+    if (awarded === null || answeredByChunk.size < chunks.length) return;
+    const answered = new Set<string>();
+    answeredByChunk.forEach((ids) => ids.forEach((id) => answered.add(id)));
+    onData({ answered, awarded, awardsOk });
+  };
+
+  const unsubs = chunks.map((ids, i) =>
+    onSnapshot(
+      query(collection(db, "linkedResults"), where(documentId(), "in", ids)),
+      (snap) => {
+        answeredByChunk.set(i, new Set(snap.docs.map((d) => d.id)));
+        emit();
+      },
+      () => {
+        answeredByChunk.set(i, new Set());
+        emit();
+      }
+    )
+  );
+  unsubs.push(
+    onSnapshot(
+      query(collection(db, "linkedMarkAwards"), where("classId", "==", classId)),
+      (snap) => {
+        awarded = new Set(snap.docs.map((d) => d.id));
+        awardsOk = true;
+        emit();
+      },
+      () => {
+        awarded = new Set();
+        awardsOk = false;
+        emit();
+      }
+    )
+  );
+  return () => unsubs.forEach((u) => u());
 }
 
 /** One-off fetch, used when composing a parent report or similar non-realtime views. */
@@ -145,4 +209,81 @@ export async function addMarkForResult(data: {
     throw err;
   }
   return points;
+}
+
+export interface BulkMarksResult {
+  /** Marks turned into points. */
+  added: number;
+  /** Marks that failed and can be retried. */
+  failed: number;
+  /** Total points given. */
+  points: number;
+}
+
+/**
+ * "Add all": turns every answered-but-not-yet-added exam/game score of the given students into points, in one go.
+ * Each mark still goes through `addMarkForResult` (claim first, then award), so nothing can be added twice even if
+ * this runs on two devices at once. Different students are processed in parallel (a few at a time); one student's
+ * marks run one after another because they all update that student's running total.
+ */
+export async function addAllMarks(data: {
+  classId: string;
+  assignments: LinkedAssignment[];
+  studentIds: string[];
+  awardedBy: string;
+  onProgress?: (done: number, total: number) => void;
+}): Promise<BulkMarksResult> {
+  const pairs = data.assignments.flatMap((assignment) =>
+    data.studentIds.map((studentId) => ({ assignment, studentId, ref: buildLinkedRef(assignment.id, studentId) }))
+  );
+
+  // 1) the scores that exist (looked up by id, 30 at a time)
+  const results = new Map<string, LinkedResult>();
+  for (let i = 0; i < pairs.length; i += 30) {
+    const ids = pairs.slice(i, i + 30).map((p) => p.ref);
+    const snap = await getDocs(query(collection(db, "linkedResults"), where(documentId(), "in", ids)));
+    snap.docs.forEach((d) => results.set(d.id, { id: d.id, ...d.data() } as LinkedResult));
+  }
+
+  // 2) skip what was already added (the claim inside addMarkForResult is the real guard)
+  const awarded = new Set<string>();
+  try {
+    const snap = await getDocs(query(collection(db, "linkedMarkAwards"), where("classId", "==", data.classId)));
+    snap.docs.forEach((d) => awarded.add(d.id));
+  } catch {
+    /* fall back to the per-mark claim */
+  }
+
+  const todo = pairs.filter((p) => results.has(p.ref) && !awarded.has(p.ref));
+  const byStudent = new Map<string, typeof todo>();
+  todo.forEach((p) => byStudent.set(p.studentId, [...(byStudent.get(p.studentId) || []), p]));
+
+  const out: BulkMarksResult = { added: 0, failed: 0, points: 0 };
+  let done = 0;
+  data.onProgress?.(0, todo.length);
+
+  const queue = [...byStudent.values()];
+  async function worker() {
+    for (let group = queue.shift(); group; group = queue.shift()) {
+      for (const p of group) {
+        try {
+          const points = await addMarkForResult({
+            assignment: p.assignment,
+            studentId: p.studentId,
+            score: results.get(p.ref)!.score,
+            title: p.assignment.title,
+            awardedBy: data.awardedBy,
+          });
+          out.added += 1;
+          out.points += points;
+        } catch (err) {
+          if (!(err instanceof Error && err.message === "already-added")) out.failed += 1;
+        }
+        done += 1;
+        data.onProgress?.(done, todo.length);
+      }
+    }
+  }
+  await Promise.all(Array.from({ length: Math.min(4, queue.length) }, worker));
+  return out;
 }

@@ -1,7 +1,7 @@
 import FeatureGate from "../components/common/FeatureGate";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Plus, Trash2, ExternalLink, Award } from "lucide-react";
+import { Plus, Trash2, ExternalLink, Award, BellRing, CheckCheck, Hourglass, ListChecks } from "lucide-react";
 import { useAuth } from "../contexts/AuthContext";
 import { subscribeToClasses } from "../lib/services/classesService";
 import { subscribeToStudents } from "../lib/services/studentsService";
@@ -11,7 +11,11 @@ import {
   deleteLinkedAssignment,
   subscribeToLinkedResult,
   subscribeToMarkAward,
+  subscribeToClassAnswerStatus,
+  buildLinkedRef,
+  type ClassAnswerStatus,
   addMarkForResult,
+  addAllMarks,
   marksForScore,
 } from "../lib/services/linkedActivityService";
 import type { ClassRecord, LinkedAssignment, StudentRecord, LinkedResult, LinkedMarkAward } from "../types";
@@ -45,6 +49,71 @@ function useAssignmentStatuses(assignmentId: string, studentIds: string[]) {
   // Wait for every first answer so a student whose mark was already added never flashes on screen.
   const ready = studentIds.every((id) => id in results && id in awards);
   return { results, awards, ready };
+}
+
+/** Live "who has answered / whose mark is still to add" for every exam and game of the class, without opening them. */
+function useClassAnswerStatus(classId: string, assignments: LinkedAssignment[], students: StudentRecord[]) {
+  const [status, setStatus] = useState<ClassAnswerStatus | null>(null);
+  const refs = assignments.flatMap((a) => students.map((s) => buildLinkedRef(a.id, s.id)));
+  const refsKey = refs.join(",");
+
+  useEffect(() => {
+    setStatus(null);
+    if (!classId) return;
+    return subscribeToClassAnswerStatus(classId, refs, setStatus);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [classId, refsKey]);
+
+  /** Counts for one exam/game: null until the first answer arrives. */
+  function countsFor(a: LinkedAssignment) {
+    if (!status) return null;
+    const answeredIds = students.filter((s) => status.answered.has(buildLinkedRef(a.id, s.id)));
+    const toMark = status.awardsOk
+      ? answeredIds.filter((s) => !status.awarded.has(buildLinkedRef(a.id, s.id))).length
+      : answeredIds.length;
+    return { answered: answeredIds.length, toMark, total: students.length, awardsOk: status.awardsOk };
+  }
+  return { ready: status !== null, status, countsFor };
+}
+
+/** The indicator on a collapsed exam/game: new answers waiting for marks, nothing yet, or all done. */
+function AnswerBadge({ counts }: { counts: ReturnType<ReturnType<typeof useClassAnswerStatus>["countsFor"]> }) {
+  const { t } = useTranslation();
+  const base = "mt-1.5 inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-bold";
+  if (!counts) {
+    return <span className={`${base} bg-cream-200 text-navy/40`}>{t("linked.badgeChecking", "Checking answers…")}</span>;
+  }
+  if (counts.toMark > 0) {
+    return (
+      <span className={`${base} bg-amber-100 text-amber-800 ring-1 ring-amber-300`}>
+        <span className="relative flex h-2 w-2">
+          <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-amber-500 opacity-70" />
+          <span className="relative inline-flex h-2 w-2 rounded-full bg-amber-500" />
+        </span>
+        <BellRing size={13} />
+        {counts.awardsOk
+          ? t("linked.badgeToMark", { n: counts.toMark, defaultValue: "{{n}} answered · marks to add" })
+          : t("linked.badgeAnswered", { n: counts.answered, defaultValue: "{{n}} answered" })}
+        <span className="font-semibold text-amber-700/70">
+          {t("linked.badgeOf", { done: counts.answered, total: counts.total, defaultValue: "{{done}}/{{total}}" })}
+        </span>
+      </span>
+    );
+  }
+  if (counts.answered > 0) {
+    return (
+      <span className={`${base} bg-emerald-50 text-emerald-700 ring-1 ring-emerald-200`}>
+        <CheckCheck size={13} />
+        {t("linked.badgeAllMarked", "All marks added")}
+      </span>
+    );
+  }
+  return (
+    <span className={`${base} bg-cream-200 text-navy/50`}>
+      <Hourglass size={12} />
+      {t("linked.badgeNone", "No answers yet")}
+    </span>
+  );
 }
 
 /** One row of a class's roster: the student's score, and the button that turns it into marks. */
@@ -129,6 +198,8 @@ function AssignmentResults({
     assignment.id,
     students.map((s) => s.id)
   );
+  const [bulkBusy, setBulkBusy] = useState(false);
+  const [bulkError, setBulkError] = useState(false);
 
   if (!ready) return <Spinner />;
 
@@ -137,12 +208,40 @@ function AssignmentResults({
   const notYet = open.filter((s) => !results[s.id]);
   const marked = students.length - open.length;
 
+  async function handleAddAllHere() {
+    if (bulkBusy || done.length === 0) return;
+    setBulkBusy(true);
+    setBulkError(false);
+    try {
+      const r = await addAllMarks({
+        classId: assignment.classId,
+        assignments: [assignment],
+        studentIds: done.map((s) => s.id),
+        awardedBy: teacherId,
+      });
+      if (r.failed > 0) setBulkError(true);
+    } catch {
+      setBulkError(true);
+    } finally {
+      setBulkBusy(false);
+    }
+  }
+
   return (
     <div className="flex flex-col gap-1.5">
       {open.length > 0 && (
-        <p className="mb-1 text-xs text-navy/50">
-          {t("linked.progress", { done: done.length, pending: notYet.length })}
-        </p>
+        <div className="mb-1 flex flex-wrap items-center justify-between gap-2">
+          <p className="text-xs text-navy/50">{t("linked.progress", { done: done.length, pending: notYet.length })}</p>
+          {done.length > 0 && (
+            <div className="flex items-center gap-2">
+              {bulkError && <span className="text-xs text-red-600">{t("linked.addMarkError")}</span>}
+              <button onClick={handleAddAllHere} disabled={bulkBusy} className="btn-gold py-1 px-2.5 text-xs disabled:opacity-60">
+                <ListChecks size={13} />
+                {bulkBusy ? t("common.loading") : t("linked.addAllHere", { n: done.length, defaultValue: "Add all ({{n}})" })}
+              </button>
+            </div>
+          )}
+        </div>
       )}
       {[...done, ...notYet].map((s) => (
         <StudentResultRow
@@ -170,7 +269,7 @@ export default function LinkedActivitiesPage() {
   const [source, setSource] = useState<Source>("gatway");
   const [classes, setClasses] = useState<ClassRecord[]>([]);
   const [selectedClassId, setSelectedClassId] = useState("");
-  const [assignments, setAssignments] = useState<LinkedAssignment[]>([]);
+  const [allAssignments, setAllAssignments] = useState<LinkedAssignment[]>([]);
   const [students, setStudents] = useState<StudentRecord[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -195,7 +294,7 @@ export default function LinkedActivitiesPage() {
 
   useEffect(() => {
     if (!selectedClassId) {
-      setAssignments([]);
+      setAllAssignments([]);
       setStudents([]);
       setLoading(false);
       return;
@@ -204,7 +303,7 @@ export default function LinkedActivitiesPage() {
     const unsubAssignments = subscribeToClassAssignments(
       selectedClassId,
       (data) => {
-        setAssignments(data.filter((a) => a.source === source));
+        setAllAssignments(data);
         setLoading(false);
       },
       (error) => {
@@ -217,7 +316,65 @@ export default function LinkedActivitiesPage() {
       unsubAssignments();
       unsubStudents();
     };
-  }, [selectedClassId, source]);
+  }, [selectedClassId]);
+
+  const assignments = allAssignments.filter((a) => a.source === source);
+  const answerStatus = useClassAnswerStatus(selectedClassId, allAssignments, students);
+  // Everything answered across ALL the class's exams and games whose mark hasn't been added yet.
+  const pending = (() => {
+    const st = answerStatus.status;
+    if (!st || !st.awardsOk) return { marks: 0, students: 0, items: [] as LinkedAssignment[] };
+    const items: LinkedAssignment[] = [];
+    const studentSet = new Set<string>();
+    let marks = 0;
+    for (const a of allAssignments) {
+      let any = false;
+      for (const s of students) {
+        const ref = buildLinkedRef(a.id, s.id);
+        if (st.answered.has(ref) && !st.awarded.has(ref)) {
+          marks += 1;
+          studentSet.add(s.id);
+          any = true;
+        }
+      }
+      if (any) items.push(a);
+    }
+    return { marks, students: studentSet.size, items };
+  })();
+  const [bulkOpen, setBulkOpen] = useState(false);
+  const [bulkBusy, setBulkBusy] = useState(false);
+  const [bulkProgress, setBulkProgress] = useState({ done: 0, total: 0 });
+  const [bulkResult, setBulkResult] = useState<{ added: number; failed: number } | "error" | null>(null);
+
+  useEffect(() => setBulkResult(null), [selectedClassId]);
+
+  async function handleAddAll() {
+    if (!user || bulkBusy) return;
+    setBulkBusy(true);
+    setBulkResult(null);
+    setBulkProgress({ done: 0, total: pending.marks });
+    try {
+      const r = await addAllMarks({
+        classId: selectedClassId,
+        assignments: pending.items,
+        studentIds: students.map((s) => s.id),
+        awardedBy: user.uid,
+        onProgress: (done, total) => setBulkProgress({ done, total }),
+      });
+      setBulkResult({ added: r.added, failed: r.failed });
+    } catch (err) {
+      console.error("Add all marks failed", err);
+      setBulkResult("error");
+    } finally {
+      setBulkBusy(false);
+      setBulkOpen(false);
+    }
+  }
+
+  const toMarkBySource = (s: Source) =>
+    allAssignments
+      .filter((a) => a.source === s)
+      .filter((a) => (answerStatus.countsFor(a)?.toMark ?? 0) > 0).length;
 
   async function handleCreate() {
     if (!user || !selectedClassId || !title.trim() || !url.trim()) return;
@@ -266,11 +423,49 @@ export default function LinkedActivitiesPage() {
             }`}
           >
             {t(s === "gatway" ? "linked.tabGatway" : "linked.tabPlay")}
+            {toMarkBySource(s) > 0 && (
+              <span
+                className="ms-2 inline-flex min-w-[1.25rem] items-center justify-center rounded-full bg-amber-500 px-1.5 text-[11px] font-bold leading-5 text-white"
+                title={t("linked.tabToMark", { n: toMarkBySource(s), defaultValue: "{{n}} with answers to mark" })}
+              >
+                {toMarkBySource(s)}
+              </span>
+            )}
           </button>
         ))}
       </div>
 
       <ClassSelector classes={classes} selectedClassId={selectedClassId} onSelect={setSelectedClassId} />
+
+      {pending.marks > 0 && (
+        <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-amber-300 bg-amber-50 px-4 py-3">
+          <p className="flex items-center gap-2 text-sm font-semibold text-amber-900">
+            <BellRing size={16} />
+            {t("linked.pendingBanner", {
+              marks: pending.marks,
+              items: pending.items.length,
+              defaultValue: "{{marks}} marks ready to add across {{items}} exams and games",
+            })}
+          </p>
+          <button onClick={() => setBulkOpen(true)} className="btn-gold py-1.5 px-3 text-sm">
+            <ListChecks size={15} />
+            {t("linked.addAllCount", { n: pending.marks, defaultValue: "Add all marks ({{n}})" })}
+          </button>
+        </div>
+      )}
+      {bulkResult && (
+        <p
+          className={`rounded-lg px-3 py-2 text-sm font-semibold ${
+            bulkResult === "error" || bulkResult.failed > 0 ? "bg-red-50 text-red-700" : "bg-emerald-50 text-emerald-700"
+          }`}
+        >
+          {bulkResult === "error"
+            ? t("linked.addMarkError")
+            : bulkResult.failed > 0
+            ? t("linked.addAllPartial", { added: bulkResult.added, failed: bulkResult.failed, defaultValue: "Added {{added}} marks · {{failed}} couldn't be added — try again." })
+            : t("linked.addAllDone", { added: bulkResult.added, defaultValue: "Added {{added}} marks." })}
+        </p>
+      )}
 
       {loading ? (
         <Spinner />
@@ -279,7 +474,12 @@ export default function LinkedActivitiesPage() {
       ) : (
         <div className="flex flex-col gap-3">
           {assignments.map((a) => (
-            <div key={a.id} className="rounded-xl border border-cream-400 bg-white p-4">
+            <div
+              key={a.id}
+              className={`rounded-xl border bg-white p-4 ${
+                (answerStatus.countsFor(a)?.toMark ?? 0) > 0 ? "border-amber-300 border-s-4 border-s-amber-500 shadow-sm" : "border-cream-400"
+              }`}
+            >
               <div className="flex items-center justify-between gap-3">
                 <div className="min-w-0">
                   <a
@@ -297,6 +497,7 @@ export default function LinkedActivitiesPage() {
                       {t("linked.addedOn", { date: formatNoteDate(a.createdAt, i18n.language) })}
                     </p>
                   )}
+                  <AnswerBadge counts={answerStatus.countsFor(a)} />
                 </div>
                 <div className="flex items-center gap-3">
                   <button
@@ -324,6 +525,34 @@ export default function LinkedActivitiesPage() {
           ))}
         </div>
       )}
+
+      <Modal open={bulkOpen} onClose={() => !bulkBusy && setBulkOpen(false)} title={t("linked.addAllTitle", "Add all marks for this class?")}>
+        <div className="flex flex-col gap-4">
+          <p className="text-sm text-navy/80">
+            {t("linked.addAllBody", {
+              marks: pending.marks,
+              students: pending.students,
+              items: pending.items.length,
+              defaultValue:
+                "This adds {{marks}} marks for {{students}} students across {{items}} exams and games. Each student's points are updated, and parents get their usual points notification.",
+            })}
+          </p>
+          {bulkBusy && (
+            <p className="text-sm font-semibold text-navy">
+              {t("linked.addAllRunning", { done: bulkProgress.done, total: bulkProgress.total, defaultValue: "Adding marks… {{done}}/{{total}}" })}
+            </p>
+          )}
+          <div className="flex justify-end gap-2">
+            <button onClick={() => setBulkOpen(false)} disabled={bulkBusy} className="rounded-lg px-4 py-2 text-sm font-semibold text-navy/70 hover:bg-cream-200 disabled:opacity-40">
+              {t("common.cancel", "Cancel")}
+            </button>
+            <button onClick={handleAddAll} disabled={bulkBusy} className="btn-gold px-4 py-2 text-sm disabled:opacity-60">
+              <ListChecks size={15} />
+              {bulkBusy ? t("common.loading") : t("linked.addAllConfirm", "Add all")}
+            </button>
+          </div>
+        </div>
+      </Modal>
 
       <Modal open={createModalOpen} onClose={() => setCreateModalOpen(false)} title={t("linked.assign")}>
         <div className="flex flex-col gap-3">
