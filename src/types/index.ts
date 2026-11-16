@@ -109,6 +109,13 @@ export interface InviteRecord {
   role: "student" | "parent";
   createdBy: string;
   createdAt: number;
+  /**
+   * Public "pick your child" list for the join page (id + name ONLY — never
+   * contact details). Kept in sync by the class's teacher; see
+   * `syncInviteRoster` in invitesService.
+   */
+  roster?: { id: string; name: string }[];
+  rosterUpdatedAt?: number;
 }
 
 export interface ClassRecord {
