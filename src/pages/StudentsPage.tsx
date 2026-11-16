@@ -1,3 +1,4 @@
+import { syncInviteRoster } from "../lib/services/invitesService";
 import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useSearchParams } from "react-router-dom";
@@ -233,6 +234,8 @@ export default function StudentsPage() {
       (data) => {
         setStudents(data);
         setLoading(false);
+        // Keep the join page's public child list (id + name only) in step with the roster.
+        syncInviteRoster(selectedClassId, data).catch(() => {});
       },
       () => setLoading(false)
     );

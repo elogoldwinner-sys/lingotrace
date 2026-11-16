@@ -335,6 +335,7 @@
     "selectChild": "Select your child",
     "selectChildPlaceholder": "Choose your child",
     "selectChildHint": "Pick your child before continuing with Google.",
+    "rosterEmpty": "The class list isn't ready yet. Please ask the teacher to open the Students page and share the link again.",
     "haveAccountAlready": "Already joined before?",
     "errorPickChild": "Please select your child first.",
     "errorAuth": "We couldn't complete sign-up. Please try again."

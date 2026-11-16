@@ -8,14 +8,13 @@ import { useTheme } from "../contexts/ThemeContext";
 import KidJoinPage, { KidJoinChildField } from "../components/home/KidJoinPage";
 import { getInvite } from "../lib/services/invitesService";
 import {
-  subscribeToStudents,
   createStudent,
   createStudentAccountMapping,
   recordParentJoin,
   findStudentByAuthUid,
 } from "../lib/services/studentsService";
 import { addChildToParent } from "../lib/services/parentsService";
-import type { InviteRecord, StudentRecord } from "../types";
+import type { InviteRecord } from "../types";
 import Spinner from "../components/common/Spinner";
 
 type Stage = "loading" | "invalid" | "form" | "submitting" | "done";
@@ -29,7 +28,6 @@ export default function JoinPage() {
 
   const [stage, setStage] = useState<Stage>("loading");
   const [invite, setInvite] = useState<InviteRecord | null>(null);
-  const [students, setStudents] = useState<StudentRecord[]>([]);
   const [error, setError] = useState("");
   const [childStudentId, setChildStudentId] = useState("");
 
@@ -47,11 +45,9 @@ export default function JoinPage() {
       .catch(() => setStage("invalid"));
   }, [token]);
 
-  useEffect(() => {
-    if (!invite || invite.role !== "parent") return;
-    const unsub = subscribeToStudents(invite.classId, setStudents);
-    return unsub;
-  }, [invite]);
+  // The child picker comes from the invite itself (id + name only). The
+  // students collection is no longer publicly listable — it holds parent contact details.
+  const students = invite?.roster ?? [];
 
   async function finalizeJoin(firebaseUser: User, childStudentId?: string) {
     if (!invite) return;
@@ -190,6 +186,9 @@ export default function JoinPage() {
               </option>
             ))}
           </select>
+          {students.length === 0 && (
+            <p className="mt-2 text-sm font-semibold text-red-600">{t("join.rosterEmpty")}</p>
+          )}
         </KidJoinChildField>
       </KidJoinPage>
     );
@@ -232,6 +231,9 @@ export default function JoinPage() {
               ))}
             </select>
             <p className="text-xs text-cream-600 mt-1.5">{t("join.selectChildHint")}</p>
+            {students.length === 0 && (
+              <p className="text-xs text-red-600 mt-1.5">{t("join.rosterEmpty")}</p>
+            )}
           </div>
         )}
 

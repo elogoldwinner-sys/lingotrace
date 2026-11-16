@@ -18,7 +18,7 @@ import {
   normalizeEmail,
 } from "../lib/services/classesService";
 import { subscribeToStudentCounts } from "../lib/services/studentsService";
-import { getOrCreateInvite, buildInviteUrl } from "../lib/services/invitesService";
+import { getOrCreateInvite, buildInviteUrl, refreshInviteRoster } from "../lib/services/invitesService";
 import type { ClassRecord } from "../types";
 import ClassTypeCard from "../components/avatars/ClassTypeCard";
 import type { AvatarGender } from "../lib/avatars";
@@ -232,6 +232,8 @@ export default function ClassesPage() {
     setInviteError("");
     try {
       const invite = await getOrCreateInvite(classItem.id, classItem.name, "parent", user.uid);
+      // The join page reads its child list from the invite, so refresh it before the link goes out.
+      await refreshInviteRoster(classItem.id);
       await navigator.clipboard.writeText(buildInviteUrl(invite.id));
       setCopiedKey(classItem.id);
       setTimeout(() => setCopiedKey(""), 2000);
