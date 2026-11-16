@@ -529,7 +529,8 @@ export default function KidDashboard({
         {extra}
       </div>
 
-      <div className="min-w-0 space-y-5">
+      {/* Shortcuts + calendar lead the page below the two-column breakpoint (they used to land at the very bottom). */}
+      <div className="order-first min-w-0 space-y-5 xl:order-none">
         <QuickActions classes={classes} />
         <UpcomingCalendar sessionDates={sessionDates} today={today} classes={classes} />
       </div>

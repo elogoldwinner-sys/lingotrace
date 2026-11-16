@@ -21,7 +21,7 @@ import {
   ChevronsRight,
 } from "lucide-react";
 
-const navItems = [
+export const navItems = [
   { to: "/teacher/dashboard", key: "dashboard", icon: LayoutDashboard },
   { to: "/teacher/preferences", key: "preferences", icon: SlidersHorizontal },
   { to: "/teacher/classes", key: "classes", icon: BookOpen },

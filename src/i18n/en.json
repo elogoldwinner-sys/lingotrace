@@ -14,6 +14,8 @@
     "settings": "Settings",
     "signOut": "Sign out",
     "toggleSidebar": "Toggle menu",
+    "fullscreen": "Full screen",
+    "exitFullscreen": "Exit full screen",
     "switchToTeacher": "Switch to Teacher Dashboard",
     "switchToParentPortal": "Switch to Parent Portal",
     "switchToStudentPortal": "Switch to Student Portal",
@@ -1355,6 +1357,12 @@
     "welcomeTitle": "Welcome to LingoTrace!",
     "welcomeBody": "Notifications are enabled on this device.",
     "testSuccess": "Test notification sent. Check your device."
+  },
+  "fs": {
+    "suggestTitle": "Try full-screen mode",
+    "suggestBody": "Hide the browser bars and move the menu to a bottom bar to get more room for your work.",
+    "enter": "Full screen",
+    "notNow": "Not now"
   },
   "pwa": {
     "installTitle": "Install the LingoTrace app",

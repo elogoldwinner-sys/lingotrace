@@ -4,6 +4,9 @@ import Sidebar from "./Sidebar";
 import Topbar from "./Topbar";
 import GenderPromptModal from "../common/GenderPromptModal";
 import TeacherSchoolGate from "../school/TeacherSchoolGate";
+import BottomNav from "./BottomNav";
+import FullscreenSuggestion from "../common/FullscreenSuggestion";
+import { useFullscreenMode } from "../../lib/fullscreen";
 
 const DESKTOP_COLLAPSE_KEY = "lingotrace-sidebar-collapsed";
 
@@ -24,6 +27,8 @@ export default function AppLayout() {
     () => localStorage.getItem(DESKTOP_COLLAPSE_KEY) === "1"
   );
   const [mobileOpen, setMobileOpen] = useState(false);
+  // Full-screen mode: the sidebar is replaced by a sticky bottom bar and the page uses the full width.
+  const { immersive } = useFullscreenMode();
 
   useEffect(() => {
     localStorage.setItem(DESKTOP_COLLAPSE_KEY, desktopCollapsed ? "1" : "0");
@@ -42,25 +47,28 @@ export default function AppLayout() {
 
   return (
     <div className="min-h-screen bg-cream">
-      <Sidebar
-        collapsed={desktopCollapsed}
-        mobileOpen={mobileOpen}
-        onToggle={handleToggle}
-        onNavigate={() => setMobileOpen(false)}
-      />
+      {!immersive && (
+        <Sidebar
+          collapsed={desktopCollapsed}
+          mobileOpen={mobileOpen}
+          onToggle={handleToggle}
+          onNavigate={() => setMobileOpen(false)}
+        />
+      )}
       <div
-        className={`flex min-h-screen min-w-0 flex-col transition-[padding] duration-200 ps-14 ${
-          desktopCollapsed ? "md:ps-16" : "md:ps-64"
+        className={`flex min-h-screen min-w-0 flex-col transition-[padding] duration-200 ${
+          immersive ? "" : `ps-14 ${desktopCollapsed ? "md:ps-16" : "md:ps-64"}`
         }`}
       >
         <Topbar />
-        <main className="min-w-0 flex-1 px-3 py-5 sm:px-4 sm:py-6 md:px-8 md:py-8">
+        <main className={`min-w-0 flex-1 px-3 py-5 sm:px-4 sm:py-6 md:px-8 md:py-8 ${immersive ? "pb-28 sm:pb-28 md:pb-28" : ""}`}>
           <TeacherSchoolGate />
           <Outlet />
         </main>
       </div>
       {/* First sign-in only: asks a teacher with no saved gender to pick one. */}
       <GenderPromptModal />
+      {immersive ? <BottomNav /> : <FullscreenSuggestion />}
     </div>
   );
 }

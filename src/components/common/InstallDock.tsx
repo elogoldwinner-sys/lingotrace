@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useLocation } from "react-router-dom";
 import { appForPath } from "../../lib/appIdentity";
+import { useFullscreenMode } from "../../lib/fullscreen";
 import { useTranslation } from "react-i18next";
 import { ChevronDown, ChevronUp, Download, Share2, MoreVertical, ExternalLink, PlusSquare, Check, Smartphone } from "lucide-react";
 import { getInstallMode, isRunningAsApp, subscribeInstall, triggerInstall, type InstallMode } from "../../lib/pwaInstall";
@@ -60,6 +61,7 @@ function Step({ n, icon, children }: { n: number; icon: React.ReactNode; childre
 export default function InstallDock() {
   const { t } = useTranslation();
   const { pathname } = useLocation();
+  const { immersive } = useFullscreenMode();
   const [, force] = useState(0);
   const [open, setOpen] = useState(openThisVisit);
   const [busy, setBusy] = useState(false);
@@ -70,7 +72,8 @@ export default function InstallDock() {
   // Each portal offers its own app: pages that belong to no single portal (home, school, admin, invites) show no bar.
   // The parent portal page has its own permanent install card, so the floating bar is skipped there.
   const app = appForPath(pathname);
-  if (app === "default" || pathname.replace(/\/+$/, "").startsWith("/parent/portal")) return null;
+  // The full-screen bottom menu sits where this bar floats, and installing isn't what you're doing in full screen.
+  if (immersive || app === "default" || pathname.replace(/\/+$/, "").startsWith("/parent/portal")) return null;
   if (isRunningAsApp()) return null;
   const appName = t(`pwa.appName.${app}`);
 

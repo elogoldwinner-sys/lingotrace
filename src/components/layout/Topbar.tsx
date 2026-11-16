@@ -7,6 +7,8 @@ import { useSchool } from "../../contexts/SchoolContext";
 import { uploadToCloudinary } from "../../lib/cloudinary";
 import { ACTION_TONES } from "../../lib/uiColors";
 import ThemeToggle from "../common/ThemeToggle";
+import FullscreenButton from "../common/FullscreenButton";
+import { clearFullscreenSuggestion } from "../../lib/fullscreen";
 import SchoolLogo from "./SchoolLogo";
 import { useTheme } from "../../contexts/ThemeContext";
 import type { TeacherGender } from "../../types";
@@ -69,6 +71,7 @@ export default function Topbar() {
   }, [menuOpen]);
 
   async function handleSignOut() {
+    clearFullscreenSuggestion(); // the next login gets the full-screen suggestion again
     await signOut();
     navigate("/teacher/login");
   }
@@ -121,7 +124,7 @@ export default function Topbar() {
                 {i18n.language === "ar" ? "EN" : "AR"}
               </button>
 
-
+              <FullscreenButton className={`${KID_PILL} ${KID_TONES.blue}`} />
 
               <div ref={menuRef} className="relative">
                 <button
@@ -230,7 +233,10 @@ export default function Topbar() {
               {i18n.language === "ar" ? "EN" : "AR"}
             </button>
 
-
+            <FullscreenButton
+              iconSize={14}
+              className={`flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs font-semibold ${ACTION_TONES.blue}`}
+            />
 
             <input
               ref={fileInputRef}
