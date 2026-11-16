@@ -7,7 +7,7 @@
   "scope": "./school/",
   "display": "standalone",
   "orientation": "portrait-primary",
-  "background_color": "#ffffff",
+  "background_color": "#2563EB",
   "theme_color": "#2563EB",
   "lang": "ar",
   "dir": "rtl",

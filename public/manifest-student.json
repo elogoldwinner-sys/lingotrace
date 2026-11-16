@@ -7,7 +7,7 @@
   "scope": "./student/",
   "display": "standalone",
   "orientation": "portrait-primary",
-  "background_color": "#ffffff",
+  "background_color": "#EA580C",
   "theme_color": "#EA580C",
   "lang": "ar",
   "dir": "rtl",
