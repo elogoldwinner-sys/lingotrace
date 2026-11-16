@@ -187,6 +187,8 @@ service cloud.firestore {
     // Class join links. Anyone with the exact token can read it (needed to
     // resolve /join/:token before the visitor has signed in) — the collection
     // is never listable, so a token must already be known to look it up.
+    // The doc also carries `roster` ([{id, name}] — no contact details) for
+    // the join page's child picker, so it is only as public as the token.
     match /invites/{token} {
       allow get: if true;
       // A teacher looking up "do I already have an invite for this class+role"
@@ -202,7 +204,13 @@ service cloud.firestore {
       // change) are untouched and still resolve via `get` above.
       allow create: if ownsClass(request.resource.data.classId) &&
         request.resource.data.role == "parent";
-      allow update, delete: if false;
+      // The class's teacher may refresh ONLY the public "pick your child"
+      // roster (id + name per student) and its timestamp — nothing else.
+      allow update: if ownsClass(resource.data.classId) &&
+        request.resource.data.diff(resource.data).affectedKeys().hasOnly(['roster', 'rosterUpdatedAt']) &&
+        request.resource.data.roster is list &&
+        request.resource.data.roster.size() <= 500;
+      allow delete: if false;
     }
 
     // True when the signed-in Google account's (verified) email is the one a
@@ -278,15 +286,24 @@ service cloud.firestore {
 
     // Students belong to a class. The teacher who owns the class has full
     // access. A signed-in student/parent can read their own linked record.
-    // Listing (without auth) is allowed so the public /join page can show a
-    // "pick your name" / "pick your child" roster for a specific class —
-    // note this means roster info (names, parent contact fields) for a class
-    // is readable by anyone who knows its classId, not just invite holders.
+    // Listing is NOT public: these documents carry parent names, e-mails and
+    // WhatsApp numbers. The public /join page does not read this collection —
+    // it shows the "pick your child" list from `invites/{token}.roster`
+    // (id + name only), which the teacher's client keeps in sync.
+    // Who may list: the class's teacher, school staff who may see the class,
+    // a signed-in student of the same class (avatar picker greys out the
+    // pictures classmates already took), and a signed-in user looking up
+    // their own record (`where authUid == uid` — portal sign-in).
     match /students/{studentId} {
       allow get: if ownsClass(resource.data.classId) ||
         staffMaySeeClass(resource.data.classId) ||
         isLinkedStudent(studentId) || isLinkedParent(studentId);
-      allow list: if true;
+      allow list: if ownsClass(resource.data.classId) ||
+        staffMaySeeClass(resource.data.classId) ||
+        (isSignedIn() && resource.data.authUid == request.auth.uid) ||
+        (isSignedIn() &&
+          exists(/databases/$(database)/documents/studentAccounts/$(request.auth.uid)) &&
+          get(/databases/$(database)/documents/studentAccounts/$(request.auth.uid)).data.classId == resource.data.classId);
       allow update: if ownsClass(resource.data.classId) ||
         (isSignedIn() && resource.data.authUid == null &&
           request.resource.data.authUid == request.auth.uid) ||
@@ -411,10 +428,8 @@ service cloud.firestore {
     }
 
     // A class's current weekly top-3 (doc id = classId, overwritten each
-    // week). Readable by anyone, matching the existing posture of
-    // /students/{studentId} above — that roster is already listable
-    // without auth (needed for the join page), so this doesn't expose
-    // anything a visitor couldn't already see by knowing the classId. Only
+    // week). Readable by anyone who knows the classId. It holds only the
+    // top-3 names and their points (no contact details). Only
     // written by that class's own teacher: only a teacher's client has read
     // access to every student's points needed to compute it.
     match /classRankings/{classId} {
