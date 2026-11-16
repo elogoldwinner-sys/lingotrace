@@ -257,13 +257,10 @@ export function subscribeToStudentCounts(
  */
 export async function setTeacherWhatsappForClasses(classIds: string[], whatsappNumber: string) {
   if (classIds.length === 0) return;
-  // Firestore "in" queries cap at 30 values; chunk defensively.
-  const chunks: string[][] = [];
-  for (let i = 0; i < classIds.length; i += 30) {
-    chunks.push(classIds.slice(i, i + 30));
-  }
-  for (const chunk of chunks) {
-    const snapshot = await getDocs(query(collection(db, "students"), where("classId", "in", chunk)));
+  // One equality query per class (not an "in" query) so the security rules can
+  // verify the teacher owns each class being listed.
+  for (const classId of classIds) {
+    const snapshot = await getDocs(query(collection(db, "students"), where("classId", "==", classId)));
     if (snapshot.empty) continue;
     // Batched writes cap at 500; split into sub-chunks of 400 to stay safe.
     for (let i = 0; i < snapshot.docs.length; i += 400) {
@@ -322,8 +319,8 @@ export async function assignAvatars(assignments: { id: string; photoURL: string 
 export async function syncSchoolLogoForTeacher(teacherUid: string, url: string | null) {
   const classesSnap = await getDocs(query(collection(db, "classes"), where("teacherId", "==", teacherUid)));
   const classIds = classesSnap.docs.map((d) => d.id);
-  for (let i = 0; i < classIds.length; i += 30) {
-    const snap = await getDocs(query(collection(db, "students"), where("classId", "in", classIds.slice(i, i + 30))));
+  for (const classId of classIds) {
+    const snap = await getDocs(query(collection(db, "students"), where("classId", "==", classId)));
     await applySchoolLogoToStudents(
       snap.docs.map((d) => ({ id: d.id, schoolLogoURL: (d.data() as StudentRecord).schoolLogoURL })),
       url

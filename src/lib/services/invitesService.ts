@@ -5,6 +5,7 @@ import {
   getDoc,
   getDocs,
   query,
+  updateDoc,
   where,
 } from "firebase/firestore";
 import { db } from "../firebase";
@@ -60,4 +61,46 @@ export async function getOrCreateInvite(
 
 export function buildInviteUrl(token: string) {
   return `${window.location.origin}${import.meta.env.BASE_URL}join/${token}`;
+}
+
+/**
+ * The join page used to list /students publicly to build its "pick your
+ * child" dropdown, which exposed parent names, e-mails and WhatsApp numbers to
+ * anyone who knew a classId. It now reads `roster` from the invite document
+ * instead — only {id, name} per student, and only reachable with the token.
+ *
+ * Teacher-side: writes the roster onto every parent invite of the class, but
+ * only when the id/name list actually changed (points, badges etc. also fire
+ * student snapshots, so the signature check keeps this to ~zero writes).
+ */
+const lastRosterSignature = new Map<string, string>();
+
+export async function syncInviteRoster(
+  classId: string,
+  students: { id: string; name: string }[]
+): Promise<void> {
+  const roster = students
+    .map((s) => ({ id: s.id, name: s.name }))
+    .sort((a, b) => a.name.localeCompare(b.name));
+  const signature = JSON.stringify(roster);
+  if (lastRosterSignature.get(classId) === signature) return;
+
+  const invites = await getDocs(
+    query(invitesRef, where("classId", "==", classId), where("role", "==", "parent"))
+  );
+  await Promise.all(
+    invites.docs
+      .filter((d) => JSON.stringify(d.data().roster ?? null) !== signature)
+      .map((d) => updateDoc(d.ref, { roster, rosterUpdatedAt: Date.now() }))
+  );
+  lastRosterSignature.set(classId, signature);
+}
+
+/** One-off refresh from the live roster — used right before a teacher copies the invite link. */
+export async function refreshInviteRoster(classId: string): Promise<void> {
+  const snap = await getDocs(query(collection(db, "students"), where("classId", "==", classId)));
+  await syncInviteRoster(
+    classId,
+    snap.docs.map((d) => ({ id: d.id, name: (d.data().name as string) || "" }))
+  );
 }
