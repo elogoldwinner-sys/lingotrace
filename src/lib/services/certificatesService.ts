@@ -2,7 +2,7 @@ import { collection, getDocs, query, where } from "firebase/firestore";
 import { db } from "../firebase";
 import { createFirestoreService } from "../firestoreService";
 import { toMillis } from "../timestamps";
-import type { CertificateRecord, PointsTransaction, StudentRecord } from "../../types";
+import type { CertificateRecord, PointsTransaction, StudentRecord, TemplateCertificateInfo } from "../../types";
 import { getBadgeDefinition } from "./badgesService";
 import { sendParentAlert } from "./parentAlertsService";
 import type { CertificateRenderData } from "../certificate";
@@ -115,9 +115,15 @@ export function toRenderData(c: {
   rank: number | null;
   classSize: number | null;
   badgeIds: string[];
+  /** "template" = the school's own design, drawn from `template` (unset = the playful design). */
+  style?: "playful" | "template";
+  template?: TemplateCertificateInfo;
+  /** When it was issued; today for a certificate that is only being downloaded. */
+  createdAt?: unknown;
 }, logoUrl?: string): CertificateRenderData {
   return {
     logoUrl,
+    template: c.style === "template" && c.template ? { info: c.template, issuedAt: toMillis(c.createdAt) || Date.now() } : undefined,
     studentName: c.studentName,
     reason: c.reason,
     points: c.points,

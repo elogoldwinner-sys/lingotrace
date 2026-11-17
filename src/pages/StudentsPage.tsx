@@ -1,4 +1,5 @@
 import { syncInviteRoster } from "../lib/services/invitesService";
+import { syncClassAvatars } from "../lib/services/classAvatarsService";
 import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useSearchParams } from "react-router-dom";
@@ -236,6 +237,8 @@ export default function StudentsPage() {
         setLoading(false);
         // Keep the join page's public child list (id + name only) in step with the roster.
         syncInviteRoster(selectedClassId, data).catch(() => {});
+        // Same for the avatar picker's "pictures already taken" doc.
+        syncClassAvatars(selectedClassId, data).catch(() => {});
       },
       () => setLoading(false)
     );

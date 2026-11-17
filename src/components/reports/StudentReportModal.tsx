@@ -20,7 +20,7 @@ import {
   type Txn,
 } from "../../lib/reports/pointsStats";
 import { GAINED, GainedLostBars, HorizontalBars, Legend, LOST, RunningTotalLine } from "../charts/PointsCharts";
-import { PrintedOn, PrintPortal, printReport, ReportControls, ReportHeader, StatCards } from "./reportParts";
+import { PrintedOn, PrintPortal, printReport, ReportControls, ReportHeader, StatCards, ReportSignatures } from "./reportParts";
 import { StudentAssessments } from "./AssessmentTables";
 import type { PointsTransaction, StudentRecord } from "../../types";
 
@@ -120,6 +120,7 @@ function StudentSheet({ student, className, period, kind, txns, firstAt, logo, t
           </table>}
         </>
       )}
+      <ReportSignatures />
       <PrintedOn />
     </div>
   );

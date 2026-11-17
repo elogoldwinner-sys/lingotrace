@@ -9,6 +9,8 @@ export interface UserProfile {
   photoURL?: string;
   /** School logo (Cloudinary URL) shown in a circular frame in the teacher header and on printed reports. */
   schoolLogoURL?: string;
+  /** The teacher's own signature image, printed as "Subject teacher" at the foot of the reports and certificates they issue. */
+  signatureURL?: string;
   /** Teacher's WhatsApp contact number (with country code), shown to parents in the parent portal. */
   whatsappNumber?: string;
   /**
@@ -500,6 +502,42 @@ export interface ClassRanking {
  * PDF. The stats are a snapshot taken when it was issued, so the certificate
  * never changes afterwards.
  */
+/** A certificate design the school made itself (A4 picture or the first page of a PDF). LingoTrace fills in the data. */
+export interface CertificateTemplate {
+  /** The page as an image, ready to draw (made from the uploaded PNG / JPG / PDF). */
+  imageUrl: string;
+  /** What was uploaded, kept so the principal can open it. */
+  sourceUrl?: string;
+  orientation: "landscape" | "portrait";
+  /** The principal can switch it off without deleting it. */
+  enabled: boolean;
+  /** Language of the labels LingoTrace prints on it (points, rank, badges, roles). */
+  labelLang: "ar" | "en";
+  /** Colour of the name, reason and signature captions — pick one that reads well on the design. */
+  textColor: string;
+}
+
+/**
+ * What a certificate made on the school's template needs besides the student's own details. Copied onto the
+ * certificate when it is issued, because the student / parent who downloads it later can't read the school's or the
+ * teacher's documents. A signature or stamp the principal had switched off at that moment is not drawn (its `show…`
+ * flag is false); a switched-on signature without an uploaded image prints as a blank line to sign by hand.
+ */
+export interface TemplateCertificateInfo {
+  templateURL: string;
+  orientation: "landscape" | "portrait";
+  labelLang: "ar" | "en";
+  textColor: string;
+  principalName: string;
+  teacherName: string;
+  showPrincipalSignature: boolean;
+  showStamp: boolean;
+  showTeacherSignature: boolean;
+  principalSignatureURL?: string;
+  stampURL?: string;
+  teacherSignatureURL?: string;
+}
+
 export interface CertificateRecord {
   id: string;
   studentId: string;
@@ -514,6 +552,10 @@ export interface CertificateRecord {
   badgeIds: string[];
   /** Auth uid of the issuing teacher. */
   issuedBy: string;
+  /** Which design it was issued on. Unset = the original playful design. */
+  style?: "playful" | "template";
+  /** Present when `style` is "template" (the school's own design). */
+  template?: TemplateCertificateInfo;
   createdAt: number;
 }
 
@@ -541,6 +583,8 @@ export interface School {
   autoNotifyParents?: boolean;
   /** A letterhead the principal uploaded (PDF). Printed reports are placed on its first page. Needs the "letterhead" feature. */
   letterhead?: SchoolLetterhead;
+  /** The school's own certificate design; certificates teachers issue are drawn on it when it is switched on. */
+  certificateTemplate?: CertificateTemplate;
   /** Period times, school days and timezone, set by the principal; teachers build their timetables on it. */
   schedule?: { timezone: string; days: number[]; periods: { start: string; end: string }[] };
   createdAt: number;
@@ -563,6 +607,14 @@ export interface SchoolLetterhead {
 export interface SchoolAssets {
   signatureURL?: string;
   stampURL?: string;
+  /**
+   * Principal switches for what the school's printed documents carry. Unset = on, so the images can be switched off
+   * without deleting them.
+   */
+  showPrincipalSignature?: boolean;
+  showStamp?: boolean;
+  /** Whether subject teachers' own signatures are printed on the documents they issue. */
+  showTeacherSignature?: boolean;
 }
 
 /**

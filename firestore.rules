@@ -291,19 +291,16 @@ service cloud.firestore {
     // it shows the "pick your child" list from `invites/{token}.roster`
     // (id + name only), which the teacher's client keeps in sync.
     // Who may list: the class's teacher, school staff who may see the class,
-    // a signed-in student of the same class (avatar picker greys out the
-    // pictures classmates already took), and a signed-in user looking up
-    // their own record (`where authUid == uid` — portal sign-in).
+    // and a signed-in user looking up their own record (`where authUid ==
+    // uid` — portal sign-in). Students can NOT list their classmates: the
+    // avatar picker reads `classAvatars/{classId}` instead.
     match /students/{studentId} {
       allow get: if ownsClass(resource.data.classId) ||
         staffMaySeeClass(resource.data.classId) ||
         isLinkedStudent(studentId) || isLinkedParent(studentId);
       allow list: if ownsClass(resource.data.classId) ||
         staffMaySeeClass(resource.data.classId) ||
-        (isSignedIn() && resource.data.authUid == request.auth.uid) ||
-        (isSignedIn() &&
-          exists(/databases/$(database)/documents/studentAccounts/$(request.auth.uid)) &&
-          get(/databases/$(database)/documents/studentAccounts/$(request.auth.uid)).data.classId == resource.data.classId);
+        (isSignedIn() && resource.data.authUid == request.auth.uid);
       allow update: if ownsClass(resource.data.classId) ||
         (isSignedIn() && resource.data.authUid == null &&
           request.resource.data.authUid == request.auth.uid) ||
@@ -318,6 +315,39 @@ service cloud.firestore {
       allow create: if ownsClass(request.resource.data.classId) ||
         (isSignedIn() && request.resource.data.authUid == request.auth.uid);
       allow delete: if ownsClass(resource.data.classId);
+    }
+
+    // Which built-in avatars are already taken in a class, as
+    // { taken: { studentId: "boys-05.webp" } } — no personal data. The class's
+    // teacher keeps it in step with the roster. A student of the class can
+    // read it and may add or change ONLY their own entry, and only to the
+    // picture that is now on their own student record (the student update in
+    // the same batch), so nobody can claim pictures on a classmate's behalf.
+    match /classAvatars/{classId} {
+      allow get: if ownsClass(classId) ||
+        (isSignedIn() &&
+          exists(/databases/$(database)/documents/studentAccounts/$(request.auth.uid)) &&
+          get(/databases/$(database)/documents/studentAccounts/$(request.auth.uid)).data.classId == classId);
+      allow write: if ownsClass(classId);
+      allow create: if isSignedIn() &&
+        exists(/databases/$(database)/documents/studentAccounts/$(request.auth.uid)) &&
+        get(/databases/$(database)/documents/studentAccounts/$(request.auth.uid)).data.classId == classId &&
+        request.resource.data.keys().hasOnly(['taken']) &&
+        request.resource.data.taken.keys().hasOnly([get(/databases/$(database)/documents/studentAccounts/$(request.auth.uid)).data.studentId]) &&
+        request.resource.data.taken[get(/databases/$(database)/documents/studentAccounts/$(request.auth.uid)).data.studentId]
+          .matches('(boys|girls)-[0-9]+[.]webp') &&
+        getAfter(/databases/$(database)/documents/students/$(get(/databases/$(database)/documents/studentAccounts/$(request.auth.uid)).data.studentId))
+          .data.photoURL.matches('.*/avatars/' + request.resource.data.taken[get(/databases/$(database)/documents/studentAccounts/$(request.auth.uid)).data.studentId]);
+      allow update: if isSignedIn() &&
+        exists(/databases/$(database)/documents/studentAccounts/$(request.auth.uid)) &&
+        get(/databases/$(database)/documents/studentAccounts/$(request.auth.uid)).data.classId == classId &&
+        request.resource.data.diff(resource.data).affectedKeys().hasOnly(['taken']) &&
+        request.resource.data.taken.diff(resource.data.taken).affectedKeys()
+          .hasOnly([get(/databases/$(database)/documents/studentAccounts/$(request.auth.uid)).data.studentId]) &&
+        request.resource.data.taken[get(/databases/$(database)/documents/studentAccounts/$(request.auth.uid)).data.studentId]
+          .matches('(boys|girls)-[0-9]+[.]webp') &&
+        getAfter(/databases/$(database)/documents/students/$(get(/databases/$(database)/documents/studentAccounts/$(request.auth.uid)).data.studentId))
+          .data.photoURL.matches('.*/avatars/' + request.resource.data.taken[get(/databases/$(database)/documents/studentAccounts/$(request.auth.uid)).data.studentId]);
     }
 
     // Certificates issued by a teacher to a student. The issuing teacher (or the
@@ -542,8 +572,10 @@ service cloud.firestore {
     }
 
     // Signature and stamp images — kept out of the publicly readable school doc.
+    // Teachers the principal approved may READ them too, so the school's signature / stamp can be printed on the
+    // reports and certificates they issue (the principal's switches in this same doc decide what gets printed).
     match /schoolAssets/{schoolId} {
-      allow read: if isSchoolPrincipal(schoolId) || (hasStaff() && staffSchool() == schoolId);
+      allow read: if isSchoolPrincipal(schoolId) || (hasStaff() && staffSchool() == schoolId) || approvedTeacherOf(schoolId);
       allow write: if isSchoolPrincipal(schoolId);
     }
 

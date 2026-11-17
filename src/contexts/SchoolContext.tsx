@@ -26,6 +26,8 @@ interface SchoolContextValue {
   memberSchool: School | null;
   /** Signature / stamp images (staff only). */
   assets: SchoolAssets;
+  /** The same images + the principal's print switches for the teacher's OWN school, kept live (approved teachers only). */
+  memberAssets: SchoolAssets;
   /** Plans (what the platform admin switched on) of the schools this person is connected to, by school id. */
   plans: Record<string, SchoolEntitlements>;
   /** Per school id: why its plan could not be read (e.g. "permission-denied"); such a school is treated as basic. */
@@ -43,6 +45,7 @@ export function SchoolProvider({ children }: { children: ReactNode }) {
   const [school, setSchool] = useState<School | null>(null);
   const [assets, setAssets] = useState<SchoolAssets>({});
   const [memberSchool, setMemberSchool] = useState<School | null>(null);
+  const [memberAssets, setMemberAssets] = useState<SchoolAssets>({});
   const [plans, setPlans] = useState<Record<string, SchoolEntitlements>>({});
   const [planErrors, setPlanErrors] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(true);
@@ -131,6 +134,20 @@ export function SchoolProvider({ children }: { children: ReactNode }) {
     );
   }, [memberSchoolId]);
 
+  // Signature / stamp of the teacher's school (+ the principal's print switches), live, so a switch the principal flips
+  // reaches the next printout without a reload.
+  useEffect(() => {
+    if (!memberSchoolId) {
+      setMemberAssets({});
+      return;
+    }
+    return onSnapshot(
+      doc(db, "schoolAssets", memberSchoolId),
+      (snap) => setMemberAssets(snap.exists() ? (snap.data() as SchoolAssets) : {}),
+      () => setMemberAssets({})
+    );
+  }, [memberSchoolId]);
+
   // Re-read the person's access whenever they come back to the tab: a teacher waiting for approval picks the decision
   // up, and a person whose access was removed (or added) stops seeing — or starts seeing — the old role without a
   // manual reload. Without this the tab keeps showing a role that no longer exists in the database.
@@ -155,7 +172,7 @@ export function SchoolProvider({ children }: { children: ReactNode }) {
   }, [profile, membership, school]);
 
   return (
-    <SchoolContext.Provider value={{ staff, membership, school, memberSchool, assets, plans, planErrors, loading, refresh: load }}>
+    <SchoolContext.Provider value={{ staff, membership, school, memberSchool, assets, memberAssets, plans, planErrors, loading, refresh: load }}>
       {children}
     </SchoolContext.Provider>
   );

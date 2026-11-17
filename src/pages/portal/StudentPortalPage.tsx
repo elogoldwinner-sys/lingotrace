@@ -2,15 +2,13 @@ import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
 import { LogOut, Globe, Camera, Repeat } from "lucide-react";
-import { collection, getDocs, query, where } from "firebase/firestore";
-import { db } from "../../lib/firebase";
 import StudentAvatar, { rankOf } from "../../components/avatars/StudentAvatar";
 import AvatarPickerModal from "../../components/avatars/AvatarPickerModal";
 import { avatarPool, takenKeys } from "../../lib/avatars";
 import { useAuth } from "../../contexts/AuthContext";
 import { subscribeToStudentPointsHistory } from "../../lib/services/pointsService";
 import { subscribeToStudentAttendance } from "../../lib/services/attendanceService";
-import { updateStudent } from "../../lib/services/studentsService";
+import { getTakenAvatarUrls, pickAvatar } from "../../lib/services/classAvatarsService";
 import { getBadgeDefinition } from "../../lib/services/badgesService";
 import { subscribeToAnnouncements, isAnnouncementVisibleTo } from "../../lib/services/announcementsService";
 import { subscribeToClassRanking, getClassRankingOnce } from "../../lib/services/classRankingsService";
@@ -28,7 +26,6 @@ import type {
   ClassRanking,
   LinkedAssignment,
   LinkedResult,
-  StudentRecord,
 } from "../../types";
 import CertificatesSection from "../../components/portal/CertificatesSection";
 import { useAwardedAssignmentIds } from "../../lib/hooks/useLinkedAwards";
@@ -167,15 +164,19 @@ export default function StudentPortalPage() {
   /** Reads the classmates' current pictures, so the gallery can grey out the ones already taken. */
   async function openAvatarPicker() {
     if (!portalStudent) return;
-    const snap = await getDocs(query(collection(db, "students"), where("classId", "==", portalStudent.classId)));
-    setClassmates(snap.docs.filter((d) => d.id !== portalStudent.id).map((d) => ({ photoURL: (d.data() as StudentRecord).photoURL })));
+    // Reads the class's small "taken pictures" doc — students can no longer list their classmates.
+    try {
+      setClassmates(await getTakenAvatarUrls(portalStudent.classId, portalStudent.id));
+    } catch {
+      setClassmates([]);
+    }
     setAvatarOpen(true);
   }
 
   // One time only: the rules also refuse a second change once `avatarPicked` is set.
   async function handleAvatarChosen(url: string) {
     if (!portalStudent) return;
-    await updateStudent(portalStudent.id, { photoURL: url, avatarPicked: true });
+    await pickAvatar(portalStudent.id, portalStudent.classId, url);
     await refreshPortalRole();
   }
 

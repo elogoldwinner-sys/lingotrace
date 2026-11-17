@@ -6,7 +6,7 @@ import Modal from "../common/Modal";
 import { useAuth } from "../../contexts/AuthContext";
 import { useEffectiveSchoolLogo } from "../../contexts/SchoolContext";
 import { buildCsv, downloadTextFile } from "../../lib/csv";
-import { PrintPortal, printReport, ReportHeader, PrintedOn } from "./reportParts";
+import { PrintPortal, printReport, ReportHeader, PrintedOn, ReportSignatures } from "./reportParts";
 import type { AttendanceRecord, AttendanceStatus, StudentRecord } from "../../types";
 
 const STATUSES: AttendanceStatus[] = ["present", "late", "absent", "excused"];
@@ -280,6 +280,7 @@ export default function AttendanceReportModal({
         </table>
       )}
       <p className="lt-foot">{t("attendanceReport.rateNote")}</p>
+      <ReportSignatures />
       <PrintedOn />
     </div>
   );

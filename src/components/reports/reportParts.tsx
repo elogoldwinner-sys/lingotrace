@@ -4,6 +4,8 @@ import { Printer } from "lucide-react";
 import { format } from "date-fns";
 import type { KindFilter, Period, Totals } from "../../lib/reports/pointsStats";
 import { useLetterhead } from "../../lib/useLetterhead";
+import { useSchool } from "../../contexts/SchoolContext";
+import { useAuth } from "../../contexts/AuthContext";
 
 /** Renders its children into <body> so they can be printed on their own (see .lt-print-root in index.css). */
 export function PrintPortal({ children }: { children: React.ReactNode }) {
@@ -97,6 +99,44 @@ export function StatCards({ totals, extra }: { totals: Totals; extra?: { label: 
       <div className="lt-stat">
         <span>{extra?.label ?? t("reports.records")}</span>
         <b>{extra?.value ?? totals.count}</b>
+      </div>
+    </div>
+  );
+}
+
+/**
+ * Signature block at the foot of every report a teacher prints: the subject teacher's own signature, and — for a
+ * teacher the principal approved — the principal's signature and the school stamp. The principal can switch each of the
+ * three off (School settings → "What to print on documents"). Nothing is drawn when none of them is available.
+ */
+export function ReportSignatures() {
+  const { t } = useTranslation();
+  const { profile } = useAuth();
+  const { memberSchool, membership, memberAssets } = useSchool();
+  const inSchool = membership?.status === "approved" && !!memberSchool;
+  const principalSig = inSchool && memberAssets.showPrincipalSignature !== false ? memberAssets.signatureURL : undefined;
+  const stamp = inSchool && memberAssets.showStamp !== false ? memberAssets.stampURL : undefined;
+  const teacherSig = memberAssets.showTeacherSignature === false ? undefined : profile?.signatureURL;
+  if (!principalSig && !stamp && !teacherSig) return null;
+
+  const line = (img: string | undefined, label: string, name?: string) => (
+    <div style={{ minWidth: 180 }}>
+      <div style={{ height: 64, display: "flex", alignItems: "flex-end" }}>
+        {img && <img src={img} alt="" style={{ maxHeight: 64, maxWidth: 200, objectFit: "contain" }} />}
+      </div>
+      <div style={{ borderTop: "1px solid #111827", paddingTop: 3, fontSize: 11, color: "#4b5563" }}>
+        {label}
+        {name ? `: ${name}` : ""}
+      </div>
+    </div>
+  );
+
+  return (
+    <div className="lt-avoid" style={{ marginTop: 28, display: "flex", justifyContent: "space-between", alignItems: "flex-end", gap: 24 }}>
+      {teacherSig ? line(teacherSig, t("sp.subjectTeacher", "Subject teacher"), profile?.displayName) : <div />}
+      {principalSig ? line(principalSig, t("sp.principalSignature", "School principal"), memberSchool?.principalName) : <div />}
+      <div style={{ width: 96, height: 96, display: "flex", alignItems: "center", justifyContent: "center" }}>
+        {stamp && <img src={stamp} alt="" style={{ maxHeight: 96, maxWidth: 96, objectFit: "contain" }} />}
       </div>
     </div>
   );

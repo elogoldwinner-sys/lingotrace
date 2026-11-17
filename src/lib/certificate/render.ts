@@ -1,6 +1,7 @@
 import { customBoldFontUrl, customRegularFontUrl } from "./customFonts";
 import type { OverlayImage } from "./pdfOverlay";
 import { loadLogoImage } from "../logoImage";
+import type { TemplateCertificateInfo } from "../../types";
 
 export interface CertificateBadge {
   icon: string;
@@ -19,6 +20,8 @@ export interface CertificateRenderData {
   badges: CertificateBadge[];
   /** The issuing teacher's school logo (drawn top-right); nothing is drawn when absent. */
   logoUrl?: string;
+  /** Set when the certificate is drawn on the school's own template: it replaces the playful design entirely. */
+  template?: { info: TemplateCertificateInfo; issuedAt: number };
 }
 
 /** Resource names + object numbers of the template's placeholder images (see scripts used to prepare template.pdf). */

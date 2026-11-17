@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Award, Download, Send, Trash2 } from "lucide-react";
+import { useAuth } from "../../contexts/AuthContext";
 import Modal from "./Modal";
 import {
   computeCertificateStats,
@@ -10,9 +11,9 @@ import {
   toRenderData,
 } from "../../lib/services/certificatesService";
 import { downloadCertificates } from "../../lib/certificate";
-import { useEffectiveSchoolLogo } from "../../contexts/SchoolContext";
+import { useEffectiveSchoolLogo, useSchool } from "../../contexts/SchoolContext";
 import { formatNoteDate } from "../../lib/timestamps";
-import type { CertificateRecord, StudentRecord } from "../../types";
+import type { CertificateRecord, StudentRecord, TemplateCertificateInfo } from "../../types";
 
 const MAX_REASON = 180;
 
@@ -43,6 +44,13 @@ export default function CertificateModal({
 }) {
   const { t, i18n } = useTranslation();
   const { logo: schoolLogo } = useEffectiveSchoolLogo();
+  const { profile } = useAuth();
+  const { memberSchool, membership, memberAssets } = useSchool();
+  // The school's own template is offered when the principal has uploaded one and switched it on.
+  const schoolTemplate = membership?.status === "approved" ? memberSchool?.certificateTemplate : undefined;
+  const templateAvailable = !!schoolTemplate?.enabled && !!schoolTemplate.imageUrl;
+  const [style, setStyle] = useState<"playful" | "template">("playful");
+  const templateOn = templateAvailable && style === "template";
   const [reason, setReason] = useState("");
   const [busy, setBusy] = useState<"" | "issue" | "download">("");
   const [progress, setProgress] = useState("");
@@ -64,11 +72,33 @@ export default function CertificateModal({
   const recent = issued.filter((c) => selectedIds.has(c.studentId)).slice(0, 5);
   const canAct = reason.trim().length > 0 && selected.length > 0 && !busy;
 
+  /** Snapshot of the school's template, names, images and the principal's print switches, kept on the certificate (see TemplateCertificateInfo). */
+  function buildTemplateInfo(): TemplateCertificateInfo {
+    const info: TemplateCertificateInfo = {
+      templateURL: schoolTemplate!.imageUrl,
+      orientation: schoolTemplate!.orientation,
+      labelLang: schoolTemplate!.labelLang,
+      textColor: schoolTemplate!.textColor,
+      principalName: memberSchool?.principalName || "",
+      teacherName: profile?.displayName || "",
+      showPrincipalSignature: memberAssets.showPrincipalSignature !== false,
+      showStamp: memberAssets.showStamp !== false,
+      showTeacherSignature: memberAssets.showTeacherSignature !== false,
+    };
+    // Firestore rejects `undefined`, so only add what exists.
+    if (memberAssets.signatureURL) info.principalSignatureURL = memberAssets.signatureURL;
+    if (memberAssets.stampURL) info.stampURL = memberAssets.stampURL;
+    if (profile?.signatureURL) info.teacherSignatureURL = profile.signatureURL;
+    return info;
+  }
+
   async function prepare() {
     const stats = await computeCertificateStats(classId, teacherId, roster, selected);
+    const template = templateOn ? buildTemplateInfo() : null;
     return selected.map((s) => {
       const st = stats.get(s.id)!;
       return {
+        ...(template ? { style: "template" as const, template } : {}),
         studentId: s.id,
         classId,
         studentName: s.name,
@@ -122,6 +152,39 @@ export default function CertificateModal({
   return (
     <Modal open={open} onClose={onClose} title={t("certificate.modalTitle")}>
       <div className="flex flex-col gap-4">
+        {templateAvailable && (
+          <div>
+            <p className="mb-1 text-sm font-semibold text-navy">{t("certificate.styleLabel", "Certificate form")}</p>
+            <div className="grid gap-2 sm:grid-cols-2">
+              {(["playful", "template"] as const).map((key) => (
+                <button
+                  key={key}
+                  type="button"
+                  onClick={() => setStyle(key)}
+                  aria-pressed={style === key}
+                  className={`rounded-lg border px-3 py-2 text-start text-sm transition ${
+                    style === key ? "border-gold bg-gold-50 text-navy" : "border-cream-400 bg-white text-cream-700 hover:border-gold/60"
+                  }`}
+                >
+                  <span className="block font-semibold">
+                    {key === "template" ? t("certificate.styleTemplate", "School template") : t("certificate.stylePlayful", "Playful")}
+                  </span>
+                  <span className="block text-xs text-cream-600">
+                    {key === "template"
+                      ? t("certificate.styleTemplateHint", "Your school's own design, filled in with the student's details, signatures and stamp.")
+                      : t("certificate.stylePlayfulHint", "The colourful design with points, rank and badges.")}
+                  </span>
+                </button>
+              ))}
+            </div>
+            {templateOn && !profile?.signatureURL && memberAssets.showTeacherSignature !== false && (
+              <p className="mt-1.5 text-xs text-cream-600">
+                {t("certificate.noSignatureHint", "You haven't uploaded your signature (Preferences), so a blank line is printed for you to sign by hand.")}
+              </p>
+            )}
+          </div>
+        )}
+
         <div>
           <p className="mb-1 text-sm font-semibold text-navy">
             {t("certificate.recipients", { count: selected.length })}
@@ -147,7 +210,7 @@ export default function CertificateModal({
           <p className="mt-1 text-end text-xs text-cream-600">
             {reason.length}/{MAX_REASON}
           </p>
-          <p className="text-xs text-cream-600">{t("certificate.autoFill")}</p>
+          {!templateOn && <p className="text-xs text-cream-600">{t("certificate.autoFill")}</p>}
         </div>
 
         <div className="flex flex-wrap gap-2">

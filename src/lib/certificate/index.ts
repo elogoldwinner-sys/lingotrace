@@ -2,6 +2,7 @@ import templateUrl from "../../assets/certificate/template.pdf?url";
 import { appendOverlayUpdate } from "./pdfOverlay";
 import { renderCertificateOverlays, type CertificateRenderData } from "./render";
 import { buildZip } from "./zip";
+import { buildTemplateCertificatePdf } from "./template";
 
 export type { CertificateRenderData, CertificateBadge } from "./render";
 
@@ -27,6 +28,18 @@ function getTemplate(): Promise<Uint8Array> {
 
 /** One finished A4 certificate as PDF bytes: the untouched template art + this student's text on top. */
 export async function buildCertificatePdf(data: CertificateRenderData): Promise<Uint8Array> {
+  if (data.template) {
+    return buildTemplateCertificatePdf({
+      studentName: data.studentName,
+      reason: data.reason,
+      points: data.points,
+      rank: data.rank,
+      classSize: data.classSize,
+      badges: data.badges,
+      issuedAt: data.template.issuedAt,
+      info: data.template.info,
+    });
+  }
   const [template, overlays] = await Promise.all([getTemplate(), renderCertificateOverlays(data)]);
   return appendOverlayUpdate(template, TEMPLATE_SLOTS, overlays, data.studentName.trim() || "Certificate");
 }

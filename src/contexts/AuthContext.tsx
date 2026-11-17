@@ -54,6 +54,7 @@ interface AuthContextValue {
   updateTeacherWhatsapp: (whatsappNumber: string) => Promise<void>;
   updateTeacherRankingPeriod: (start: number, end: number) => Promise<void>;
   updateTeacherGender: (gender: TeacherGender) => Promise<void>;
+  updateTeacherSignature: (signatureURL: string | null) => Promise<void>;
   /** Saves which reasons the teacher sees when giving / deducting marks. */
   updateTeacherReasonPrefs: (prefs: ReasonPrefs) => Promise<void>;
   /** Saves the default reasons pre-selected when giving / deducting marks (per class). */
@@ -352,6 +353,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }
 
+  /** Saves (or removes, with null) the teacher's own signature image — printed on the documents they issue. */
+  async function updateTeacherSignature(signatureURL: string | null) {
+    const currentUser = auth.currentUser;
+    if (!currentUser) return;
+    await setDoc(doc(db, "teachers", currentUser.uid), { signatureURL: signatureURL ?? deleteField() }, { merge: true });
+    setProfile((prev) => {
+      if (!prev) return prev;
+      const next = { ...prev };
+      if (signatureURL) next.signatureURL = signatureURL;
+      else delete next.signatureURL;
+      return next;
+    });
+  }
+
   async function updateTeacherSchoolLogo(schoolLogoURL: string | null) {
     const currentUser = auth.currentUser;
     if (!currentUser) return;
@@ -434,6 +449,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         updateTeacherWhatsapp,
         updateTeacherRankingPeriod,
         updateTeacherGender,
+        updateTeacherSignature,
         updateTeacherReasonPrefs,
         updateTeacherReasonDefaults,
         updateTeacherAttendancePoints,

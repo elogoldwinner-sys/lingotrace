@@ -23,7 +23,7 @@ import {
   type Txn,
 } from "../../lib/reports/pointsStats";
 import { GAINED, GainedLostBars, HorizontalBars, Legend, LOST, RunningTotalLine } from "../charts/PointsCharts";
-import { PrintedOn, PrintPortal, printReport, ReportControls, ReportHeader, StatCards } from "./reportParts";
+import { PrintedOn, PrintPortal, printReport, ReportControls, ReportHeader, StatCards, ReportSignatures } from "./reportParts";
 import { ClassAssessments } from "./AssessmentTables";
 import type { ClassRecord, PointsTransaction, StudentRecord } from "../../types";
 
@@ -168,6 +168,7 @@ function StudentsSheet({
           </table>
         </>
       )}
+      <ReportSignatures />
       <PrintedOn />
     </div>
   );
@@ -253,6 +254,7 @@ function ClassesSheet({
           </table>
         </>
       )}
+      <ReportSignatures />
       <PrintedOn />
     </div>
   );
@@ -446,6 +448,7 @@ function SubjectsSheet({
           ))}
         </tbody>
       </table>
+      <ReportSignatures />
       <PrintedOn />
     </div>
   );

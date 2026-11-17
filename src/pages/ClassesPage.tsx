@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Link } from "react-router-dom";
-import { Plus, Trash2, Link2, Check, UserPlus, RefreshCw, Pencil } from "lucide-react";
+import { Plus, Trash2, Link2, Check, UserPlus, RefreshCw, Pencil, QrCode } from "lucide-react";
 import { BTN_TONES } from "../lib/uiColors";
 import { useAuth } from "../contexts/AuthContext";
 import { useLimit, useSchool } from "../contexts/SchoolContext";
@@ -23,6 +23,7 @@ import type { ClassRecord } from "../types";
 import ClassTypeCard from "../components/avatars/ClassTypeCard";
 import type { AvatarGender } from "../lib/avatars";
 import Modal from "../components/common/Modal";
+import QrInviteModal from "../components/classes/QrInviteModal";
 import EmptyState from "../components/common/EmptyState";
 import Spinner from "../components/common/Spinner";
 
@@ -52,6 +53,7 @@ export default function ClassesPage() {
   const [submitting, setSubmitting] = useState(false);
   const [copiedKey, setCopiedKey] = useState("");
   const [inviteError, setInviteError] = useState("");
+  const [qrInvite, setQrInvite] = useState<{ url: string; className: string } | null>(null);
 
   // "Add teacher" (subject co-teacher) form
   const [teacherForClass, setTeacherForClass] = useState<ClassRecord | null>(null);
@@ -242,6 +244,19 @@ export default function ClassesPage() {
     }
   }
 
+  /** Opens the parent-invite QR code for a class (same invite link as "Share with parents"). */
+  async function handleShowQr(classItem: ClassRecord) {
+    if (!user) return;
+    setInviteError("");
+    try {
+      const invite = await getOrCreateInvite(classItem.id, classItem.name, "parent", user.uid);
+      await refreshInviteRoster(classItem.id);
+      setQrInvite({ url: buildInviteUrl(invite.id), className: classItem.name });
+    } catch {
+      setInviteError(t("classes.inviteError"));
+    }
+  }
+
   // Only the classes this teacher runs themselves count towards the school's per-teacher cap.
   const myClassCount = classes.filter((c) => c.teacherId === user?.uid).length;
   const classLimitReached = maxClasses !== null && myClassCount >= maxClasses;
@@ -358,6 +373,17 @@ export default function ClassesPage() {
                 >
                   <span className="fx-tile shrink-0">{copiedKey === c.id ? <Check size={15} /> : <Link2 size={15} />}</span>
                   {copiedKey === c.id ? t("classes.copied") : t("classes.parentInvite")}
+                </button>
+                <button
+                  onClick={() => handleShowQr(c)}
+                  title={t("classes.qrTitle")}
+                  aria-label={t("classes.qrTitle")}
+                  className={`btn-fx ${BTN_TONES.teal} shrink-0 !px-3 text-xs leading-tight`}
+                >
+                  <span className="fx-tile shrink-0">
+                    <QrCode size={15} />
+                  </span>
+                  QR
                 </button>
                 {isSubjectOfOther ? (
                   <button onClick={() => handleSync(c)} className={`btn-fx ${BTN_TONES.blue} min-w-0 flex-1 !pe-2 text-xs leading-tight`}>
@@ -489,6 +515,12 @@ export default function ClassesPage() {
           </div>
         </form>
       </Modal>
+      <QrInviteModal
+        open={!!qrInvite}
+        onClose={() => setQrInvite(null)}
+        url={qrInvite?.url ?? ""}
+        className={qrInvite?.className ?? ""}
+      />
       <Modal open={!!placeEdit} onClose={() => setPlaceEdit(null)} title={t("sp.setGradeSection", "Set grade and section")}>
         <form onSubmit={handleSavePlace} className="space-y-4">
           <p className="text-sm text-cream-600">{placeEdit?.name}</p>

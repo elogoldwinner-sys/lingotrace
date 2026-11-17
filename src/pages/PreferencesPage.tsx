@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
-import { X, Plus, RotateCcw, CalendarCheck, MessageCircle, Trophy, Mars, Venus, UserRound, BookOpen } from "lucide-react";
+import { X, Plus, RotateCcw, CalendarCheck, MessageCircle, Trophy, Mars, Venus, UserRound, BookOpen, PenLine } from "lucide-react";
 import { useAuth } from "../contexts/AuthContext";
 import { POINTS_REASON_ICONS } from "../lib/pointsReasons";
 import { getDefaultRankingPeriod } from "../lib/services/classRankingsService";
@@ -9,6 +9,7 @@ import { allBuiltIn, cloneScope, getPrefs, hasClassOverride, effectiveScope } fr
 import { useEffect } from "react";
 import NumberedCardsSettings from "../components/common/NumberedCardsSettings";
 import FeatureGate from "../components/common/FeatureGate";
+import ImageUploadField from "../components/school/ImageUploadField";
 import type { ClassRecord, ReasonPrefs, ReasonScope, TeacherGender } from "../types";
 
 const ALL = "__all__";
@@ -23,7 +24,7 @@ function msToLocalDateValue(ms: number): string {
 /** Teacher preferences page (side menu, under Dashboard): attendance marks on/off + which reasons appear when giving / deducting marks. */
 export default function PreferencesPage() {
   const { t } = useTranslation();
-  const { user, profile, updateTeacherReasonPrefs, updateTeacherAttendancePoints, updateTeacherWhatsapp, updateTeacherRankingPeriod, updateTeacherGender } = useAuth();
+  const { user, profile, updateTeacherReasonPrefs, updateTeacherAttendancePoints, updateTeacherWhatsapp, updateTeacherRankingPeriod, updateTeacherGender, updateTeacherSignature } = useAuth();
 
   // WhatsApp number (used for parent messages)
   const [whatsapp, setWhatsapp] = useState(profile?.whatsappNumber || "");
@@ -228,6 +229,26 @@ export default function PreferencesPage() {
           {whatsappSaved && <span className="text-sm font-semibold text-green-700">{t("preferences.saved")}</span>}
         </div>
       </form>
+
+      <div className="card space-y-3 p-5">
+        <div className="flex items-start gap-3">
+          <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-gold-50 text-gold">
+            <PenLine size={20} />
+          </div>
+          <div className="min-w-0 flex-1">
+            <p className="text-base font-semibold text-navy">{t("preferences.signatureTitle", "Your signature")}</p>
+            <p className="text-sm text-cream-600">
+              {t("preferences.signatureHint", "Printed under “Subject teacher” at the foot of the reports and certificates you issue. Use a photo of your signature on white paper or a transparent PNG.")}
+            </p>
+          </div>
+        </div>
+        <ImageUploadField
+          label={t("preferences.signatureLabel", "Signature image")}
+          value={profile?.signatureURL}
+          folder="lingotrace/teacher-signatures"
+          onChange={(url) => updateTeacherSignature(url ?? null)}
+        />
+      </div>
 
       <div className="flex items-center gap-3 pt-2">
         <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-navy text-cream-100">

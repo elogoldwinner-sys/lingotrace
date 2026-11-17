@@ -8,7 +8,7 @@ import { useEffectiveSchoolLogo } from "../../contexts/SchoolContext";
 import { getSessionTransactions } from "../../lib/services/pointsService";
 import { toMillis } from "../../lib/timestamps";
 import { buildCsv, downloadTextFile } from "../../lib/csv";
-import { PrintPortal, printReport, ReportHeader, StatCards, PrintedOn } from "../reports/reportParts";
+import { PrintPortal, printReport, ReportHeader, StatCards, PrintedOn, ReportSignatures } from "../reports/reportParts";
 import type { PointsTransaction, SessionRecord, StudentRecord } from "../../types";
 
 interface Row {
@@ -159,6 +159,7 @@ export default function SessionSummaryModal({
         </table>
       )}
       {quiet > 0 && rows.length > 0 && <p className="lt-foot">{t("sessionSummary.noMarks", { count: quiet })}</p>}
+      <ReportSignatures />
       <PrintedOn />
     </div>
   );

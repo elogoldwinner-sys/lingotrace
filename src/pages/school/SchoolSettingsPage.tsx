@@ -10,8 +10,11 @@ import { useNavigate } from "react-router-dom";
 import ImageUploadField from "../../components/school/ImageUploadField";
 import ScheduleEditor from "../../components/common/ScheduleEditor";
 import LetterheadCard from "../../components/school/LetterheadCard";
+import CertificateTemplateCard from "../../components/school/CertificateTemplateCard";
 import FeatureGate from "../../components/common/FeatureGate";
+import Switch from "../../components/common/Switch";
 import { DEFAULT_TIMEZONE, safeTimezone } from "../../lib/schedule";
+import type { SchoolAssets } from "../../types";
 
 /** Principal only: school identity (name, logo, signature, stamp), approved subjects, and the "compare across subjects" switch. */
 export default function SchoolSettingsPage() {
@@ -130,6 +133,34 @@ export default function SchoolSettingsPage() {
       </section>
 
       <section className="card space-y-3 p-4">
+        <div>
+          <h2 className="label-eyebrow">{t("sp.printedItems", "What to print on documents")}</h2>
+          <p className="mt-1 text-xs text-cream-600">
+            {t("sp.printedItemsHint", "Applies to the reports and certificates your school's teachers print or download. Switching an item off hides it without deleting the image.")}
+          </p>
+        </div>
+        {(
+          [
+            { key: "showPrincipalSignature", label: t("sp.showPrincipalSignature", "Principal's signature"), has: !!assets.signatureURL },
+            { key: "showStamp", label: t("sp.showStamp", "School stamp"), has: !!assets.stampURL },
+            { key: "showTeacherSignature", label: t("sp.showTeacherSignature", "Subject teachers' signatures"), has: true },
+          ] as const
+        ).map((item) => (
+          <div key={item.key} className="flex items-center justify-between gap-3 border-t border-cream-400/70 pt-3">
+            <div className="min-w-0">
+              <p className="text-sm font-semibold text-navy">{item.label}</p>
+              {!item.has && <p className="text-xs text-cream-600">{t("sp.noImageYet", "No image uploaded yet.")}</p>}
+            </div>
+            <Switch
+              label={item.label}
+              checked={assets[item.key] !== false}
+              onChange={(next) => run(() => setSchoolAssets(sch.id, { [item.key]: next } as SchoolAssets), item.label)}
+            />
+          </div>
+        ))}
+      </section>
+
+      <section className="card space-y-3 p-4">
         <h2 className="label-eyebrow">{t("sp.subjectsList", "Subjects taught at the school")}</h2>
         <p className="text-xs text-cream-600">{t("sp.subjectsHelp", "Teachers choose their subject from this list. Department heads are matched to teachers by subject, so keep the names consistent.")}</p>
         <div className="flex flex-wrap gap-2">
@@ -172,6 +203,15 @@ export default function SchoolSettingsPage() {
           await updateSchool(sch.id, { letterhead: (next ?? null) as unknown as undefined });
           await refresh();
           audit("settings_changed", t("lh.title", "School letterhead"));
+        }}
+      />
+
+      <CertificateTemplateCard
+        value={sch.certificateTemplate || null}
+        onSave={async (next) => {
+          await updateSchool(sch.id, { certificateTemplate: (next ?? null) as unknown as undefined });
+          await refresh();
+          audit("settings_changed", t("ct.title", "Certificate template"));
         }}
       />
 

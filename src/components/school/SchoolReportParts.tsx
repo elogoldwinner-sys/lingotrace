@@ -7,21 +7,20 @@ export function SchoolSignBlock() {
   const { t } = useTranslation();
   const { school, assets } = useSchool();
   if (!school) return null;
-  const hasImages = !!(assets.signatureURL || assets.stampURL);
+  const signatureURL = assets.showPrincipalSignature === false ? undefined : assets.signatureURL;
+  const stampURL = assets.showStamp === false ? undefined : assets.stampURL;
   return (
     <div className="lt-avoid" style={{ marginTop: 28, display: "flex", justifyContent: "space-between", alignItems: "flex-end", gap: 24 }}>
       <div style={{ minWidth: 200 }}>
         <div style={{ height: 64, display: "flex", alignItems: "flex-end" }}>
-          {assets.signatureURL && <img src={assets.signatureURL} alt="" style={{ maxHeight: 64, maxWidth: 200, objectFit: "contain" }} />}
+          {signatureURL && <img src={signatureURL} alt="" style={{ maxHeight: 64, maxWidth: 200, objectFit: "contain" }} />}
         </div>
         <div style={{ borderTop: "1px solid #111827", paddingTop: 3, fontSize: 11, color: "#4b5563" }}>
           {t("sp.principalSignature", "School principal")}: {school.principalName}
         </div>
       </div>
       <div style={{ width: 96, height: 96, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 10, color: "#9ca3af" }}>
-        {assets.stampURL ? (
-          <img src={assets.stampURL} alt="" style={{ maxHeight: 96, maxWidth: 96, objectFit: "contain" }} />
-        ) : !hasImages ? null : null}
+        {stampURL && <img src={stampURL} alt="" style={{ maxHeight: 96, maxWidth: 96, objectFit: "contain" }} />}
       </div>
     </div>
   );
