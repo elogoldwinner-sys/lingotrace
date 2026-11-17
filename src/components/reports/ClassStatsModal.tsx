@@ -22,6 +22,8 @@ import {
   type Totals,
   type Txn,
 } from "../../lib/reports/pointsStats";
+import DetailedStatement from "./DetailedStatement";
+import { useBucketJump } from "../../lib/reports/useBucketJump";
 import { GAINED, GainedLostBars, HorizontalBars, Legend, LOST, RunningTotalLine } from "../charts/PointsCharts";
 import { PrintedOn, PrintPortal, printReport, ReportControls, ReportHeader, StatCards, ReportSignatures } from "./reportParts";
 import { ClassAssessments } from "./AssessmentTables";
@@ -76,6 +78,8 @@ function StudentsSheet({
   const filtered = useMemo(() => filterTxns(txns, period, kind), [txns, period, kind]);
   const mine = useMemo(() => classTotals(cls, students, filtered), [cls, students, filtered]);
   const { size, buckets } = useMemo(() => bucketize(mine.own, period), [mine, period]);
+  const { selected, select, clear } = useBucketJump();
+  const nameById = useMemo(() => new Map(students.map((s) => [s.id, s.name])), [students]);
   const { kindLabel, periodLabel } = useLabels(period, kind, filtered.length ? filtered[0].at : null);
 
   const studentRows = useMemo(
@@ -117,13 +121,23 @@ function StudentsSheet({
             <h2>
               {t("reports.classGainedLostPer")} ({t(`reports.bucket.${size}`)})
             </h2>
-            <GainedLostBars buckets={buckets} />
+            <GainedLostBars buckets={buckets} onSelect={select} selectedKey={selected} />
             <Legend items={gl} />
+            <p className="lt-hint">{t("reports.jumpHint")}</p>
           </div>
           <div className="lt-avoid">
             <h2>{t("reports.classRunningTotal")}</h2>
-            <RunningTotalLine buckets={buckets} />
+            <RunningTotalLine buckets={buckets} onSelect={select} selectedKey={selected} />
           </div>
+          <DetailedStatement
+            txns={mine.own}
+            size={size}
+            buckets={buckets}
+            selectedKey={selected}
+            onClear={clear}
+            studentName={(id) => nameById.get(id) || ""}
+            screenOnly
+          />
         </>
       )}
 

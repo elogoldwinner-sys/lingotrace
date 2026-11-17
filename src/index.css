@@ -384,6 +384,13 @@
 .lt-table th, .lt-table td { border-bottom: 1px solid #e5e7eb; padding: 5px 6px; text-align: start; vertical-align: top; }
 .lt-table th { background: #f3f4f6; font-weight: 600; }
 .lt-table td.num, .lt-table th.num { text-align: end; white-space: nowrap; }
+.lt-hit { fill: transparent; cursor: pointer; outline: none; }
+.lt-hit:hover { fill: rgba(30, 58, 138, 0.10); }
+.lt-hit:focus-visible { stroke: #1e3a8a; stroke-width: 1.5; }
+.lt-hint { font-size: 11px; color: #6b7280; margin: 2px 0 0; }
+.lt-sel-bar { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin: 6px 0; padding: 4px 8px; font-size: 12px; background: #fef3c7; border-radius: 4px; }
+.lt-sel-bar button { font-size: 12px; color: #1e3a8a; text-decoration: underline; }
+@media print { .lt-screen-only, .lt-sel-bar, .lt-hint, .lt-hit { display: none !important; } .lt-row-sel td { background: transparent !important; } }
 .lt-pos { color: #15803d; font-weight: 600; }
 .lt-neg { color: #dc2626; font-weight: 600; }
 .lt-foot { margin-top: 14px; font-size: 11px; color: #6b7280; }

@@ -7,6 +7,8 @@ import { useSchool } from "../../contexts/SchoolContext";
 import { useAuth } from "../../contexts/AuthContext";
 import { useSchoolData } from "../../components/school/SchoolDataContext";
 import { SchoolPrintedOn, SchoolSignBlock } from "../../components/school/SchoolReportParts";
+import DetailedStatement from "../../components/reports/DetailedStatement";
+import { useBucketJump } from "../../lib/reports/useBucketJump";
 import { PrintPortal, printReport, ReportControls, ReportHeader, StatCards } from "../../components/reports/reportParts";
 import { GAINED, GainedLostBars, HorizontalBars, Legend, LOST, RunningTotalLine } from "../../components/charts/PointsCharts";
 import {
@@ -119,6 +121,7 @@ export default function SchoolReportsPage() {
   const nameOf = (id: string) => students.find((s) => s.id === id)?.name || "";
   const { size, buckets } = useMemo(() => bucketize(txns, period), [txns, period]);
   const reasons = useMemo(() => byReason(txns), [txns]);
+  const { selected, select, clear } = useBucketJump();
 
   const printTitle = `${student ? student.name : cls?.classKey || cls?.name || ""} - ${t(student ? "reports.studentReportTitle" : "reports.classReportTitle")}`;
 
@@ -149,12 +152,13 @@ export default function SchoolReportsPage() {
                   <h2>
                     {t("reports.gainedLostPer")} ({t(`reports.bucket.${size}`)})
                   </h2>
-                  <GainedLostBars buckets={buckets} />
+                  <GainedLostBars buckets={buckets} onSelect={select} selectedKey={selected} />
                   <Legend items={series} />
+                  <p className="lt-hint">{t("reports.jumpHint")}</p>
                 </div>
                 <div className="lt-avoid">
                   <h2>{t("reports.runningTotal")}</h2>
-                  <RunningTotalLine buckets={buckets} />
+                  <RunningTotalLine buckets={buckets} onSelect={select} selectedKey={selected} />
                 </div>
                 <div className="lt-avoid">
                   <h2>{t("reports.byReason")}</h2>
@@ -195,31 +199,15 @@ export default function SchoolReportsPage() {
               </>
             )}
             {(student || includeEntries) && (
-              <>
-                <h2>{t("reports.history")}</h2>
-                <table className="lt-table">
-                  <thead>
-                    <tr>
-                      <th>{t("reports.colDate")}</th>
-                      {!student && <th>{t("reports.student")}</th>}
-                      <th>{t("reports.colReason")}</th>
-                      <th>{t("reports.colDetail")}</th>
-                      <th className="num">{t("reports.colPoints")}</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {[...txns].reverse().map((x) => (
-                      <tr key={x.id}>
-                        <td style={{ whiteSpace: "nowrap" }}>{x.at ? format(new Date(x.at), "yyyy-MM-dd HH:mm") : ""}</td>
-                        {!student && <td>{nameOf(x.studentId)}</td>}
-                        <td>{t(`points.reasons.${x.reason}`)}</td>
-                        <td>{x.note}</td>
-                        <td className={`num ${x.amount >= 0 ? "lt-pos" : "lt-neg"}`}>{sign(x.amount)}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </>
+              <DetailedStatement
+                txns={txns}
+                size={size}
+                buckets={buckets}
+                selectedKey={selected}
+                onClear={clear}
+                studentName={student ? undefined : nameOf}
+                includeAssess
+              />
             )}
           </>
         )}

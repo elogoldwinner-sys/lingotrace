@@ -86,6 +86,11 @@ export function totalsOf(txns: Txn[]): Totals {
   return { gained, lost, net: gained - lost, count: txns.length };
 }
 
+/** Start (ms) of the day / week / month that `ms` falls in — the same key `bucketize` gives its buckets. */
+export function bucketStart(ms: number, size: BucketSize): number {
+  return (size === "day" ? startOfDay(ms) : size === "week" ? startOfWeek(ms, { weekStartsOn: 0 }) : startOfMonth(ms)).getTime();
+}
+
 export interface Bucket {
   key: number;
   label: string;

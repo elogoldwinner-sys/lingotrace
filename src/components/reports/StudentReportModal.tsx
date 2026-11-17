@@ -22,6 +22,8 @@ import {
 import { GAINED, GainedLostBars, HorizontalBars, Legend, LOST, RunningTotalLine } from "../charts/PointsCharts";
 import { PrintedOn, PrintPortal, printReport, ReportControls, ReportHeader, StatCards, ReportSignatures } from "./reportParts";
 import { StudentAssessments } from "./AssessmentTables";
+import DetailedStatement from "./DetailedStatement";
+import { useBucketJump } from "../../lib/reports/useBucketJump";
 import type { PointsTransaction, StudentRecord } from "../../types";
 
 interface SheetProps {
@@ -41,6 +43,7 @@ function StudentSheet({ student, className, period, kind, txns, firstAt, logo, t
   const totals = totalsOf(txns);
   const { size, buckets } = useMemo(() => bucketize(txns, period), [txns, period]);
   const reasons = useMemo(() => byReason(txns), [txns]);
+  const { selected, select, clear } = useBucketJump();
   const series = [
     { label: t("reports.gained"), color: GAINED },
     { label: t("reports.lost"), color: LOST },
@@ -74,13 +77,14 @@ function StudentSheet({ student, className, period, kind, txns, firstAt, logo, t
             <h2>
               {t("reports.gainedLostPer")} ({t(`reports.bucket.${size}`)})
             </h2>
-            <GainedLostBars buckets={buckets} />
+            <GainedLostBars buckets={buckets} onSelect={select} selectedKey={selected} />
             <Legend items={series} />
+            <p className="lt-hint">{t("reports.jumpHint")}</p>
           </div>
 
           <div className="lt-avoid">
             <h2>{t("reports.runningTotal")}</h2>
-            <RunningTotalLine buckets={buckets} />
+            <RunningTotalLine buckets={buckets} onSelect={select} selectedKey={selected} />
           </div>
 
           <div className="lt-avoid">
@@ -94,30 +98,7 @@ function StudentSheet({ student, className, period, kind, txns, firstAt, logo, t
 
           <StudentAssessments txns={txns} />
 
-          {txns.some((x) => !x.assess) && <h2>{t("reports.history")}</h2>}
-          {txns.some((x) => !x.assess) && <table className="lt-table">
-            <thead>
-              <tr>
-                <th>{t("reports.colDate")}</th>
-                <th>{t("reports.colReason")}</th>
-                <th>{t("reports.colDetail")}</th>
-                <th className="num">{t("reports.colPoints")}</th>
-              </tr>
-            </thead>
-            <tbody>
-              {[...txns].filter((x) => !x.assess).reverse().map((x) => (
-                <tr key={x.id}>
-                  <td style={{ whiteSpace: "nowrap" }}>{x.at ? format(new Date(x.at), "yyyy-MM-dd HH:mm") : ""}</td>
-                  <td>{t(`points.reasons.${x.reason}`)}</td>
-                  <td>{x.note}</td>
-                  <td className={`num ${x.amount >= 0 ? "lt-pos" : "lt-neg"}`}>
-                    {x.amount > 0 ? "+" : x.amount < 0 ? "−" : ""}
-                    {Math.abs(x.amount)}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>}
+          <DetailedStatement txns={txns} size={size} buckets={buckets} selectedKey={selected} onClear={clear} />
         </>
       )}
       <ReportSignatures />
