@@ -53,7 +53,8 @@ import {
   computeAndSaveRankingForPeriod,
   getDefaultRankingPeriod,
 } from "../lib/services/classRankingsService";
-import { parseCsv, buildCsv, downloadTextFile } from "../lib/csv";
+import { parseCsv } from "../lib/csv";
+import { downloadXlsx, parseXlsx } from "../lib/xlsx";
 import { uploadToCloudinary } from "../lib/cloudinary";
 import type {
   ClassRecord,
@@ -388,14 +389,16 @@ export default function StudentsPage() {
   }
 
   function handleDownloadTemplate() {
-    const csv = buildCsv(
-      ["nameEn", "nameAr", "parentName", "parentEmail"],
-      [
-        ["Amina Al-Sayed", "أمينة السيد", "Fatima Al-Sayed", "fatima@example.com"],
-        ["Yusuf Al-Rashid", "يوسف الراشد", "", ""],
-      ]
-    );
-    downloadTextFile("lingotrace-students-template.csv", csv);
+    downloadXlsx("lingotrace-students-template.xlsx", [
+      {
+        name: "Students",
+        headers: ["nameEn", "nameAr", "parentName", "parentEmail"],
+        rows: [
+          ["Amina Al-Sayed", "أمينة السيد", "Fatima Al-Sayed", "fatima@example.com"],
+          ["Yusuf Al-Rashid", "يوسف الراشد", "", ""],
+        ],
+      },
+    ]);
   }
 
   function handleBulkFileSelected(e: React.ChangeEvent<HTMLInputElement>) {
@@ -404,10 +407,11 @@ export default function StudentsPage() {
     if (!file) return;
     setBulkFileName(file.name);
     setBulkDone(false);
-    const reader = new FileReader();
-    reader.onload = () => {
-      const text = String(reader.result || "");
-      const parsed = parseCsv(text);
+    // Excel (.xlsx) is the format of the template; plain .csv files from older exports still work.
+    const isCsv = /\.csv$/i.test(file.name) || file.type === "text/csv";
+    const readRows = async (): Promise<Record<string, string>[]> =>
+      isCsv ? parseCsv(await file.text()) : parseXlsx(await file.arrayBuffer());
+    readRows().then((parsed) => {
       const rows: BulkRow[] = parsed.map((row) => {
         const legacy = row["name"] || row["student name"] || row["student"] || "";
         let nameEn = row["nameen"] || row["name_en"] || row["english name"] || "";
@@ -425,8 +429,10 @@ export default function StudentsPage() {
         return { name, nameAr, nameEn, parentName, parentEmail };
       });
       setBulkRows(rows);
-    };
-    reader.readAsText(file);
+    }).catch(() => {
+      setBulkFileName("");
+      setBulkRows([{ name: "", error: t("students.bulkErrorUnreadable", "This file couldn't be read. Use the Excel template.") }]);
+    });
   }
 
   const bulkOverLimit = maxStudents !== null && students.length + bulkRows.filter((r) => r.name && !r.error).length > maxStudents;
@@ -1381,7 +1387,7 @@ export default function StudentsPage() {
             <input
               ref={fileInputRef}
               type="file"
-              accept=".csv,text/csv"
+              accept=".xlsx,.csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,text/csv"
               className="hidden"
               onChange={handleBulkFileSelected}
             />

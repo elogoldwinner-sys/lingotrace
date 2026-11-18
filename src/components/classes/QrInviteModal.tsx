@@ -72,8 +72,8 @@ export default function QrInviteModal({ open, onClose, url, className }: QrInvit
 
   return (
     <Modal open={open} onClose={onClose} title={t("classes.qrTitle")} widthClassName="max-w-sm">
-      <div className="flex flex-col items-center gap-3">
-        <canvas ref={canvasRef} className="w-full max-w-[280px] rounded-xl border border-cream-400/70 bg-white" />
+      <div className="flex flex-col items-center gap-2.5">
+        <canvas ref={canvasRef} className="w-full max-w-[210px] rounded-xl border border-cream-400/70 bg-white" />
         <p className="text-center text-xs text-cream-600">{t("classes.qrHint")}</p>
         {error && <p className="text-center text-xs font-semibold text-red-600">{error}</p>}
         <div className="grid w-full grid-cols-1 gap-2">

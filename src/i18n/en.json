@@ -147,7 +147,8 @@
     "confirmResetClass": "Reset every student in \"{{className}}\" — points, badges, attendance and notes — back to zero? This can't be undone.",
     "bulkImportHint": "Download the template, fill in one row per student with the English name (nameEn) and the Arabic name (nameAr), then upload it here. Both are required.",
     "downloadTemplate": "Download template",
-    "chooseFile": "Choose CSV file",
+    "bulkErrorUnreadable": "This file couldn't be read. Use the Excel template.",
+    "chooseFile": "Choose Excel file",
     "bulkErrorMissingName": "Missing name",
     "bulkErrorMissingBoth": "Both English and Arabic names are required",
     "bulkImportDone": "Students added!",
@@ -869,7 +870,7 @@
     "rate": "Attendance rate",
     "trend": "Attendance rate by week",
     "distribution": "Distribution",
-    "downloadCsv": "Download CSV",
+    "downloadExcel": "Download Excel",
     "empty": "No attendance was recorded for this selection.",
     "rateNote": "Attendance rate = (present + late) ÷ (present + late + absent). Excused sessions are not counted against the student."
   },

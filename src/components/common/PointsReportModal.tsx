@@ -6,7 +6,7 @@ import { format, startOfWeek } from "date-fns";
 import Modal from "./Modal";
 import { db } from "../../lib/firebase";
 import { useAuth } from "../../contexts/AuthContext";
-import { buildCsv, downloadTextFile } from "../../lib/csv";
+import { downloadXlsx } from "../../lib/xlsx";
 import { toMillis } from "../../lib/timestamps";
 import { kindLabel } from "../../lib/assessments";
 import { NEGATIVE_POINTS_REASONS, POSITIVE_POINTS_REASONS } from "../../lib/pointsReasons";
@@ -207,7 +207,7 @@ export default function PointsReportModal({
       body.push(["", "", "", t("pointsReport.total"), String(total), "", "", ""]);
 
       const scope = classId === "all" ? "all-classes" : (classNameById.get(classId) || "class").replace(/[^\w؀-ۿ-]+/g, "_");
-      downloadTextFile(`lingotrace-points-${scope}-${startDate}_to_${endDate}.csv`, buildCsv(headers, body));
+      downloadXlsx(`lingotrace-points-${scope}-${startDate}_to_${endDate}.xlsx`, [{ name: t("pointsReport.title"), headers, rows: body }]);
       setMessage(t("pointsReport.done", { count: rows.length }));
     } catch (err) {
       console.error("Points report failed", err);

@@ -7,7 +7,7 @@ import { useAuth } from "../../contexts/AuthContext";
 import { useEffectiveSchoolLogo } from "../../contexts/SchoolContext";
 import { getSessionTransactions } from "../../lib/services/pointsService";
 import { toMillis } from "../../lib/timestamps";
-import { buildCsv, downloadTextFile } from "../../lib/csv";
+import { downloadXlsx } from "../../lib/xlsx";
 import { PrintPortal, printReport, ReportHeader, StatCards, PrintedOn, ReportSignatures } from "../reports/reportParts";
 import type { PointsTransaction, SessionRecord, StudentRecord } from "../../types";
 
@@ -106,7 +106,7 @@ export default function SessionSummaryModal({
       r.items.map((tx) => `${signed(tx.amount)} ${reasonLabel(tx)} (${time(tx)})`).join(" | "),
     ]);
     body.push([t("reports.net"), String(totals.gained), String(totals.lost), String(totals.net), ""]);
-    downloadTextFile(`session summary - ${session.title} - ${session.date}.csv`.replace(/[\\/:*?"<>|]/g, "-"), buildCsv(header, body));
+    downloadXlsx(`session summary - ${session.title} - ${session.date}.xlsx`.replace(/[\\/:*?"<>|]/g, "-"), [{ name: session.title, headers: header, rows: body }]);
   }
 
   const sheet = (

@@ -4,7 +4,7 @@ import { Download, Printer } from "lucide-react";
 import Modal from "./Modal";
 import { useAuth } from "../../contexts/AuthContext";
 import { useEffectiveSchoolLogo } from "../../contexts/SchoolContext";
-import { buildCsv, downloadTextFile } from "../../lib/csv";
+import { downloadXlsx } from "../../lib/xlsx";
 import { PrintPortal, printReport, ReportHeader, PrintedOn, ReportSignatures } from "../reports/reportParts";
 import type { AttendanceRecord, AttendanceStatus, SessionRecord, StudentRecord } from "../../types";
 
@@ -56,7 +56,7 @@ export default function SessionAttendanceModal({
     body.push([]);
     STATUSES.forEach((s) => body.push([label(s), String(counts[s]), ""]));
     body.push([t("attendanceReport.rate"), rate === null ? "" : `${rate}%`, ""]);
-    downloadTextFile(`attendance - ${className} - ${session.title} - ${session.date}.csv`.replace(/[\\/:*?"<>|]/g, "-"), buildCsv(header, body));
+    downloadXlsx(`attendance - ${className} - ${session.title} - ${session.date}.xlsx`.replace(/[\\/:*?"<>|]/g, "-"), [{ name: session.title, headers: header, rows: body }]);
   }
 
   const sheet = (

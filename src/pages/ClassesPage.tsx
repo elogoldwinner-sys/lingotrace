@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Link } from "react-router-dom";
-import { Plus, Trash2, Link2, Check, UserPlus, RefreshCw, Pencil, QrCode } from "lucide-react";
+import { Plus, Trash2, UserPlus, RefreshCw, Pencil, QrCode } from "lucide-react";
 import { BTN_TONES } from "../lib/uiColors";
 import { useAuth } from "../contexts/AuthContext";
 import { useLimit, useSchool } from "../contexts/SchoolContext";
@@ -51,7 +51,6 @@ export default function ClassesPage() {
   const [subjectEdit, setSubjectEdit] = useState<ClassRecord | null>(null);
   const [subjectEditValue, setSubjectEditValue] = useState("");
   const [submitting, setSubmitting] = useState(false);
-  const [copiedKey, setCopiedKey] = useState("");
   const [inviteError, setInviteError] = useState("");
   const [qrInvite, setQrInvite] = useState<{ url: string; className: string } | null>(null);
 
@@ -229,23 +228,8 @@ export default function ClassesPage() {
     await deleteClass(id);
   }
 
-  async function handleCopyInvite(classItem: ClassRecord) {
-    if (!user) return;
-    setInviteError("");
-    try {
-      const invite = await getOrCreateInvite(classItem.id, classItem.name, "parent", user.uid);
-      // The join page reads its child list from the invite, so refresh it before the link goes out.
-      await refreshInviteRoster(classItem.id);
-      await navigator.clipboard.writeText(buildInviteUrl(invite.id));
-      setCopiedKey(classItem.id);
-      setTimeout(() => setCopiedKey(""), 2000);
-    } catch {
-      setInviteError(t("classes.inviteError"));
-    }
-  }
-
-  /** Opens the parent-invite QR code for a class (same invite link as "Share with parents"). */
-  async function handleShowQr(classItem: ClassRecord) {
+  /** "Share with parents": opens the class's invite QR code, which also offers copy-image, download and copy-link. */
+  async function handleShareWithParents(classItem: ClassRecord) {
     if (!user) return;
     setInviteError("");
     try {
@@ -368,22 +352,13 @@ export default function ClassesPage() {
               </div>
               <div className="flex gap-2 pt-1 border-t border-cream-400/70 mt-1">
                 <button
-                  onClick={() => handleCopyInvite(c)}
+                  onClick={() => handleShareWithParents(c)}
                   className={`btn-fx ${BTN_TONES.teal} min-w-0 flex-1 !pe-2 text-xs leading-tight`}
-                >
-                  <span className="fx-tile shrink-0">{copiedKey === c.id ? <Check size={15} /> : <Link2 size={15} />}</span>
-                  {copiedKey === c.id ? t("classes.copied") : t("classes.parentInvite")}
-                </button>
-                <button
-                  onClick={() => handleShowQr(c)}
-                  title={t("classes.qrTitle")}
-                  aria-label={t("classes.qrTitle")}
-                  className={`btn-fx ${BTN_TONES.teal} shrink-0 !px-3 text-xs leading-tight`}
                 >
                   <span className="fx-tile shrink-0">
                     <QrCode size={15} />
                   </span>
-                  QR
+                  {t("classes.parentInvite")}
                 </button>
                 {isSubjectOfOther ? (
                   <button onClick={() => handleSync(c)} className={`btn-fx ${BTN_TONES.blue} min-w-0 flex-1 !pe-2 text-xs leading-tight`}>

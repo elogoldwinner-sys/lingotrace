@@ -5,7 +5,7 @@ import { format as formatDate, parseISO, startOfWeek } from "date-fns";
 import Modal from "../common/Modal";
 import { useAuth } from "../../contexts/AuthContext";
 import { useEffectiveSchoolLogo } from "../../contexts/SchoolContext";
-import { buildCsv, downloadTextFile } from "../../lib/csv";
+import { downloadXlsx } from "../../lib/xlsx";
 import { PrintPortal, printReport, ReportHeader, PrintedOn, ReportSignatures } from "./reportParts";
 import type { AttendanceRecord, AttendanceStatus, StudentRecord } from "../../types";
 
@@ -161,7 +161,7 @@ export default function AttendanceReportModal({
   const periodText = wholePeriod ? t("attendanceReport.wholePeriod") : `${start} → ${end}`;
   const subject = student ? student.name : t("attendanceReport.wholeClass");
 
-  function downloadCsv() {
+  function downloadExcel() {
     const header = student
       ? [t("attendanceReport.date"), t("attendanceReport.status"), t("attendanceReport.note")]
       : [t("students.title"), label("present"), label("late"), label("absent"), label("excused"), t("attendanceReport.rate")];
@@ -175,7 +175,7 @@ export default function AttendanceReportModal({
           String(counts.excused),
           rate(counts) === null ? "" : `${rate(counts)}%`,
         ]);
-    downloadTextFile(`attendance - ${className} - ${subject}.csv`, buildCsv(header, rows));
+    downloadXlsx(`attendance - ${className} - ${subject}.xlsx`.replace(/[\\/:*?"<>|]/g, "-"), [{ name: subject, headers: header, rows }]);
   }
 
   const sheet = (
@@ -315,9 +315,9 @@ export default function AttendanceReportModal({
               {t("attendanceReport.wholePeriod")}
             </label>
             <div className="ms-auto flex gap-2">
-              <button type="button" onClick={downloadCsv} disabled={total(totals) === 0} className="btn-secondary py-2 px-3 text-sm disabled:opacity-50">
+              <button type="button" onClick={downloadExcel} disabled={total(totals) === 0} className="btn-secondary py-2 px-3 text-sm disabled:opacity-50">
                 <Download size={16} />
-                {t("attendanceReport.downloadCsv")}
+                {t("attendanceReport.downloadExcel")}
               </button>
               <button
                 type="button"
