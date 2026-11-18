@@ -1,3 +1,6 @@
+import StudentSearchBox from "../components/common/StudentSearchBox";
+import { filterStudentsByQuery } from "../lib/searchStudents";
+import { sortByName, useRosterSort } from "../lib/rosterSort";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Link, useSearchParams } from "react-router-dom";
@@ -70,7 +73,7 @@ function daysAgoISO(days: number) {
  * same marking features; the normal page keeps the current and previous week plus the report.
  */
 export default function AttendancePage({ archived = false }: { archived?: boolean }) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const { user, profile } = useAuth();
   // Teacher preference: when off, marking attendance never adds or deducts marks.
   const attendanceMarksOn = profile?.attendancePoints !== false;
@@ -84,6 +87,7 @@ export default function AttendancePage({ archived = false }: { archived?: boolea
   const [loading, setLoading] = useState(true);
 
   const [expandedSessionId, setExpandedSessionId] = useState<string | null>(null);
+  const [rosterQuery, setRosterQuery] = useState("");
   // Deep link from the dashboard's "current period" card: ?classId=…&sessionId=… opens that session's sheet.
   const [searchParams] = useSearchParams();
   const focusClass = searchParams.get("classId");
@@ -283,7 +287,14 @@ export default function AttendancePage({ archived = false }: { archived?: boolea
   // Only counts students still on the roster (one may have been removed
   // while ticked).
   const selectedStudents = students.filter((st) => selectedStudentIds.has(st.id));
-  const allSelected = students.length > 0 && selectedStudents.length === students.length;
+  // Search-by-name: "select all" and the list follow what the search shows; the selection itself still counts everyone ticked.
+  const { alpha, setAlpha } = useRosterSort();
+  const visibleStudents = useMemo(() => {
+    const found = filterStudentsByQuery(students, rosterQuery);
+    return alpha ? sortByName(found, i18n.language) : found;
+  }, [students, rosterQuery, alpha, i18n.language]);
+  useEffect(() => setRosterQuery(""), [expandedSessionId, selectedClassId]);
+  const allSelected = visibleStudents.length > 0 && visibleStudents.every((st) => selectedStudentIds.has(st.id));
 
   function toggleStudentSelected(studentId: string) {
     setSelectedStudentIds((prev) => {
@@ -295,7 +306,11 @@ export default function AttendancePage({ archived = false }: { archived?: boolea
   }
 
   function toggleSelectAll() {
-    setSelectedStudentIds(allSelected ? new Set() : new Set(students.map((st) => st.id)));
+    setSelectedStudentIds((prev) => {
+      const next = new Set(prev);
+      visibleStudents.forEach((st) => (allSelected ? next.delete(st.id) : next.add(st.id)));
+      return next;
+    });
   }
 
   // Applies one status to every ticked student via the same per-student path
@@ -419,7 +434,7 @@ export default function AttendancePage({ archived = false }: { archived?: boolea
                                         type="checkbox"
                                         checked={allSelected}
                                         ref={(el) => {
-                                          if (el) el.indeterminate = selectedStudents.length > 0 && !allSelected;
+                                          if (el) el.indeterminate = !allSelected && visibleStudents.some((st) => selectedStudentIds.has(st.id));
                                         }}
                                         onChange={toggleSelectAll}
                                         className="h-4 w-4 shrink-0 accent-gold"
@@ -457,7 +472,9 @@ export default function AttendancePage({ archived = false }: { archived?: boolea
                                   </div>
                                   {bulkError && <p className="text-xs text-red-600">{t("attendance.bulkError")}</p>}
 
-                                  {students.map((st) => {
+                                  <StudentSearchBox value={rosterQuery} onChange={setRosterQuery} shown={visibleStudents.length} total={students.length} alpha={alpha} onToggleAlpha={() => setAlpha(!alpha)} />
+
+                                  {visibleStudents.map((st) => {
                                     const currentStatus = recordByStudentAndSession.get(
                                       `${st.id}:${s.id}`
                                     )?.status;

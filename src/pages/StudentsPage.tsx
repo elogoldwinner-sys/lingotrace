@@ -55,6 +55,7 @@ import {
 } from "../lib/services/classRankingsService";
 import { parseCsv } from "../lib/csv";
 import { downloadXlsx, parseXlsx } from "../lib/xlsx";
+import { normalizeImportedWhatsapp } from "../lib/whatsapp";
 import { uploadToCloudinary } from "../lib/cloudinary";
 import type {
   ClassRecord,
@@ -97,8 +98,20 @@ interface BulkRow {
   nameEn?: string;
   parentName?: string;
   parentEmail?: string;
+  /** Normalised (00<country code><number>); left out when the cell was empty or not a phone number. */
+  parentWhatsapp?: string;
+  /** The row still imports, but part of it was skipped (e.g. an unrecognised WhatsApp number). */
+  warning?: string;
   error?: string;
 }
+
+/** Header text → comparable key: "Parent WhatsApp", "parent_whatsapp" and a header with a stray Arabic diacritic all match. */
+const normKey = (k: string) =>
+  k
+    .normalize("NFKD")
+    .replace(/[\u064B-\u065F\u0670\u0640\u0300-\u036F\u200B-\u200F\u202A-\u202E\uFEFF]/g, "")
+    .replace(/[^a-z0-9\u0600-\u06FF]/gi, "")
+    .toLowerCase();
 
 function todayISO() {
   return new Date().toISOString().slice(0, 10);
@@ -389,13 +402,25 @@ export default function StudentsPage() {
   }
 
   function handleDownloadTemplate() {
+    // An empty template: just the headers, so the teacher has nothing to delete. The WhatsApp column is formatted as
+    // Text so Excel keeps a leading 0 / +. A second sheet explains the columns (the importer reads the first sheet only).
     downloadXlsx("lingotrace-students-template.xlsx", [
       {
         name: "Students",
-        headers: ["nameEn", "nameAr", "parentName", "parentEmail"],
+        headers: ["nameEn", "nameAr", "parentName", "parentEmail", "parentWhatsapp"],
+        rows: [],
+        textColumns: [4],
+      },
+      {
+        name: "Instructions",
+        headers: ["Column / العمود", "Required / مطلوب", "Notes / ملاحظات"],
         rows: [
-          ["Amina Al-Sayed", "أمينة السيد", "Fatima Al-Sayed", "fatima@example.com"],
-          ["Yusuf Al-Rashid", "يوسف الراشد", "", ""],
+          ["nameEn", "Yes / نعم", "Student's name in English / اسم الطالب بالإنجليزية"],
+          ["nameAr", "Yes / نعم", "Student's name in Arabic / اسم الطالب بالعربية"],
+          ["parentName", "No / لا", "Parent's name / اسم ولي الأمر"],
+          ["parentEmail", "No / لا", "Parent's e-mail / البريد الإلكتروني لولي الأمر"],
+          ["parentWhatsapp", "No / لا", "Parent's WhatsApp with the country code, e.g. +966501234567 (a Saudi number like 0501234567 also works) / رقم واتساب ولي الأمر مع رمز الدولة، مثل +966501234567 (ويقبل الرقم السعودي مثل 0501234567)"],
+          ["", "", "Fill in one row per student on the Students sheet, then upload the file. / املأ صفًا لكل طالب في ورقة Students ثم ارفع الملف."],
         ],
       },
     ]);
@@ -412,21 +437,31 @@ export default function StudentsPage() {
     const readRows = async (): Promise<Record<string, string>[]> =>
       isCsv ? parseCsv(await file.text()) : parseXlsx(await file.arrayBuffer());
     readRows().then((parsed) => {
-      const rows: BulkRow[] = parsed.map((row) => {
-        const legacy = row["name"] || row["student name"] || row["student"] || "";
-        let nameEn = row["nameen"] || row["name_en"] || row["english name"] || "";
-        let nameAr = row["namear"] || row["name_ar"] || row["arabic name"] || "";
+      const rows: BulkRow[] = parsed.map((rawRow) => {
+        const cells: Record<string, string> = {};
+        for (const [key, value] of Object.entries(rawRow)) cells[normKey(key)] = value;
+        const pick = (...keys: string[]) => keys.map((k) => cells[k]).find((v) => v) || "";
+        const legacy = pick("name", "studentname", "student");
+        let nameEn = pick("nameen", "englishname");
+        let nameAr = pick("namear", "arabicname");
         // Older files with a single "name" column: put it under the language it is written in.
         if (legacy && !nameEn && !nameAr) {
           if (/[\u0600-\u06FF]/.test(legacy)) nameAr = legacy;
           else nameEn = legacy;
         }
         const name = primaryName(nameEn, nameAr);
-        const parentName = row["parentname"] || row["parent name"] || undefined;
-        const parentEmail = row["parentemail"] || row["parent email"] || undefined;
+        const parentName = pick("parentname") || undefined;
+        const parentEmail = pick("parentemail") || undefined;
+        const rawWhatsapp = pick("parentwhatsapp", "parentwhatsnumber", "parentwhatsappnumber", "whatsapp", "whatsappnumber", "parentphone", "parentmobile", "phone", "mobile");
+        let parentWhatsapp: string | undefined;
+        let warning: string | undefined;
+        if (rawWhatsapp) {
+          parentWhatsapp = normalizeImportedWhatsapp(rawWhatsapp) ?? undefined;
+          if (!parentWhatsapp) warning = t("students.bulkWarnWhatsapp", "WhatsApp number not recognised — the student is added without it");
+        }
         if (!name) return { name: "", error: t("students.bulkErrorMissingName") };
-        if (!nameEn || !nameAr) return { name, nameAr, nameEn, parentName, parentEmail, error: t("students.bulkErrorMissingBoth") };
-        return { name, nameAr, nameEn, parentName, parentEmail };
+        if (!nameEn || !nameAr) return { name, nameAr, nameEn, parentName, parentEmail, parentWhatsapp, error: t("students.bulkErrorMissingBoth") };
+        return { name, nameAr, nameEn, parentName, parentEmail, parentWhatsapp, warning };
       });
       setBulkRows(rows);
     }).catch(() => {
@@ -446,7 +481,7 @@ export default function StudentsPage() {
     try {
       await createStudentsBulk(
         selectedClassId,
-        validRows.map((r) => ({ name: r.name, nameAr: r.nameAr, nameEn: r.nameEn, parentName: r.parentName, parentEmail: r.parentEmail }))
+        validRows.map((r) => ({ name: r.name, nameAr: r.nameAr, nameEn: r.nameEn, parentName: r.parentName, parentEmail: r.parentEmail, parentWhatsapp: r.parentWhatsapp }))
       );
       setBulkDone(true);
       setBulkRows([]);
@@ -1409,6 +1444,7 @@ export default function StudentsPage() {
                     {row.nameEn || row.nameAr ? [row.nameEn, row.nameAr].filter(Boolean).join(" — ") : t("students.bulkErrorMissingName")}
                   </span>
                   {row.error && <span className="text-xs text-red-600">{row.error}</span>}
+                  {!row.error && row.warning && <span className="text-xs text-amber-700">{row.warning}</span>}
                 </div>
               ))}
             </div>

@@ -26,3 +26,17 @@ export function normalizeWhatsappNumber(raw: string): string | null {
   if (!/^00[1-9]\d{7,14}$/.test(value)) return null;
   return value;
 }
+
+/**
+ * Like normalizeWhatsappNumber, but forgiving about what a spreadsheet does to phone numbers: Excel turns a number typed
+ * as 966501234567 into a plain number (no "+", no "00") and drops the leading 0 of 0501234567, so those shapes are
+ * recognised too. Returns null when the cell doesn't look like a phone number.
+ */
+export function normalizeImportedWhatsapp(raw: string): string | null {
+  const direct = normalizeWhatsappNumber(raw);
+  if (direct) return direct;
+  const digits = raw.replace(/[^\d]/g, "");
+  if (/^5\d{8}$/.test(digits)) return `00966${digits}`; // 05xxxxxxxx that lost its 0
+  if (/^[1-9]\d{9,14}$/.test(digits)) return `00${digits}`; // 966501234567 typed without + or 00
+  return null;
+}

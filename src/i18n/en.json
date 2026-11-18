@@ -145,8 +145,9 @@
     "confirmDeleteMany": "Remove {{count}} student(s) from the class? This can't be undone.",
     "confirmResetStudent": "Reset {{name}}'s points, badges, attendance and notes back to zero? This can't be undone.",
     "confirmResetClass": "Reset every student in \"{{className}}\" — points, badges, attendance and notes — back to zero? This can't be undone.",
-    "bulkImportHint": "Download the template, fill in one row per student with the English name (nameEn) and the Arabic name (nameAr), then upload it here. Both are required.",
+    "bulkImportHint": "Download the template (it is empty) and fill in one row per student: the English name (nameEn) and the Arabic name (nameAr) are required; the parent's name, e-mail and WhatsApp number (parentWhatsapp) are optional. Then upload it here.",
     "downloadTemplate": "Download template",
+    "bulkWarnWhatsapp": "WhatsApp number not recognised — the student is added without it",
     "bulkErrorUnreadable": "This file couldn't be read. Use the Excel template.",
     "chooseFile": "Choose Excel file",
     "bulkErrorMissingName": "Missing name",
@@ -650,6 +651,15 @@
       "enabledHint": "When off, teachers only see the platform's own design.",
       "labelLang": "Language of the labels",
       "textColor": "Text colour"
+  },
+  "studentSearch": {
+    "placeholder": "Search student name…",
+    "clear": "Clear search",
+    "count": "{{shown}} of {{total}} students",
+    "none": "No student matches this search.",
+    "sortLabel": "A–Z",
+    "sortOff": "Sort students alphabetically",
+    "sortOn": "Sorted A–Z — click to restore the class order"
   },
   "certificate": {
     "button": "Certificate",

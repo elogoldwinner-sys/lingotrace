@@ -39,6 +39,9 @@ import SessionSummaryModal from "../components/common/SessionSummaryModal";
 import SessionAttendanceModal from "../components/common/SessionAttendanceModal";
 import NamesWheelModal from "../components/common/NamesWheelModal";
 import SoundToggle from "../components/common/SoundToggle";
+import StudentSearchBox from "../components/common/StudentSearchBox";
+import { filterStudentsByQuery } from "../lib/searchStudents";
+import { sortByName, useRosterSort } from "../lib/rosterSort";
 import { unlockSound } from "../lib/sounds";
 import MarkReinforcement, { type MarkReinforcementEvent } from "../components/common/MarkReinforcement";
 import { reasonsForAmount, POSITIVE_POINTS_REASONS } from "../lib/pointsReasons";
@@ -69,7 +72,7 @@ function todayISO() {
  * computed from the dates each time, so weeks move to the Archive on their own.
  */
 export default function SessionsPage({ archived = false }: { archived?: boolean }) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const { user, profile } = useAuth();
   const parentAlerts = useParentAlertsEnabled();
   const [classes, setClasses] = useState<ClassRecord[]>([]);
@@ -119,6 +122,7 @@ export default function SessionsPage({ archived = false }: { archived?: boolean 
 
   // Active session (the one currently expanded to apply session procedures)
   const [activeSessionId, setActiveSessionId] = useState<string | null>(null);
+  const [rosterQuery, setRosterQuery] = useState("");
   // Deep link: ?classId=…&sessionId=… opens that session ready to run.
   const [searchParams] = useSearchParams();
   const focusClass = searchParams.get("classId");
@@ -185,6 +189,14 @@ export default function SessionsPage({ archived = false }: { archived?: boolean 
     const unsubscribe = subscribeToAttendanceBySession(activeSessionId, setSessionAttendance);
     return unsubscribe;
   }, [activeSessionId]);
+
+  // Search-by-name for the roster: the filter never changes who is in the class (wheel, picks and totals still use everyone).
+  const { alpha, setAlpha } = useRosterSort();
+  const visibleStudents = useMemo(() => {
+    const found = filterStudentsByQuery(students, rosterQuery);
+    return alpha ? sortByName(found, i18n.language) : found;
+  }, [students, rosterQuery, alpha, i18n.language]);
+  useEffect(() => setRosterQuery(""), [activeSessionId, selectedClassId]);
 
   const sessionAttendanceByStudent = useMemo(() => {
     const map = new Map<string, AttendanceRecord>();
@@ -620,8 +632,10 @@ export default function SessionsPage({ archived = false }: { archived?: boolean 
                               </p>
                             )}
 
+                            <StudentSearchBox value={rosterQuery} onChange={setRosterQuery} shown={visibleStudents.length} total={students.length} alpha={alpha} onToggleAlpha={() => setAlpha(!alpha)} />
+
                             <div className="space-y-2">
-                              {students.map((st) => {
+                              {visibleStudents.map((st) => {
                                 const currentStatus = sessionAttendanceByStudent.get(st.id)?.status;
                                 const isBlocked = currentStatus === "absent" || currentStatus === "excused";
                                 return (

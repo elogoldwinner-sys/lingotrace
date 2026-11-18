@@ -14,6 +14,8 @@ export interface XlsxSheet {
   headers: string[];
   /** Rows as text or numbers. Text that looks like a plain number (e.g. "12", "-3", "4.5") is stored as a number. */
   rows: (string | number)[][];
+  /** Zero-based columns to format as Text (phone numbers: Excel keeps the leading 0 / + and never turns them into 5.0E+11). */
+  textColumns?: number[];
 }
 
 /* ───────────────────────────── writing ───────────────────────────── */
@@ -60,6 +62,7 @@ function sheetName(raw: string, used: Set<string>): string {
 function sheetXml(sheet: XlsxSheet, rtl: boolean): string {
   const all = [sheet.headers, ...sheet.rows];
   const cols = Math.max(1, ...all.map((r) => r.length));
+  const textCols = new Set(sheet.textColumns ?? []);
 
   // Column widths from the longest cell (capped, so a long "details" column wraps instead of stretching).
   const widths = Array.from({ length: cols }, (_, c) => {
@@ -76,6 +79,7 @@ function sheetXml(sheet: XlsxSheet, rtl: boolean): string {
           if (value === "" || value === null || value === undefined) return r === 0 ? `<c r="${ref}" s="1"/>` : "";
           if (r > 0 && typeof value === "number" && Number.isFinite(value)) return `<c r="${ref}" s="3"><v>${value}</v></c>`;
           const text = String(value);
+          if (r > 0 && textCols.has(c)) return `<c r="${ref}" s="4" t="inlineStr"><is><t xml:space="preserve">${esc(text)}</t></is></c>`;
           if (r > 0 && NUMERIC.test(text)) return `<c r="${ref}" s="3"><v>${text}</v></c>`;
           return `<c r="${ref}" s="${r === 0 ? 1 : 2}" t="inlineStr"><is><t xml:space="preserve">${esc(text)}</t></is></c>`;
         })
@@ -91,7 +95,7 @@ function sheetXml(sheet: XlsxSheet, rtl: boolean): string {
     `<sheetViews><sheetView workbookViewId="0"${rtl ? ' rightToLeft="1"' : ""}>` +
     `<pane ySplit="1" topLeftCell="A2" activePane="bottomLeft" state="frozen"/><selection pane="bottomLeft"/></sheetView></sheetViews>` +
     `<sheetFormatPr defaultRowHeight="15"/>` +
-    `<cols>${widths.map((w, i) => `<col min="${i + 1}" max="${i + 1}" width="${w}" customWidth="1"/>`).join("")}</cols>` +
+    `<cols>${widths.map((w, i) => `<col min="${i + 1}" max="${i + 1}" width="${w}" customWidth="1"${textCols.has(i) ? ' style="4"' : ""}/>`).join("")}</cols>` +
     `<sheetData>${rowsXml}</sheetData>` +
     `</worksheet>`
   );
@@ -106,11 +110,12 @@ const STYLES_XML =
   `<borders count="2"><border><left/><right/><top/><bottom/><diagonal/></border>` +
   `<border><left style="thin"><color rgb="FFD1D5DB"/></left><right style="thin"><color rgb="FFD1D5DB"/></right><top style="thin"><color rgb="FFD1D5DB"/></top><bottom style="thin"><color rgb="FFD1D5DB"/></bottom><diagonal/></border></borders>` +
   `<cellStyleXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/></cellStyleXfs>` +
-  `<cellXfs count="4">` +
+  `<cellXfs count="5">` +
   `<xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0"/>` +
   `<xf numFmtId="0" fontId="1" fillId="2" borderId="1" xfId="0" applyFont="1" applyFill="1" applyBorder="1" applyAlignment="1"><alignment horizontal="center" vertical="center" wrapText="1"/></xf>` +
   `<xf numFmtId="0" fontId="0" fillId="0" borderId="1" xfId="0" applyBorder="1" applyAlignment="1"><alignment vertical="top" wrapText="1"/></xf>` +
   `<xf numFmtId="0" fontId="0" fillId="0" borderId="1" xfId="0" applyBorder="1" applyAlignment="1"><alignment horizontal="center" vertical="top"/></xf>` +
+  `<xf numFmtId="49" fontId="0" fillId="0" borderId="1" xfId="0" applyNumberFormat="1" applyBorder="1" applyAlignment="1"><alignment vertical="top"/></xf>` +
   `</cellXfs>` +
   `<cellStyles count="1"><cellStyle name="Normal" xfId="0" builtinId="0"/></cellStyles>` +
   `</styleSheet>`;
